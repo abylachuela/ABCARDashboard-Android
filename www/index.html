@@ -985,16 +985,16 @@ html, body {
 <script>
 'use strict';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.5';
 const GITHUB_REPO = 'abylachuela/ABCARDashboard-Android';
-const GITHUB_API  = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 const CFG = {
-  server:     'http://38.57.232.64:3335',   // FastAPI game server
+  server:     'http://38.57.232.64:3335',
   apiGames:   'http://38.57.232.64:3335/api/games',
-  wsBase:     'ws://38.57.232.64:3335/ws',  // /ws/{gameId} per-game
-  classicUrl: 'http://38.57.232.64:3336/dashboard/classic',
-  dashServer: 'http://38.57.232.64:3336',
+  wsBase:     'ws://38.57.232.64:3335/ws',
+  classicUrl: 'http://38.57.232.64:3335',   // dashboard now served at root of :3335
+  dashServer: 'http://38.57.232.64:3335',
+  appLatest:  'http://38.57.232.64:3335/app/latest',
   pollInterval: 10000,
   wsReconnectMax: 15000,
   cacheKey: 'abcar_games_cache',
@@ -1961,46 +1961,47 @@ async function checkForUpdates() {
   if (log) log.style.display = 'none';
 
   try {
-    const res = await fetch(GITHUB_API, {
-      headers: { Accept: 'application/vnd.github+json' },
+    const res = await fetch(CFG.appLatest, {
       signal: AbortSignal.timeout(10000),
       cache: 'no-store',
     });
 
-    if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
-    const release = await res.json();
+    if (!res.ok) throw new Error(`Servidor: ${res.status}`);
+    const info = await res.json();
 
-    const latestTag  = (release.tag_name || 'v0.0.0').replace(/^v/, '');
-    const currentTag = APP_VERSION.replace(/^v/, '');
-    const isNewer    = compareVersions(latestTag, currentTag) > 0;
+    const latestVer  = String(info.versionName || '0.0');
+    const currentVer = APP_VERSION;
+    const isNewer    = compareVersions(latestVer, currentVer) > 0;
 
     if (statusRow) statusRow.style.display = 'flex';
 
     if (isNewer) {
       if (icon)  icon.textContent  = '🆕';
-      if (label) label.textContent = `Nueva versión disponible: v${latestTag}`;
-      if (sub)   sub.textContent   = `Tu versión: v${currentTag}`;
-      if (link)  { link.href = release.html_url; link.style.display = 'inline-block'; }
+      if (label) label.textContent = `Nueva versión disponible: v${latestVer}`;
+      if (sub)   sub.textContent   = `Tu versión: v${currentVer}${info.mandatory ? ' — Actualización obligatoria' : ''}`;
+      if (link)  { link.href = info.url; link.textContent = '⬇️ Descargar APK'; link.style.display = 'inline-block'; }
       if (log)   log.style.display = 'block';
-      if (logBody && release.body) {
-        logBody.innerHTML = release.body
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/^##\s+(.+)/gm, '<div style="font-weight:700;color:var(--accent);margin-top:8px">$1</div>')
-          .replace(/^-\s+(.+)/gm, '<div>• $1</div>')
-          .replace(/\n/g, '');
+      if (logBody) {
+        logBody.innerHTML = info.changelog
+          ? info.changelog
+              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+              .replace(/^##\s+(.+)/gm, '<div style="font-weight:700;color:var(--accent);margin-top:8px">$1</div>')
+              .replace(/^-\s+(.+)/gm, '<div>• $1</div>')
+              .replace(/\n/g, '')
+          : '<div style="color:var(--muted)">Sin notas de versión.</div>';
       }
       vibrate([100, 50, 200]);
     } else {
       if (icon)  icon.textContent  = '✅';
       if (label) label.textContent = 'La app está actualizada';
-      if (sub)   sub.textContent   = `v${currentTag} es la última versión`;
+      if (sub)   sub.textContent   = `v${currentVer} es la última versión`;
       if (link)  link.style.display = 'none';
     }
   } catch (err) {
     if (statusRow) statusRow.style.display = 'flex';
     if (icon)  icon.textContent  = '⚠️';
     if (label) label.textContent = 'No se pudo verificar';
-    if (sub)   sub.textContent   = 'Revisa tu conexión a internet';
+    if (sub)   sub.textContent   = 'Revisa tu conexión al servidor';
     if (link)  link.style.display = 'none';
   } finally {
     if (btn) { btn.textContent = '🔍 Buscar actualizaciones'; btn.disabled = false; }
