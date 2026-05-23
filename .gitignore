@@ -1,0 +1,36 @@
+## Node
+node_modules/
+npm-debug.log*
+.npm
+
+## Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/google-services.json
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+## Capacitor
+.capacitor/
+
+## macOS
+.DS_Store
+**/.DS_Store
+
+## IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+## Logs
+*.log
+/tmp/
+
+## Env
+.env
+.env.local

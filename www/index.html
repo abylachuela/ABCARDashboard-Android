@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ABCARLineUp Live</title>
+<meta name="theme-color" content="#0a0a1a" id="themeColor">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a1a;
+  --surface: #0d1117;
+  --surface2: #161b22;
+  --accent: #00d4ff;
+  --green: #00cc66;
+  --orange: #ff6b35;
+  --gold: #ffd700;
+  --red: #ff4757;
+  --text: #e6edf3;
+  --muted: #7d8590;
+  --border: rgba(255,255,255,0.08);
+  --shadow: rgba(0,0,0,0.4);
+  --live-bg: #0d1117;
+}
+
+/* ── LIGHT THEME ── */
+:root.light {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface2: #e8ecf2;
+  --accent: #007acc;
+  --green: #00994d;
+  --orange: #d95b20;
+  --gold: #b8860b;
+  --red: #cc2233;
+  --text: #111827;
+  --muted: #5a6678;
+  --border: rgba(0,0,0,0.09);
+  --shadow: rgba(0,0,0,0.12);
+  --live-bg: #f9fafb;
+}
+:root.light .conn-dot.online { box-shadow: 0 0 6px var(--green); }
+:root.light .splash-loader { border-top-color: var(--accent); border-color: rgba(0,0,0,0.12); }
+:root.light .out-circle { border-color: var(--muted); }
+:root.light .out-circle.filled { background: var(--orange); border-color: var(--orange); }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* ── SCREENS ── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  will-change: opacity, transform;
+  overflow: hidden;
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0) !important;
+}
+.screen.slide-up { transform: translateY(20px); }
+
+/* ── SPLASH ── */
+#splash {
+  background: var(--bg);
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.splash-icon { width: 80px; height: 80px; }
+.splash-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px; }
+.splash-title span { color: var(--accent); }
+.splash-sub { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+.splash-loader {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-top: 24px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOP BAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 54px;
+  min-height: 54px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;
+}
+.topbar-title {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--text);
+  cursor: pointer; border-radius: 8px; flex-shrink: 0;
+  transition: background 150ms;
+}
+.icon-btn:active { background: var(--border); }
+
+/* connection dot */
+.conn-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+.conn-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse-green 1.8s ease-in-out infinite;
+}
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 4px var(--green); }
+  50% { box-shadow: 0 0 12px var(--green); }
+}
+.conn-label { font-size: 0.7rem; color: var(--muted); }
+
+/* ── SCROLL CONTAINER ── */
+.scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ── HOME HERO ── */
+.hero {
+  padding: 28px 20px 20px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+}
+.hero h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
+.hero p { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem; font-weight: 600;
+  margin-top: 12px;
+  letter-spacing: 0.5px;
+}
+.status-badge.live { background: rgba(0,255,136,0.12); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+.status-badge.offline { background: rgba(255,71,87,0.12); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+.badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.badge-dot.live { animation: pulse-green 1.8s ease-in-out infinite; }
+
+/* ── GAMES LIST ── */
+.section-title {
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+  padding: 16px 16px 8px;
+}
+.games-list { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.game-card {
+  background: var(--surface2);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform 120ms, border-color 120ms;
+}
+.game-card:active { transform: scale(0.98); }
+.game-card.active-game { border-color: var(--green); }
+.game-card.paused-game { border-color: var(--orange); }
+.game-card.final-game { border-color: var(--muted); }
+.game-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.game-badge {
+  font-size: 0.68rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; letter-spacing: 0.4px;
+}
+.game-badge.en-curso { background: rgba(0,255,136,0.15); color: var(--green); }
+.game-badge.pausado { background: rgba(255,107,53,0.15); color: var(--orange); }
+.game-badge.finalizado { background: rgba(125,133,144,0.15); color: var(--muted); }
+.game-badge.programado { background: rgba(0,212,255,0.15); color: var(--accent); }
+.game-inning { font-size: 0.75rem; color: var(--muted); }
+.game-matchup { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.game-team { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.team-name { font-size: 0.82rem; color: var(--muted); text-align: center; font-weight: 500; }
+.team-score { font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1; }
+.game-vs { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+
+/* ── ACTION BUTTONS ── */
+.action-buttons { padding: 8px 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.btn {
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem; font-weight: 600;
+  cursor: pointer; transition: opacity 120ms, transform 120ms;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: scale(0.97); opacity: 0.85; }
+.btn-primary { background: var(--accent); color: #000; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+/* ── HOME FOOTER ── */
+.home-footer {
+  padding: 10px 16px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.72rem; color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.ws-badge {
+  font-size: 0.68rem; font-weight: 600; padding: 2px 8px;
+  border-radius: 8px;
+}
+.ws-badge.connected { background: rgba(0,255,136,0.12); color: var(--green); }
+.ws-badge.disconnected { background: rgba(125,133,144,0.12); color: var(--muted); }
+.countdown-badge {
+  font-size: 0.72rem; color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,212,255,0.2);
+}
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  display: none;
+  background: rgba(255,107,53,0.12);
+  border-bottom: 1px solid rgba(255,107,53,0.3);
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  color: var(--orange);
+  text-align: center;
+}
+.offline-banner.show { display: block; }
+
+/* ── PULL TO REFRESH ── */
+.pull-indicator {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  height: 0; overflow: hidden; transition: height 200ms ease;
+  background: var(--surface); color: var(--accent); font-size: 0.8rem;
+}
+.pull-indicator.pulling { height: 40px; }
+.pull-arrow { font-size: 1.2rem; transition: transform 200ms; }
+.pull-arrow.ready { transform: rotate(180deg); }
+
+/* ── GAME DETAIL ── */
+.scoreboard-card {
+  margin: 12px;
+  background: var(--surface2);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.scoreboard-teams {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.sb-team { text-align: center; flex: 1; }
+.sb-team-name { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+.sb-score {
+  font-size: 3rem; font-weight: 900; line-height: 1;
+  color: var(--text); margin-top: 4px;
+}
+.sb-vs { color: var(--border); font-size: 1.2rem; font-weight: 300; }
+.inning-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.inning-table {
+  width: 100%; border-collapse: collapse;
+  min-width: 360px;
+}
+.inning-table th, .inning-table td {
+  text-align: center; padding: 6px 8px;
+  font-size: 0.78rem; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.inning-table th { color: var(--muted); font-weight: 500; }
+.inning-table .team-label { text-align: left; font-weight: 600; color: var(--text); }
+.inning-table .current-inning { color: var(--accent); font-weight: 700; }
+.inning-table .total-col { font-weight: 800; color: var(--text); border-left: 1px solid var(--border); }
+
+/* game status row */
+.game-status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 12px 12px;
+  background: var(--surface2);
+  border-radius: 12px; border: 1px solid var(--border);
+  padding: 12px 16px; gap: 12px;
+}
+.status-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.status-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.status-value { font-size: 0.9rem; font-weight: 700; }
+.inning-val { color: var(--accent); }
+.count-val { color: var(--text); font-size: 1rem; }
+.outs-row { display: flex; gap: 5px; align-items: center; }
+.out-circle {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--orange);
+}
+.out-circle.filled { background: var(--orange); }
+
+/* diamond */
+.diamond-wrap {
+  margin: 0 12px 12px;
+  background: var(--surface2);
+  border-radius: 12px; border: 1px solid var(--border);
+  padding: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.diamond-svg { width: 100px; height: 100px; }
+
+/* batter/pitcher cards */
+.player-cards {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin: 0 12px 12px;
+}
+.player-card {
+  background: var(--surface2);
+  border-radius: 12px; border: 1px solid var(--border);
+  padding: 12px;
+}
+.player-card-role {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.player-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 2px; }
+.player-number { font-size: 0.72rem; color: var(--muted); }
+.player-stat-row { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.player-stat { display: flex; flex-direction: column; align-items: center; }
+.player-stat span:first-child { font-size: 0.65rem; color: var(--muted); }
+.player-stat span:last-child { font-size: 0.85rem; font-weight: 700; }
+
+/* ── STATS TABS ── */
+.tabs-bar {
+  display: flex; border-bottom: 1px solid var(--border);
+  margin: 0 12px; gap: 0;
+}
+.tab-btn {
+  flex: 1; padding: 10px 4px; background: none; border: none;
+  color: var(--muted); font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color 150ms, border-color 150ms;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; margin: 12px; }
+.tab-panel.active { display: block; }
+.stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); }
+.stats-table { width: 100%; border-collapse: collapse; min-width: 380px; }
+.stats-table th, .stats-table td {
+  padding: 8px 10px; font-size: 0.76rem;
+  text-align: center; border-bottom: 1px solid var(--border);
+}
+.stats-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--surface2); }
+.stats-table td:first-child, .stats-table th:first-child { text-align: left; padding-left: 14px; }
+.stats-table tr:last-child td { border-bottom: none; }
+
+/* historial */
+.historial-list { display: flex; flex-direction: column; gap: 8px; }
+.historial-item {
+  background: var(--surface2);
+  border-radius: 10px; border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-size: 0.82rem; color: var(--text);
+}
+.historial-time { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+/* ── CLASSIC SCREEN ── */
+#classic { background: var(--bg); }
+.iframe-wrap { flex: 1; position: relative; }
+.iframe-wrap iframe {
+  width: 100%; height: 100%;
+  border: none; display: block;
+}
+.iframe-loader {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--bg); gap: 14px;
+  font-size: 0.9rem; color: var(--muted);
+}
+.iframe-loader.hidden { display: none; }
+.iframe-error {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--bg); gap: 16px; padding: 32px; text-align: center;
+}
+.iframe-error.show { display: flex; }
+.iframe-error p { color: var(--muted); font-size: 0.9rem; }
+.iframe-error .err-icon { font-size: 3rem; }
+
+/* ── LIVE BOX ── */
+.live-box {
+  background: var(--live-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px var(--shadow);
+}
+.live-box-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem; font-weight: 600;
+}
+.live-badge {
+  display: flex; align-items: center; gap-5px;
+  background: var(--red); color: #fff;
+  font-size: 0.68rem; font-weight: 800;
+  padding: 3px 8px; border-radius: 20px;
+  letter-spacing: 0.5px;
+  animation: blink-badge 1.4s ease-in-out infinite;
+}
+@keyframes blink-badge {
+  0%,100% { opacity: 1; } 50% { opacity: 0.6; }
+}
+.live-box-title { flex: 1; color: var(--text); }
+.live-fullscreen-btn {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 1rem; padding: 2px 4px;
+  border-radius: 6px; transition: color 150ms;
+}
+.live-fullscreen-btn:active { color: var(--accent); }
+.video-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  background: #000;
+}
+.video-wrap iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; border: none;
+}
+.no-stream {
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+
+/* ── SETTINGS SCREEN ── */
+.settings-section { padding: 0 16px; margin-bottom: 6px; }
+.settings-section-title {
+  font-size: 0.68rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 16px 4px 8px;
+}
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px var(--shadow);
+}
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 120ms;
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row:active { background: var(--surface2); }
+.settings-row-icon { font-size: 1.1rem; flex-shrink: 0; width: 24px; text-align: center; }
+.settings-row-body { flex: 1; min-width: 0; }
+.settings-row-label { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.settings-row-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+.settings-badge {
+  font-size: 0.7rem; font-weight: 700; padding: 4px 10px;
+  background: var(--surface2); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 20px;
+  text-decoration: none; flex-shrink: 0;
+  transition: background 150ms;
+}
+.settings-badge:active { background: var(--accent); color: #fff; }
+.update-badge { background: var(--green) !important; color: #fff !important; border-color: var(--green) !important; }
+.settings-toggle-wrap {
+  width: 44px; height: 26px; flex-shrink: 0;
+  background: var(--surface2); border-radius: 13px;
+  border: 1px solid var(--border);
+  position: relative; transition: background 250ms;
+  cursor: pointer;
+}
+.settings-toggle-wrap.on { background: var(--accent); border-color: var(--accent); }
+.settings-toggle {
+  position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  background: var(--muted); border-radius: 50%;
+  transition: transform 250ms, background 250ms;
+}
+.settings-toggle-wrap.on .settings-toggle {
+  transform: translateX(18px);
+  background: #fff;
+}
+.update-log {
+  margin: 8px 16px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+.update-log-title { font-weight: 700; margin-bottom: 8px; color: var(--accent); }
+
+/* ── THEME TOGGLE ── */
+.theme-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); cursor: pointer;
+  font-size: 1rem; flex-shrink: 0;
+  transition: background 200ms, transform 200ms;
+}
+.theme-btn:active { transform: scale(0.88); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center; color: var(--muted);
+  font-size: 0.9rem;
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SPLASH ══════════════════ -->
+<div id="splash" class="screen active">
+  <svg class="splash-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Diamond field -->
+    <polygon points="40,6 74,40 40,74 6,40" fill="#161b22" stroke="#00d4ff" stroke-width="2"/>
+    <!-- Bases -->
+    <rect x="36" y="2" width="8" height="8" rx="2" fill="#ffd700"/>
+    <rect x="70" y="36" width="8" height="8" rx="2" fill="#ffd700"/>
+    <rect x="36" y="70" width="8" height="8" rx="2" fill="#ffd700"/>
+    <rect x="2" y="36" width="8" height="8" rx="2" fill="#ffd700"/>
+    <!-- Ball stitching lines -->
+    <circle cx="40" cy="40" r="12" fill="white" stroke="#e6edf3" stroke-width="1"/>
+    <path d="M34 35 Q37 40 34 45" stroke="#ff4757" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M46 35 Q43 40 46 45" stroke="#ff4757" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M35 36 Q37 38 36 40 Q37 42 35 44" stroke="#ff4757" stroke-width="1" fill="none"/>
+    <path d="M45 36 Q43 38 44 40 Q43 42 45 44" stroke="#ff4757" stroke-width="1" fill="none"/>
+  </svg>
+  <div class="splash-title"><span>A</span>BCARLineUp</div>
+  <div class="splash-sub">Live Dashboard</div>
+  <div class="splash-loader"></div>
+</div>
+
+<!-- ══════════════════ HOME ══════════════════ -->
+<div id="home" class="screen slide-up">
+  <div class="topbar">
+    <button class="icon-btn" onclick="vibrate(30);openSettings()">
+      <svg width="20" height="14" viewBox="0 0 20 14" fill="none">
+        <rect width="20" height="2" rx="1" fill="currentColor"/>
+        <rect y="6" width="20" height="2" rx="1" fill="currentColor"/>
+        <rect y="12" width="20" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <div class="topbar-title">⚾ ABCAR LineUp</div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+      <div id="connDot" class="conn-dot"></div>
+      <span class="conn-label">38.57.232.64</span>
+    </div>
+  </div>
+
+  <div class="offline-banner" id="offlineBanner">
+    OFFLINE — datos en caché <span id="cacheAge"></span>
+  </div>
+
+  <div class="scroll-body" id="homeScroll">
+    <div class="pull-indicator" id="pullIndicator">
+      <span class="pull-arrow" id="pullArrow">↓</span>
+      <span id="pullText">Jala para actualizar</span>
+    </div>
+
+    <div class="hero">
+      <h1>ABCAR LineUp Live</h1>
+      <p>Sistema de marcadores de béisbol en tiempo real</p>
+      <div class="status-badge" id="statusBadge">
+        <span class="badge-dot" id="badgeDot"></span>
+        <span id="badgeText">Conectando...</span>
+      </div>
+    </div>
+
+    <div class="section-title">PARTIDOS</div>
+    <div class="games-list" id="gamesList">
+      <div class="empty-state">
+        <div class="empty-icon">⚾</div>
+        Cargando partidos...
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-primary" onclick="goScreen('classic')">
+        📺 Dashboard Clásico
+      </button>
+      <button class="btn btn-secondary" onclick="refreshGames()">
+        🔄 Actualizar
+      </button>
+    </div>
+
+    <div class="home-footer">
+      <span>Actualizado: <span id="lastUpdate">--:--:--</span></span>
+      <span class="countdown-badge">⟳ <span id="countdown">10</span>s</span>
+      <span class="ws-badge disconnected" id="wsBadge">WS OFF</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ GAME DETAIL ══════════════════ -->
+<div id="game" class="screen slide-up">
+  <div class="topbar">
+    <button class="icon-btn" onclick="vibrate(30);goScreen('home')">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="topbar-title" id="gameTopTitle">Partido</div>
+    <button class="icon-btn" onclick="shareGame()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <circle cx="15" cy="4" r="2" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="5" cy="10" r="2" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="15" cy="16" r="2" stroke="currentColor" stroke-width="1.8"/>
+        <line x1="13.2" y1="5.1" x2="6.8" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="6.8" y1="11" x2="13.2" y2="14.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="scroll-body">
+    <!-- scoreboard -->
+    <div class="scoreboard-card">
+      <div class="scoreboard-teams">
+        <div class="sb-team">
+          <div class="sb-team-name" id="sbTeamA">—</div>
+          <div class="sb-score" id="sbScoreA">0</div>
+        </div>
+        <div class="sb-vs">VS</div>
+        <div class="sb-team">
+          <div class="sb-team-name" id="sbTeamB">—</div>
+          <div class="sb-score" id="sbScoreB">0</div>
+        </div>
+      </div>
+      <div class="inning-table-wrap">
+        <table class="inning-table" id="inningTable">
+          <thead><tr id="inningHeader"></tr></thead>
+          <tbody>
+            <tr id="inningRowA"></tr>
+            <tr id="inningRowB"></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- live video box -->
+    <div class="live-box" id="liveBox">
+      <div class="live-box-header">
+        <span class="live-badge">● EN VIVO</span>
+        <span class="live-box-title">Transmisión en vivo</span>
+        <button class="live-fullscreen-btn" onclick="toggleLiveFullscreen()" title="Pantalla completa">⛶</button>
+      </div>
+      <div class="video-wrap" id="videoWrap" style="display:none;">
+        <iframe id="liveFrame" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      </div>
+      <div class="no-stream" id="noStream">📡 Sin transmisión activa</div>
+    </div>
+
+    <!-- status row -->
+    <div class="game-status-row">
+      <div class="status-item">
+        <span class="status-label">Entrada</span>
+        <span class="status-value inning-val" id="gameInning">1 ♦</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Outs</span>
+        <div class="outs-row" id="outsRow">
+          <div class="out-circle"></div>
+          <div class="out-circle"></div>
+          <div class="out-circle"></div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Bolas-Strikes</span>
+        <span class="status-value count-val" id="bsCount">0-0</span>
+      </div>
+    </div>
+
+    <!-- diamond -->
+    <div class="diamond-wrap">
+      <svg class="diamond-svg" viewBox="0 0 100 100" id="diamondSvg">
+        <!-- field -->
+        <polygon points="50,5 95,50 50,95 5,50" fill="#0d1117" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+        <!-- base paths -->
+        <line x1="50" y1="5" x2="95" y2="50" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <line x1="95" y1="50" x2="50" y2="95" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <line x1="50" y1="95" x2="5" y2="50" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <line x1="5" y1="50" x2="50" y2="5" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <!-- 2nd base (top) -->
+        <rect id="base2" x="43" y="1" width="14" height="9" rx="2" fill="#2d3748" stroke="#7d8590" stroke-width="1.5"/>
+        <!-- 1st base (right) -->
+        <rect id="base1" x="89" y="43" width="14" height="9" rx="2" fill="#2d3748" stroke="#7d8590" stroke-width="1.5" transform="rotate(45 96 47.5)"/>
+        <!-- 3rd base (left) -->
+        <rect id="base3" x="-3" y="43" width="14" height="9" rx="2" fill="#2d3748" stroke="#7d8590" stroke-width="1.5" transform="rotate(-45 4 47.5)"/>
+        <!-- home plate -->
+        <polygon points="50,91 55,96 50,100 45,96" fill="#7d8590"/>
+        <!-- pitcher -->
+        <circle cx="50" cy="50" r="4" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+      </svg>
+    </div>
+
+    <!-- player cards -->
+    <div class="player-cards">
+      <div class="player-card">
+        <div class="player-card-role">🏏 Bateador</div>
+        <div class="player-name" id="batterName">—</div>
+        <div class="player-number" id="batterNum">#—</div>
+        <div class="player-stat-row">
+          <div class="player-stat"><span>AVG</span><span id="batterAvg">.000</span></div>
+          <div class="player-stat"><span>AB</span><span id="batterAb">0</span></div>
+          <div class="player-stat"><span>H</span><span id="batterH">0</span></div>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="player-card-role">⚾ Lanzador</div>
+        <div class="player-name" id="pitcherName">—</div>
+        <div class="player-number" id="pitcherNum">#—</div>
+        <div class="player-stat-row">
+          <div class="player-stat"><span>ERA</span><span id="pitcherEra">0.00</span></div>
+          <div class="player-stat"><span>IP</span><span id="pitcherIp">0.0</span></div>
+          <div class="player-stat"><span>K</span><span id="pitcherK">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('bateo')">Bateo</button>
+      <button class="tab-btn" onclick="switchTab('pitcheo')">Pitcheo</button>
+      <button class="tab-btn" onclick="switchTab('historial')">Historial</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-bateo">
+      <div class="stats-table-wrap">
+        <table class="stats-table" id="bateoTable">
+          <thead><tr><th>#</th><th>Jugador</th><th>AB</th><th>H</th><th>RBI</th><th>BB</th><th>SO</th><th>AVG</th></tr></thead>
+          <tbody id="bateoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-pitcheo">
+      <div class="stats-table-wrap">
+        <table class="stats-table" id="pitcheoTable">
+          <thead><tr><th>#</th><th>Jugador</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th><th>ERA</th></tr></thead>
+          <tbody id="pitcheoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-historial">
+      <div class="historial-list" id="historialList">
+        <div class="empty-state"><div class="empty-icon">📋</div>Sin eventos aún</div>
+      </div>
+    </div>
+
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ CLASSIC ══════════════════ -->
+<div id="classic" class="screen slide-up">
+  <div class="topbar">
+    <button class="icon-btn" onclick="vibrate(30);goScreen('home')">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="topbar-title">Dashboard Clásico</div>
+    <div style="display:flex;gap:4px;">
+      <button class="icon-btn" onclick="reloadClassic()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M15.5 9A6.5 6.5 0 0 1 4 13.5M2.5 9A6.5 6.5 0 0 1 14 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M14 2.5V5.5H17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="shareClassic()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="13" cy="3" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="4" cy="9" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="13" cy="15" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <line x1="11.2" y1="4.1" x2="5.8" y2="7.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="5.8" y1="10.1" x2="11.2" y2="13.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="iframe-wrap">
+    <div class="iframe-loader" id="iframeLoader">
+      <div class="splash-loader"></div>
+      Cargando dashboard clásico...
+    </div>
+    <div class="iframe-error" id="iframeError">
+      <div class="err-icon">📡</div>
+      <strong>No se pudo cargar el dashboard clásico</strong>
+      <p>Verifica tu conexión al servidor<br><small style="color:var(--muted)">En el dispositivo Android funciona sin restricciones CORS</small></p>
+      <button class="btn btn-primary" style="width:100%;max-width:280px" onclick="reloadClassic()">🔄 Reintentar</button>
+      <button class="btn btn-secondary" style="width:100%;max-width:280px" onclick="openInBrowser()">🌐 Abrir en navegador</button>
+    </div>
+    <div id="classicContent" style="flex:1;overflow:auto;width:100%;background:#fff;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ SETTINGS ══════════════════ -->
+<div id="settings" class="screen slide-up">
+  <div class="topbar">
+    <button class="icon-btn" onclick="vibrate(30);goScreen('home')">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="topbar-title">⚙️ Configuración</div>
+    <div style="width:36px"></div>
+  </div>
+
+  <div class="scroll-body">
+    <!-- UPDATE SECTION -->
+    <div class="settings-section">
+      <div class="settings-section-title">ACTUALIZACIONES</div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-row-icon">🚀</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Versión actual</div>
+            <div class="settings-row-sub" id="currentVersionLabel">v1.0.0</div>
+          </div>
+        </div>
+
+        <div class="settings-row" id="updateStatusRow" style="display:none">
+          <div class="settings-row-icon" id="updateIcon">✅</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label" id="updateLabel">App actualizada</div>
+            <div class="settings-row-sub" id="updateSub"></div>
+          </div>
+          <a id="updateLink" href="#" target="_blank" class="settings-badge update-badge" style="display:none">Descargar</a>
+        </div>
+
+        <div class="settings-row">
+          <button class="btn btn-primary" id="checkUpdateBtn" onclick="checkForUpdates()" style="width:100%;margin-top:4px">
+            🔍 Buscar actualizaciones
+          </button>
+        </div>
+
+        <div class="update-log" id="updateLog" style="display:none">
+          <div class="update-log-title">📋 Novedades</div>
+          <div id="updateLogBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVER SECTION -->
+    <div class="settings-section">
+      <div class="settings-section-title">SERVIDOR</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-row-icon">🌐</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">API de juegos</div>
+            <div class="settings-row-sub">38.57.232.64:3335</div>
+          </div>
+          <div class="settings-badge" id="apiStatusBadge">—</div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-icon">📺</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Dashboard Clásico</div>
+            <div class="settings-row-sub">38.57.232.64:3336</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <button class="btn btn-secondary" onclick="testServerConn()" style="width:100%">📡 Probar conexión</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div class="settings-section">
+      <div class="settings-section-title">APARIENCIA</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="toggleTheme()" style="cursor:pointer">
+          <div class="settings-row-icon" id="settingsThemeIcon">🌙</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Tema</div>
+            <div class="settings-row-sub" id="settingsThemeLabel">Modo oscuro</div>
+          </div>
+          <div class="settings-toggle-wrap">
+            <div class="settings-toggle" id="settingsThemeToggle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATA -->
+    <div class="settings-section">
+      <div class="settings-section-title">DATOS</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="clearCache()" style="cursor:pointer">
+          <div class="settings-row-icon">🗑️</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Limpiar caché</div>
+            <div class="settings-row-sub" id="cacheInfoLabel">—</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-icon">⏱️</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Intervalo de actualización</div>
+            <div class="settings-row-sub">Cada 10 segundos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="settings-section">
+      <div class="settings-section-title">ACERCA DE</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-row-icon">⚾</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">ABCARLineUp Dashboard</div>
+            <div class="settings-row-sub">Sistema de marcadores de béisbol en tiempo real</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-icon">📦</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Repositorio</div>
+            <div class="settings-row-sub">github.com/abylachuela/ABCARDashboard-Android</div>
+          </div>
+          <a href="https://github.com/abylachuela/ABCARDashboard-Android" target="_blank" class="settings-badge">GitHub ↗</a>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-icon">🏗️</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label">Stack</div>
+            <div class="settings-row-sub">Capacitor 6 · FastAPI · WebSocket</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ JS ══════════════════ -->
+<script>
+'use strict';
+
+const APP_VERSION = '1.0.0';
+const GITHUB_REPO = 'abylachuela/ABCARDashboard-Android';
+const GITHUB_API  = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+
+const CFG = {
+  server:     'http://38.57.232.64:3335',   // FastAPI game server
+  apiGames:   'http://38.57.232.64:3335/api/games',
+  wsBase:     'ws://38.57.232.64:3335/ws',  // /ws/{gameId} per-game
+  classicUrl: 'http://38.57.232.64:3336/dashboard/classic',
+  dashServer: 'http://38.57.232.64:3336',
+  pollInterval: 10000,
+  wsReconnectMax: 15000,
+  cacheKey: 'abcar_games_cache',
+  cacheTTL: 300000,
+};
+
+// ── STATE ──
+let state = {
+  currentScreen: 'splash',
+  ws: null,
+  wsConnected: false,
+  wsReconnectDelay: 1000,
+  pollTimer: null,
+  countdownTimer: null,
+  countdownVal: 10,
+  connCheckTimer: null,
+  serverOnline: false,
+  games: [],
+  activeGameId: null,
+  wakeLock: null,
+  gameHistory: [],
+};
+
+// ── VIBRATION ──
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ── SCREEN NAVIGATION ──
+function goScreen(id) {
+  const prev = document.getElementById(state.currentScreen);
+  const next = document.getElementById(id);
+  if (!next || id === state.currentScreen) return;
+
+  vibrate(30);
+
+  prev.classList.remove('active');
+  next.classList.add('slide-up');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      next.classList.add('active');
+    });
+  });
+
+  state.currentScreen = id;
+
+  if (id === 'classic') {
+    loadClassicIframe();
+  }
+  if (id === 'game') {
+    requestWakeLock();
+  } else {
+    releaseWakeLock();
+  }
+  if (id === 'home') {
+    startCountdown();
+  } else {
+    stopCountdown();
+  }
+}
+
+// ── WAKE LOCK ──
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      state.wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (_) {}
+}
+function releaseWakeLock() {
+  if (state.wakeLock) {
+    state.wakeLock.release().catch(() => {});
+    state.wakeLock = null;
+  }
+}
+
+// ── WEBSOCKET MANAGER (per-game: /ws/{gameId}) ──
+function connectWS(gameId) {
+  if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) return;
+
+  const gid = gameId || (state.games.length > 0 ? state.games.find(g => g.status === 'EN CURSO')?.id : null);
+  if (!gid) { startPoller(); return; }
+
+  const url = `${CFG.wsBase}/${gid}`;
+  try {
+    state.ws = new WebSocket(url);
+    state.ws._gameId = gid;
+  } catch (_) {
+    scheduleWSReconnect();
+    return;
+  }
+
+  state.ws.addEventListener('open', () => {
+    state.wsConnected = true;
+    state.wsReconnectDelay = 1000;
+    updateConnUI(true);
+    stopPoller();
+  });
+
+  state.ws.addEventListener('message', async (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      // Server sends full game state on each update
+      if (msg.gameId !== undefined || msg.estadoJuegoJson !== undefined) {
+        // Re-fetch all games to stay in sync
+        await fetchGamesFromServer();
+      } else {
+        handleWSMessage(msg);
+      }
+    } catch (_) {}
+  });
+
+  state.ws.addEventListener('close', () => {
+    state.wsConnected = false;
+    updateConnUI(false);
+    startPoller();
+    scheduleWSReconnect();
+  });
+
+  state.ws.addEventListener('error', () => {
+    state.wsConnected = false;
+    updateConnUI(false);
+  });
+}
+
+function scheduleWSReconnect() {
+  const gid = state.ws?._gameId;
+  setTimeout(() => connectWS(gid), state.wsReconnectDelay);
+  state.wsReconnectDelay = Math.min(state.wsReconnectDelay * 2, CFG.wsReconnectMax);
+}
+
+function handleWSMessage(msg) {
+  const type = msg.type || msg.event || '';
+
+  if (type === 'game_update' || type === 'score_change' || type === 'inning_change') {
+    const prevScores = state.games.map(g => `${g.id}:${g.scoreA}:${g.scoreB}`).join('|');
+
+    if (msg.games) {
+      state.games = normalizeGames(msg.games);
+      saveCache(state.games);
+      renderGamesList();
+    } else if (msg.gameId && msg.data) {
+      const idx = state.games.findIndex(g => g.id === msg.gameId);
+      if (idx !== -1) {
+        state.games[idx] = { ...state.games[idx], ...msg.data };
+        saveCache(state.games);
+        renderGamesList();
+        if (state.activeGameId === msg.gameId) {
+          renderGameDetail(state.games[idx]);
+        }
+      }
+    }
+
+    const newScores = state.games.map(g => `${g.id}:${g.scoreA}:${g.scoreB}`).join('|');
+    if (newScores !== prevScores) {
+      vibrate([100, 50, 100]);
+      logHistory(`Actualización de marcador`);
+    }
+
+    updateLastUpdate();
+    resetCountdown();
+  }
+}
+
+// ── REST POLLER ──
+function startPoller() {
+  if (state.pollTimer) return;
+  state.pollTimer = setInterval(() => fetchGamesFromServer(), CFG.pollInterval);
+  fetchGamesFromServer();
+}
+function stopPoller() {
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+    state.pollTimer = null;
+  }
+}
+
+// ── COUNTDOWN ──
+function startCountdown() {
+  stopCountdown();
+  state.countdownVal = CFG.pollInterval / 1000;
+  updateCountdownUI();
+  state.countdownTimer = setInterval(() => {
+    state.countdownVal--;
+    if (state.countdownVal <= 0) {
+      state.countdownVal = CFG.pollInterval / 1000;
+      if (!state.wsConnected) fetchGamesFromServer();
+    }
+    updateCountdownUI();
+  }, 1000);
+}
+function stopCountdown() {
+  if (state.countdownTimer) {
+    clearInterval(state.countdownTimer);
+    state.countdownTimer = null;
+  }
+}
+function resetCountdown() {
+  state.countdownVal = CFG.pollInterval / 1000;
+  updateCountdownUI();
+}
+function updateCountdownUI() {
+  const el = document.getElementById('countdown');
+  if (el) el.textContent = state.countdownVal;
+}
+
+// ── FETCH & PARSE ──
+async function fetchGamesFromServer() {
+  try {
+    const res = await fetch(CFG.apiGames, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+    const games = normalizeGames(Array.isArray(raw) ? raw : []);
+
+    state.games = games;
+    saveCache(games);
+    renderGamesList();
+    updateLastUpdate();
+    resetCountdown();
+    setServerOnline(true);
+    hideOfflineBanner();
+  } catch (err) {
+    setServerOnline(false);
+    loadFromCache();
+  }
+}
+
+function extractGames(doc, rawHtml) {
+  const games = [];
+
+  // Strategy 1: look for structured game cards
+  const gameEls = doc.querySelectorAll(
+    '[class*="game"], [class*="match"], [class*="partido"], [class*="juego"], [data-game], [data-match]'
+  );
+
+  gameEls.forEach((el, i) => {
+    const game = parseGameElement(el, i);
+    if (game) games.push(game);
+  });
+
+  if (games.length > 0) return games;
+
+  // Strategy 2: look for score patterns in raw HTML
+  if (rawHtml) {
+    return parseScoresFromHTML(rawHtml);
+  }
+
+  return games;
+}
+
+function parseGameElement(el, idx) {
+  const text = el.textContent || '';
+  const teamEls = el.querySelectorAll('[class*="team"], [class*="equipo"], [class*="club"]');
+  const scoreEls = el.querySelectorAll('[class*="score"], [class*="marcador"], [class*="run"]');
+
+  const teams = Array.from(teamEls).map(t => t.textContent.trim()).filter(Boolean);
+  const scores = Array.from(scoreEls).map(s => parseInt(s.textContent.trim()) || 0);
+
+  const statusEl = el.querySelector('[class*="status"], [class*="estado"], [class*="inning"]');
+  const rawStatus = (statusEl ? statusEl.textContent : text).toLowerCase();
+
+  let status = 'PROGRAMADO';
+  if (rawStatus.includes('en curso') || rawStatus.includes('live') || rawStatus.includes('activ')) status = 'EN CURSO';
+  else if (rawStatus.includes('paus') || rawStatus.includes('suspend')) status = 'PAUSADO';
+  else if (rawStatus.includes('final') || rawStatus.includes('termin') || rawStatus.includes('end')) status = 'FINALIZADO';
+
+  const inningMatch = text.match(/(?:entrada|inning|inn\.?)\s*(\d+)/i);
+  const inning = inningMatch ? parseInt(inningMatch[1]) : 1;
+
+  return {
+    id: `game_${idx}`,
+    teamA: teams[0] || `Equipo A`,
+    teamB: teams[1] || `Equipo B`,
+    scoreA: scores[0] || 0,
+    scoreB: scores[1] || 0,
+    status,
+    inning,
+    innings: { A: Array(9).fill('-'), B: Array(9).fill('-') },
+    outs: 0, balls: 0, strikes: 0,
+    bases: [false, false, false],
+    batter: null, pitcher: null,
+    batters: [], pitchers: [],
+  };
+}
+
+function parseScoresFromHTML(html) {
+  const games = [];
+  // Look for score patterns like "Team A 3 - 2 Team B" or similar numeric patterns near team names
+  const patterns = [
+    /([A-ZÁÉÍÓÚÑ][a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,20})\s+(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,20})/g,
+    /<[^>]*class="[^"]*(?:home|local|equipo-a)[^"]*"[^>]*>([^<]+)<[^>]*>[\s\S]{0,200}?(\d+)[\s\S]{0,200}?(\d+)[\s\S]{0,200}?<[^>]*class="[^"]*(?:away|visitante|equipo-b)[^"]*"[^>]*>([^<]+)</g,
+  ];
+
+  let m;
+  patterns[0].lastIndex = 0;
+  while ((m = patterns[0].exec(html)) !== null && games.length < 10) {
+    games.push({
+      id: `game_${games.length}`,
+      teamA: m[1].trim(),
+      teamB: m[4].trim(),
+      scoreA: parseInt(m[2]),
+      scoreB: parseInt(m[3]),
+      status: 'EN CURSO',
+      inning: 1,
+      innings: { A: Array(9).fill('-'), B: Array(9).fill('-') },
+      outs: 0, balls: 0, strikes: 0,
+      bases: [false, false, false],
+      batter: null, pitcher: null,
+      batters: [], pitchers: [],
+    });
+  }
+
+  // If nothing found, generate a demo card so the app doesn't show blank
+  if (games.length === 0) {
+    games.push(makeDemoGame());
+  }
+
+  return games;
+}
+
+function makeDemoGame() {
+  return {
+    id: 'demo_0',
+    teamA: 'Equipo Local',
+    teamB: 'Equipo Visitante',
+    scoreA: 0,
+    scoreB: 0,
+    status: 'PROGRAMADO',
+    inning: 1,
+    innings: { A: Array(9).fill('-'), B: Array(9).fill('-') },
+    outs: 0, balls: 0, strikes: 0,
+    bases: [false, false, false],
+    batter: { name: '—', number: '—', avg: '.000', ab: 0, h: 0 },
+    pitcher: { name: '—', number: '—', era: '0.00', ip: '0.0', k: 0 },
+    batters: [],
+    pitchers: [],
+  };
+}
+
+function normalizeGames(rawGames) {
+  return rawGames.map(g => {
+    let estado = {};
+    let rosterLocal = [];
+    let rosterVisitante = [];
+    try { estado = JSON.parse(g.estadoJuegoJson || '{}'); } catch (_) {}
+    try { rosterLocal = JSON.parse(g.rosterLocalJson || '[]'); } catch (_) {}
+    try { rosterVisitante = JSON.parse(g.rosterVisitanteJson || '[]'); } catch (_) {}
+
+    const totalInnings = estado.innings || g.innings || 9;
+    const byInningA = estado.scoreLocalByInning || [];
+    const byInningB = estado.scoreVisitanteByInning || [];
+    const inningsGrid = { A: [], B: [] };
+    for (let i = 0; i < totalInnings; i++) {
+      inningsGrid.A.push(byInningA[i] !== undefined ? byInningA[i] : '-');
+      inningsGrid.B.push(byInningB[i] !== undefined ? byInningB[i] : '-');
+    }
+
+    const statusMap = { EN_CURSO: 'EN CURSO', FINALIZADO: 'FINALIZADO', PROGRAMADO: 'PROGRAMADO' };
+    const status = statusMap[g.estado] || g.estado || 'PROGRAMADO';
+
+    const batter = rosterLocal[estado.idxBateadorLocal] || rosterVisitante[estado.idxBateadorVisitante] || null;
+    const pitcher = rosterVisitante[estado.idxPitcherVisitante] || rosterLocal[estado.idxPitcherLocal] || null;
+
+    return {
+      id: g.gameId,
+      codigo: g.codigoSesion,
+      teamA: (g.equipoLocal || 'Local').trim(),
+      teamB: (g.equipoVisitante || 'Visitante').trim(),
+      scoreA: estado.scoreLocal ?? 0,
+      scoreB: estado.scoreVisitante ?? 0,
+      status,
+      inning: estado.inning || 1,
+      esTop: estado.esTop ?? true,
+      totalInnings,
+      innings: inningsGrid,
+      outs:    estado.outs || 0,
+      balls:   0,
+      strikes: 0,
+      bases:   [!!estado.base1, !!estado.base2, !!estado.base3],
+      batter:  batter ? {
+        name: batter.nombre, number: batter.numero,
+        avg: batter.ab > 0 ? (batter.hits / batter.ab).toFixed(3).replace('0.', '.') : '.000',
+        ab: batter.ab, h: batter.hits,
+      } : null,
+      pitcher: pitcher ? {
+        name: pitcher.nombre, number: pitcher.numero,
+        era:  pitcher.ipOuts > 0 ? ((pitcher.er * 27) / pitcher.ipOuts).toFixed(2) : '0.00',
+        ip:   `${Math.floor(pitcher.ipOuts / 3)}.${pitcher.ipOuts % 3}`,
+        k:    pitcher.pitK || 0,
+      } : null,
+      batters:  rosterLocal.map(p => ({
+        num: p.numero, name: p.nombre, ab: p.ab, h: p.hits,
+        rbi: p.rbi, bb: p.bb, so: p.k,
+        avg: p.ab > 0 ? (p.hits / p.ab).toFixed(3).replace('0.', '.') : '.000',
+      })),
+      pitchers: rosterVisitante.filter(p => p.ipOuts > 0 || p.posicion === 'P').map(p => ({
+        num: p.numero, name: p.nombre,
+        ip:  `${Math.floor(p.ipOuts / 3)}.${p.ipOuts % 3}`,
+        h:   p.pitH, bb: p.pitBb, k: p.pitK, er: p.er,
+        era: p.ipOuts > 0 ? ((p.er * 27) / p.ipOuts).toFixed(2) : '0.00',
+      })),
+      streamingUrl: g.streamingUrl || '',
+      ts: g.timestamp,
+    };
+  });
+}
+
+// ── CACHE ──
+function saveCache(games) {
+  try {
+    localStorage.setItem(CFG.cacheKey, JSON.stringify({ ts: Date.now(), games }));
+  } catch (_) {}
+}
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(CFG.cacheKey);
+    if (!raw) return;
+    const { ts, games } = JSON.parse(raw);
+    const ageMs = Date.now() - ts;
+    if (ageMs > CFG.cacheTTL) return;
+    const ageMin = Math.floor(ageMs / 60000);
+    state.games = games;
+    renderGamesList();
+    showOfflineBanner(ageMin);
+  } catch (_) {}
+}
+
+function showOfflineBanner(ageMin) {
+  const banner = document.getElementById('offlineBanner');
+  const age = document.getElementById('cacheAge');
+  if (banner && age) {
+    age.textContent = ageMin > 0 ? `hace ${ageMin} min` : 'hace menos de 1 min';
+    banner.classList.add('show');
+  }
+}
+function hideOfflineBanner() {
+  const banner = document.getElementById('offlineBanner');
+  if (banner) banner.classList.remove('show');
+}
+
+// ── CONNECTION MONITOR ──
+function startConnMonitor() {
+  checkConn();
+  state.connCheckTimer = setInterval(checkConn, 10000);
+}
+async function checkConn() {
+  try {
+    await fetch(CFG.apiGames, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' });
+    setServerOnline(true);
+  } catch (_) {
+    setServerOnline(false);
+  }
+}
+function setServerOnline(online) {
+  state.serverOnline = online;
+  const dot = document.getElementById('connDot');
+  const badge = document.getElementById('statusBadge');
+  const badgeDot = document.getElementById('badgeDot');
+  const badgeText = document.getElementById('badgeText');
+  if (dot) dot.classList.toggle('online', online);
+  if (online) hideOfflineBanner();
+  if (badge && badgeDot && badgeText) {
+    badge.className = 'status-badge ' + (online ? 'live' : 'offline');
+    badgeDot.className = 'badge-dot ' + (online ? 'live' : '');
+    badgeText.textContent = online ? '● EN VIVO' : '● DESCONECTADO';
+  }
+}
+function updateConnUI(wsOnline) {
+  const wsBadge = document.getElementById('wsBadge');
+  if (wsBadge) {
+    wsBadge.textContent = wsOnline ? 'WS LIVE' : 'WS OFF';
+    wsBadge.className = 'ws-badge ' + (wsOnline ? 'connected' : 'disconnected');
+  }
+}
+
+// ── RENDER GAMES LIST ──
+function renderGamesList() {
+  const list = document.getElementById('gamesList');
+  if (!list) return;
+
+  if (!state.games || state.games.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚾</div>No hay partidos disponibles</div>`;
+    return;
+  }
+
+  list.innerHTML = state.games.map(g => {
+    const cls = g.status === 'EN CURSO' ? 'active-game' : g.status === 'PAUSADO' ? 'paused-game' : 'final-game';
+    const badge = g.status === 'EN CURSO' ? 'en-curso' : g.status === 'PAUSADO' ? 'pausado' : g.status === 'FINALIZADO' ? 'finalizado' : 'programado';
+    const inningText = g.status !== 'FINALIZADO' && g.status !== 'PROGRAMADO' ? `Entrada ${g.inning}` : g.status;
+    return `
+    <div class="game-card ${cls}" onclick="openGame('${g.id}')">
+      <div class="game-card-header">
+        <span class="game-badge ${badge}">${g.status}</span>
+        <span class="game-inning">${inningText}</span>
+      </div>
+      <div class="game-matchup">
+        <div class="game-team">
+          <div class="team-name">${escHtml(g.teamA)}</div>
+          <div class="team-score">${g.scoreA}</div>
+        </div>
+        <div class="game-vs">VS</div>
+        <div class="game-team">
+          <div class="team-name">${escHtml(g.teamB)}</div>
+          <div class="team-score">${g.scoreB}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openGame(gameId) {
+  vibrate(30);
+  const id = isNaN(gameId) ? gameId : Number(gameId);
+  const game = state.games.find(g => g.id === id);
+  if (!game) return;
+  state.activeGameId = gameId;
+  renderGameDetail(game);
+  goScreen('game');
+}
+
+// ── RENDER GAME DETAIL ──
+function renderGameDetail(game) {
+  // live video box
+  updateLiveBox(game);
+
+  // top bar title
+  setText('gameTopTitle', `${escHtml(game.teamA)} vs ${escHtml(game.teamB)}`);
+
+  // scoreboard
+  setText('sbTeamA', game.teamA);
+  setText('sbTeamB', game.teamB);
+  setText('sbScoreA', game.scoreA);
+  setText('sbScoreB', game.scoreB);
+
+  // inning table
+  buildInningTable(game);
+
+  // status row
+  const half = game.half === 'bottom' ? '▼' : '♦';
+  setText('gameInning', `Entrada ${game.inning} ${half}`);
+
+  // outs circles
+  const outsRow = document.getElementById('outsRow');
+  if (outsRow) {
+    outsRow.innerHTML = [0,1,2].map(i =>
+      `<div class="out-circle${i < game.outs ? ' filled' : ''}"></div>`
+    ).join('');
+  }
+
+  setText('bsCount', `${game.balls}-${game.strikes}`);
+
+  // diamond bases
+  updateDiamond(game.bases || [false, false, false]);
+
+  // batter
+  const b = game.batter || {};
+  setText('batterName', b.name || '—');
+  setText('batterNum', b.number ? `#${b.number}` : '#—');
+  setText('batterAvg', b.avg || '.000');
+  setText('batterAb', b.ab ?? 0);
+  setText('batterH', b.h ?? 0);
+
+  // pitcher
+  const p = game.pitcher || {};
+  setText('pitcherName', p.name || '—');
+  setText('pitcherNum', p.number ? `#${p.number}` : '#—');
+  setText('pitcherEra', p.era || '0.00');
+  setText('pitcherIp', p.ip || '0.0');
+  setText('pitcherK', p.k ?? 0);
+
+  // stats tables
+  renderBateoTable(game.batters || []);
+  renderPitcheoTable(game.pitchers || []);
+  renderHistorial();
+}
+
+function buildInningTable(game) {
+  const header = document.getElementById('inningHeader');
+  const rowA = document.getElementById('inningRowA');
+  const rowB = document.getElementById('inningRowB');
+  if (!header || !rowA || !rowB) return;
+
+  const maxInnings = Math.max(9, game.inning || 1);
+  const innArr = Array.from({ length: maxInnings }, (_, i) => i + 1);
+
+  header.innerHTML = `<th class="team-label">Equipo</th>` +
+    innArr.map(i => `<th class="${i === game.inning ? 'current-inning' : ''}">${i}</th>`).join('') +
+    `<th class="total-col">R</th>`;
+
+  const scoresA = game.innings?.A || Array(maxInnings).fill('-');
+  const scoresB = game.innings?.B || Array(maxInnings).fill('-');
+
+  rowA.innerHTML = `<td class="team-label">${escHtml(game.teamA)}</td>` +
+    innArr.map((i, idx) => `<td class="${i === game.inning ? 'current-inning' : ''}">${scoresA[idx] ?? '-'}</td>`).join('') +
+    `<td class="total-col">${game.scoreA}</td>`;
+
+  rowB.innerHTML = `<td class="team-label">${escHtml(game.teamB)}</td>` +
+    innArr.map((i, idx) => `<td class="${i === game.inning ? 'current-inning' : ''}">${scoresB[idx] ?? '-'}</td>`).join('') +
+    `<td class="total-col">${game.scoreB}</td>`;
+}
+
+function updateDiamond(bases) {
+  // bases[0]=1st, bases[1]=2nd, bases[2]=3rd
+  const colors = { active: '#ffd700', inactive: '#2d3748' };
+  const strokes = { active: '#ffd700', inactive: '#7d8590' };
+
+  const b1 = document.getElementById('base1');
+  const b2 = document.getElementById('base2');
+  const b3 = document.getElementById('base3');
+
+  if (b1) { b1.setAttribute('fill', bases[0] ? colors.active : colors.inactive); b1.setAttribute('stroke', bases[0] ? strokes.active : strokes.inactive); }
+  if (b2) { b2.setAttribute('fill', bases[1] ? colors.active : colors.inactive); b2.setAttribute('stroke', bases[1] ? strokes.active : strokes.inactive); }
+  if (b3) { b3.setAttribute('fill', bases[2] ? colors.active : colors.inactive); b3.setAttribute('stroke', bases[2] ? strokes.active : strokes.inactive); }
+}
+
+function renderBateoTable(batters) {
+  const body = document.getElementById('bateoBody');
+  if (!body) return;
+  if (!batters.length) {
+    body.innerHTML = `<tr><td colspan="8" style="color:var(--muted);padding:20px">Sin datos de bateo</td></tr>`;
+    return;
+  }
+  body.innerHTML = batters.map(b => `
+    <tr>
+      <td>${b.number || '-'}</td>
+      <td style="text-align:left;padding-left:14px;font-weight:500">${escHtml(b.name || '-')}</td>
+      <td>${b.ab ?? '-'}</td><td>${b.h ?? '-'}</td><td>${b.rbi ?? '-'}</td>
+      <td>${b.bb ?? '-'}</td><td>${b.so ?? '-'}</td>
+      <td style="color:var(--accent)">${b.avg || '.000'}</td>
+    </tr>`).join('');
+}
+
+function renderPitcheoTable(pitchers) {
+  const body = document.getElementById('pitcheoBody');
+  if (!body) return;
+  if (!pitchers.length) {
+    body.innerHTML = `<tr><td colspan="9" style="color:var(--muted);padding:20px">Sin datos de pitcheo</td></tr>`;
+    return;
+  }
+  body.innerHTML = pitchers.map(p => `
+    <tr>
+      <td>${p.number || '-'}</td>
+      <td style="text-align:left;padding-left:14px;font-weight:500">${escHtml(p.name || '-')}</td>
+      <td>${p.ip ?? '-'}</td><td>${p.h ?? '-'}</td><td>${p.r ?? '-'}</td>
+      <td>${p.er ?? '-'}</td><td>${p.bb ?? '-'}</td><td>${p.so ?? '-'}</td>
+      <td style="color:var(--accent)">${p.era || '0.00'}</td>
+    </tr>`).join('');
+}
+
+function renderHistorial() {
+  const list = document.getElementById('historialList');
+  if (!list) return;
+  if (!state.gameHistory.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>Sin eventos aún</div>`;
+    return;
+  }
+  list.innerHTML = state.gameHistory.slice(-20).reverse().map(e =>
+    `<div class="historial-item">${escHtml(e.text)}<div class="historial-time">${e.time}</div></div>`
+  ).join('');
+}
+
+function logHistory(text) {
+  const now = new Date();
+  state.gameHistory.push({ text, time: now.toLocaleTimeString('es-MX') });
+  if (state.currentScreen === 'game') renderHistorial();
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    const names = ['bateo', 'pitcheo', 'historial'];
+    btn.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  if (panel) panel.classList.add('active');
+}
+
+// ── CLASSIC FETCH+INJECT ──
+async function loadClassicIframe() {
+  const loader = document.getElementById('iframeLoader');
+  const errEl  = document.getElementById('iframeError');
+  const cont   = document.getElementById('classicContent');
+  if (!cont) return;
+
+  loader.classList.remove('hidden');
+  errEl.classList.remove('show');
+  cont.innerHTML = '';
+
+  try {
+    const res = await fetch(CFG.classicUrl + '?t=' + Date.now(), {
+      cache: 'no-store',
+      headers: { Accept: 'text/html' },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    let html = await res.text();
+
+    // Rewrite relative URLs → absolute so assets load correctly
+    html = html.replace(/(src|href)="(?!https?:|\/\/|#|data:)([^"]+)"/g,
+      (_, attr, path) => `${attr}="${CFG.server}/${path.replace(/^\//, '')}"`);
+
+    // Inject into a sandboxed shadow root for style isolation
+    const host = document.createElement('div');
+    host.style.cssText = 'width:100%;height:100%;';
+    cont.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = html;
+
+    // Re-execute scripts inside shadow DOM
+    shadow.querySelectorAll('script').forEach(old => {
+      const s = document.createElement('script');
+      if (old.src) s.src = old.src; else s.textContent = old.textContent;
+      shadow.appendChild(s);
+    });
+
+    loader.classList.add('hidden');
+  } catch (e) {
+    loader.classList.add('hidden');
+    errEl.classList.add('show');
+  }
+}
+
+function reloadClassic() {
+  vibrate(30);
+  loadClassicIframe();
+}
+
+function openInBrowser() {
+  window.open(CFG.classicUrl, '_blank');
+}
+
+function shareClassic() {
+  vibrate(30);
+  if (navigator.share) {
+    navigator.share({
+      title: 'ABCARLineUp Dashboard Clásico',
+      text: '⚾ Dashboard clásico de béisbol en tiempo real',
+      url: CFG.classicUrl,
+    }).catch(() => {});
+  }
+}
+
+// ── SHARE GAME ──
+function shareGame() {
+  vibrate(30);
+  const game = state.games.find(g => g.id === state.activeGameId);
+  if (!game) return;
+  const text = `⚾ ${game.teamA} ${game.scoreA} - ${game.scoreB} ${game.teamB} | Entrada ${game.inning} | #ABCARLineUp`;
+  if (navigator.share) {
+    navigator.share({ title: 'ABCARLineUp', text, url: CFG.classicUrl }).catch(() => {});
+  }
+}
+
+// ── REFRESH ──
+function refreshGames() {
+  vibrate([30, 20, 30]);
+  fetchGamesFromServer();
+  resetCountdown();
+}
+
+// ── LAST UPDATE ──
+function updateLastUpdate() {
+  const el = document.getElementById('lastUpdate');
+  if (el) el.textContent = new Date().toLocaleTimeString('es-MX');
+}
+
+// ── PULL TO REFRESH ──
+function initPullToRefresh() {
+  const scroll = document.getElementById('homeScroll');
+  const indicator = document.getElementById('pullIndicator');
+  const arrow = document.getElementById('pullArrow');
+  const text = document.getElementById('pullText');
+  if (!scroll || !indicator) return;
+
+  let startY = 0;
+  let pulling = false;
+
+  scroll.addEventListener('touchstart', (e) => {
+    if (scroll.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, { passive: true });
+
+  scroll.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 60) {
+      indicator.classList.add('pulling');
+      const ready = dy > 80;
+      arrow.classList.toggle('ready', ready);
+      text.textContent = ready ? 'Suelta para actualizar' : 'Jala para actualizar';
+    } else {
+      indicator.classList.remove('pulling');
+    }
+  }, { passive: true });
+
+  scroll.addEventListener('touchend', (e) => {
+    if (!pulling) return;
+    const dy = (e.changedTouches[0]?.clientY || startY) - startY;
+    if (dy > 80) {
+      refreshGames();
+    }
+    indicator.classList.remove('pulling');
+    arrow.classList.remove('ready');
+    text.textContent = 'Jala para actualizar';
+    pulling = false;
+  }, { passive: true });
+}
+
+// ── UTILITIES ──
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── BOOT SEQUENCE ──
+async function boot() {
+  // Start WS and conn monitor immediately in background
+  connectWS();
+  startConnMonitor();
+
+  // Show splash for 1.8s, then transition to home
+  await new Promise(r => setTimeout(r, 1800));
+
+  // Try to load games (from server or cache)
+  const cached = localStorage.getItem(CFG.cacheKey);
+  if (cached) {
+    try {
+      const { games } = JSON.parse(cached);
+      state.games = games;
+    } catch (_) {}
+  }
+
+  // Fetch fresh data (non-blocking)
+  fetchGamesFromServer().catch(() => loadFromCache());
+
+  goScreen('home');
+  startCountdown();
+  startPoller();
+  initPullToRefresh();
+}
+
+// ── DARK / LIGHT THEME ──
+function initTheme() {
+  const saved = localStorage.getItem('abcar_theme') || 'dark';
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  } else {
+    document.documentElement.classList.remove('light');
+  }
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  vibrate(30);
+  const isLight = document.documentElement.classList.toggle('light');
+  localStorage.setItem('abcar_theme', isLight ? 'light' : 'dark');
+  updateThemeIcon();
+  updateThemeToggleUI();
+  // Update status bar color for native feel
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', isLight ? '#f2f4f8' : '#0a0a1a');
+}
+
+function updateThemeIcon() {
+  const btn = document.getElementById('themeBtn');
+  if (!btn) return;
+  const isLight = document.documentElement.classList.contains('light');
+  btn.textContent = isLight ? '☀️' : '🌙';
+  btn.title = isLight ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  updateSettingsUI();
+  goScreen('settings');
+}
+
+function updateSettingsUI() {
+  setText('currentVersionLabel', `v${APP_VERSION}`);
+  updateThemeToggleUI();
+  updateCacheInfo();
+  updateApiStatusBadge();
+}
+
+function updateThemeToggleUI() {
+  const isLight = document.documentElement.classList.contains('light');
+  const icon  = document.getElementById('settingsThemeIcon');
+  const label = document.getElementById('settingsThemeLabel');
+  const toggle = document.getElementById('settingsThemeToggle');
+  const wrap   = toggle?.parentElement;
+  if (icon)  icon.textContent  = isLight ? '☀️' : '🌙';
+  if (label) label.textContent = isLight ? 'Modo claro' : 'Modo oscuro';
+  if (wrap)  wrap.classList.toggle('on', isLight);
+}
+
+function updateCacheInfo() {
+  const el = document.getElementById('cacheInfoLabel');
+  if (!el) return;
+  try {
+    const raw = localStorage.getItem(CFG.cacheKey);
+    if (!raw) { el.textContent = 'Sin caché'; return; }
+    const { ts, games } = JSON.parse(raw);
+    const min = Math.round((Date.now() - ts) / 60000);
+    el.textContent = `${games?.length || 0} partidos · hace ${min < 1 ? 'menos de 1 min' : min + ' min'}`;
+  } catch (_) { el.textContent = 'Sin caché'; }
+}
+
+function updateApiStatusBadge() {
+  const badge = document.getElementById('apiStatusBadge');
+  if (!badge) return;
+  badge.textContent = state.serverOnline ? '✅ Online' : '❌ Offline';
+  badge.style.color = state.serverOnline ? 'var(--green)' : 'var(--red)';
+}
+
+function clearCache() {
+  vibrate([30, 20, 30]);
+  try { localStorage.removeItem(CFG.cacheKey); } catch (_) {}
+  updateCacheInfo();
+  const el = document.getElementById('cacheInfoLabel');
+  if (el) { el.textContent = '✅ Caché limpiada'; setTimeout(() => updateCacheInfo(), 1500); }
+}
+
+async function testServerConn() {
+  vibrate(30);
+  const badge = document.getElementById('apiStatusBadge');
+  if (badge) { badge.textContent = '⏳ Probando...'; badge.style.color = 'var(--muted)'; }
+  try {
+    const res = await fetch(CFG.apiGames, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' });
+    const ok = res.ok;
+    setServerOnline(ok);
+    if (badge) { badge.textContent = ok ? '✅ Online' : '⚠️ Error'; badge.style.color = ok ? 'var(--green)' : 'var(--orange)'; }
+  } catch (_) {
+    setServerOnline(false);
+    if (badge) { badge.textContent = '❌ Sin conexión'; badge.style.color = 'var(--red)'; }
+  }
+}
+
+// ── CHECK FOR UPDATES ──
+async function checkForUpdates() {
+  vibrate(30);
+  const btn       = document.getElementById('checkUpdateBtn');
+  const statusRow = document.getElementById('updateStatusRow');
+  const icon      = document.getElementById('updateIcon');
+  const label     = document.getElementById('updateLabel');
+  const sub       = document.getElementById('updateSub');
+  const link      = document.getElementById('updateLink');
+  const log       = document.getElementById('updateLog');
+  const logBody   = document.getElementById('updateLogBody');
+
+  if (btn) { btn.textContent = '⏳ Buscando...'; btn.disabled = true; }
+  if (statusRow) statusRow.style.display = 'none';
+  if (log) log.style.display = 'none';
+
+  try {
+    const res = await fetch(GITHUB_API, {
+      headers: { Accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(10000),
+      cache: 'no-store',
+    });
+
+    if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
+    const release = await res.json();
+
+    const latestTag  = (release.tag_name || 'v0.0.0').replace(/^v/, '');
+    const currentTag = APP_VERSION.replace(/^v/, '');
+    const isNewer    = compareVersions(latestTag, currentTag) > 0;
+
+    if (statusRow) statusRow.style.display = 'flex';
+
+    if (isNewer) {
+      if (icon)  icon.textContent  = '🆕';
+      if (label) label.textContent = `Nueva versión disponible: v${latestTag}`;
+      if (sub)   sub.textContent   = `Tu versión: v${currentTag}`;
+      if (link)  { link.href = release.html_url; link.style.display = 'inline-block'; }
+      if (log)   log.style.display = 'block';
+      if (logBody && release.body) {
+        logBody.innerHTML = release.body
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/^##\s+(.+)/gm, '<div style="font-weight:700;color:var(--accent);margin-top:8px">$1</div>')
+          .replace(/^-\s+(.+)/gm, '<div>• $1</div>')
+          .replace(/\n/g, '');
+      }
+      vibrate([100, 50, 200]);
+    } else {
+      if (icon)  icon.textContent  = '✅';
+      if (label) label.textContent = 'La app está actualizada';
+      if (sub)   sub.textContent   = `v${currentTag} es la última versión`;
+      if (link)  link.style.display = 'none';
+    }
+  } catch (err) {
+    if (statusRow) statusRow.style.display = 'flex';
+    if (icon)  icon.textContent  = '⚠️';
+    if (label) label.textContent = 'No se pudo verificar';
+    if (sub)   sub.textContent   = 'Revisa tu conexión a internet';
+    if (link)  link.style.display = 'none';
+  } finally {
+    if (btn) { btn.textContent = '🔍 Buscar actualizaciones'; btn.disabled = false; }
+  }
+}
+
+function compareVersions(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+// ── LIVE VIDEO BOX ──
+function getEmbedUrl(url) {
+  if (!url || !url.trim()) return null;
+  // YouTube watch or short URL
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&rel=0`;
+  // YouTube live
+  const ytLive = url.match(/youtube\.com\/live\/([a-zA-Z0-9_-]{11})/);
+  if (ytLive) return `https://www.youtube.com/embed/${ytLive[1]}?autoplay=1&mute=1&rel=0`;
+  // Twitch channel
+  const twitch = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
+  if (twitch) return `https://player.twitch.tv/?channel=${twitch[1]}&parent=localhost&autoplay=true&muted=true`;
+  // Raw embed-ready URL (m3u8, etc.)
+  if (url.startsWith('http')) return url;
+  return null;
+}
+
+function updateLiveBox(game) {
+  const box    = document.getElementById('liveBox');
+  const wrap   = document.getElementById('videoWrap');
+  const frame  = document.getElementById('liveFrame');
+  const noStr  = document.getElementById('noStream');
+  if (!box || !wrap || !frame || !noStr) return;
+
+  const embedUrl = getEmbedUrl(game?.streamingUrl);
+
+  if (embedUrl) {
+    if (frame.src !== embedUrl) frame.src = embedUrl;
+    wrap.style.display = 'block';
+    noStr.style.display = 'none';
+    box.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    noStr.style.display = 'flex';
+    // Keep box visible to show "Sin transmisión activa"
+    box.style.display = 'block';
+  }
+}
+
+function toggleLiveFullscreen() {
+  const wrap = document.getElementById('videoWrap');
+  if (!wrap) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    wrap.requestFullscreen().catch(() => {});
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => { initTheme(); boot(); });
+
+// Release wake lock when app goes to background
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) releaseWakeLock();
+  else if (state.currentScreen === 'game') requestWakeLock();
+});
+</script>
+</body>
+</html>

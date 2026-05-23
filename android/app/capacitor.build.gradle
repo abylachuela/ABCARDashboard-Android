@@ -1,0 +1,9 @@
+// Capacitor build file - auto-generated
+android {
+    defaultConfig {
+        resValue "string", "custom_url_scheme", "com.dgt.abcar"
+    }
+}
+
+dependencies {
+}

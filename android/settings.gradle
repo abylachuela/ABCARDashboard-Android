@@ -1,0 +1,5 @@
+rootProject.name = 'ABCARDashboard'
+
+apply from: 'capacitor.settings.gradle'
+
+include ':app'
