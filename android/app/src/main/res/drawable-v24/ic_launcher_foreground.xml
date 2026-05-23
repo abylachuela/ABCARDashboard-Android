@@ -10,28 +10,20 @@
         android:strokeColor="#00d4ff"
         android:strokeWidth="2"/>
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#ffffff"
         android:strokeWidth="3"
         android:pathData="M30,60 L45,45 L60,55 L78,35"/>
-    <circle
+    <path
         android:fillColor="#00d4ff"
-        android:cx="30"
-        android:cy="60"
-        android:r="3"/>
-    <circle
+        android:pathData="M27,60 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z"/>
+    <path
         android:fillColor="#00d4ff"
-        android:cx="45"
-        android:cy="45"
-        android:r="3"/>
-    <circle
+        android:pathData="M42,45 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z"/>
+    <path
         android:fillColor="#00d4ff"
-        android:cx="60"
-        android:cy="55"
-        android:r="3"/>
-    <circle
+        android:pathData="M57,55 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z"/>
+    <path
         android:fillColor="#ff6b35"
-        android:cx="78"
-        android:cy="35"
-        android:r="3"/>
+        android:pathData="M75,35 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z"/>
 </vector>
