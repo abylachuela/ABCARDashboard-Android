@@ -904,28 +904,6 @@ html, body {
       </div>
     </div>
 
-    <!-- ACCOUNT / CREDENTIALS SECTION -->
-    <div class="settings-section">
-      <div class="settings-section-title">CUENTA</div>
-      <div class="settings-card">
-        <div class="settings-row" id="authStatusRow" style="display:none">
-          <div class="settings-row-icon" id="authStatusIcon">🔐</div>
-          <div class="settings-row-body">
-            <div class="settings-row-label" id="authStatusLabel">—</div>
-          </div>
-        </div>
-        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:8px;">
-          <input id="credUser" type="text" autocomplete="username"
-            placeholder="Usuario"
-            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none;">
-          <input id="credPass" type="password" autocomplete="current-password"
-            placeholder="Contraseña"
-            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none;">
-          <button class="btn btn-primary" onclick="saveCredentials()" style="width:100%">🔑 Guardar y conectar</button>
-        </div>
-      </div>
-    </div>
-
     <!-- SERVER SECTION -->
     <div class="settings-section">
       <div class="settings-section-title">SERVIDOR</div>
@@ -1061,14 +1039,14 @@ html, body {
 const APP_VERSION = '2.0';
 const GITHUB_REPO = 'abylachuela/ABCARDashboard-Android';
 
-// ── CONFIG — nuevo servidor HTTPS :3336 con Bearer auth ──
+// ── CONFIG — servidor FastAPI :3335 (sin autenticación) ──
 const CFG = {
-  server:     'https://38.57.232.64:3336',
-  apiGames:   'https://38.57.232.64:3336/api/games',
-  wsBase:     'wss://38.57.232.64:3336/ws',
-  loginUrl:   'https://38.57.232.64:3336/auth/login',
-  healthUrl:  'https://38.57.232.64:3336/api/health',
-  appLatest:  null,   // endpoint movido; actualizaciones via GitHub
+  server:     'http://38.57.232.64:3335',
+  apiGames:   'http://38.57.232.64:3335/api/games',
+  wsBase:     'ws://38.57.232.64:3335/ws',
+  healthUrl:  'http://38.57.232.64:3335/api/health',
+  loginUrl:   'http://38.57.232.64:3335/auth/login',  // fallback si activan auth
+  appLatest:  'http://38.57.232.64:3335/app/latest',
   pollInterval: 10000,
   wsReconnectMax: 15000,
   cacheKey:   'abcar_games_cache',
@@ -1334,7 +1312,7 @@ function updateCountdownUI() {
 // ── FETCH & PARSE ──
 async function fetchGamesFromServer() {
   try {
-    await ensureAuth();
+    // :3335 es API pública — sin auth. Solo agrega header si hay token guardado.
     const res = await fetchWithAuth(CFG.apiGames, {
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
