@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- HTTPS con cert auto-firmado — bypass via MainActivity.onReceivedSslError -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">38.57.232.64</domain>
+    </domain-config>
+    <!-- Localhost siempre cleartext -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">38.57.232.64</domain>
-        <domain includeSubdomains="true">10.253.255.202</domain>
         <domain includeSubdomains="true">localhost</domain>
     </domain-config>
 </network-security-config>

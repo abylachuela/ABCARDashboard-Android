@@ -545,6 +545,73 @@ html, body {
   font-size: 0.9rem;
 }
 .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+/* SUPER PANEL */
+.super-panel {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.6);
+  opacity: 0; pointer-events: none;
+  transition: opacity 200ms ease;
+  display: flex; align-items: flex-end;
+}
+.super-panel.open { opacity: 1; pointer-events: all; }
+.super-sheet {
+  width: 100%; background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 36px;
+  transform: translateY(100%);
+  transition: transform 300ms cubic-bezier(.32,.72,0,1);
+  max-height: 85vh; overflow-y: auto;
+}
+.super-panel.open .super-sheet { transform: translateY(0); }
+.super-handle {
+  width: 40px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 0 auto 16px;
+}
+.super-title { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.super-game-title { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.super-section { margin-bottom: 20px; }
+.super-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+.super-teams-row { display: flex; align-items: center; gap: 12px; }
+.super-vs { font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.super-team-ctrl { flex: 1; text-align: center; }
+.super-team-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.super-score-btns { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.super-score-disp { font-size: 24px; font-weight: 800; color: var(--text); min-width: 32px; text-align: center; }
+.super-btn { width: 36px; height: 36px; border-radius: 50%; border: none; font-size: 18px; font-weight: 700; cursor: pointer; }
+.super-btn-green { background: var(--green); color: #fff; }
+.super-btn-red { background: var(--red); color: #fff; }
+.super-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.super-action-btn {
+  padding: 12px 8px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center;
+}
+.super-action-btn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.super-msg-row { display: flex; gap: 8px; }
+.super-msg-input {
+  flex: 1; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 14px; outline: none;
+}
+.super-msg-input::placeholder { color: var(--muted); }
+.super-send-btn {
+  padding: 10px 16px; background: var(--accent); border: none;
+  border-radius: 10px; color: #000; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.super-status { min-height: 24px; font-size: 13px; text-align: center; margin-top: 8px; color: var(--green); }
+
+/* Floating super button in game screen */
+.super-fab {
+  position: fixed; bottom: 90px; right: 18px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, #ffd700, #ff6b35);
+  border: none; font-size: 22px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,215,0,0.4);
+  z-index: 100; display: none;
+  align-items: center; justify-content: center;
+  transition: transform 150ms ease;
+}
+.super-fab:active { transform: scale(0.92); }
 </style>
 </head>
 <body>
@@ -786,6 +853,7 @@ html, body {
 
     <div style="height:24px"></div>
   </div>
+  <button class="super-fab" id="superFab" onclick="openSuperPanel()">⚡</button>
 </div>
 
 <!-- ══════════════════ SETTINGS ══════════════════ -->
@@ -832,6 +900,28 @@ html, body {
         <div class="update-log" id="updateLog" style="display:none">
           <div class="update-log-title">📋 Novedades</div>
           <div id="updateLogBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT / CREDENTIALS SECTION -->
+    <div class="settings-section">
+      <div class="settings-section-title">CUENTA</div>
+      <div class="settings-card">
+        <div class="settings-row" id="authStatusRow" style="display:none">
+          <div class="settings-row-icon" id="authStatusIcon">🔐</div>
+          <div class="settings-row-body">
+            <div class="settings-row-label" id="authStatusLabel">—</div>
+          </div>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+          <input id="credUser" type="text" autocomplete="username"
+            placeholder="Usuario"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none;">
+          <input id="credPass" type="password" autocomplete="current-password"
+            placeholder="Contraseña"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none;">
+          <button class="btn btn-primary" onclick="saveCredentials()" style="width:100%">🔑 Guardar y conectar</button>
         </div>
       </div>
     </div>
@@ -908,24 +998,83 @@ html, body {
   </div>
 </div>
 
+<!-- SUPER PANEL -->
+<div id="superPanel" class="super-panel" onclick="closeSuperPanel(event)">
+  <div class="super-sheet" id="superSheet">
+    <div class="super-handle"></div>
+    <div class="super-title">⚡ Control Remoto</div>
+    <div id="superGameTitle" class="super-game-title"></div>
+
+    <!-- Score adjustments -->
+    <div class="super-section">
+      <div class="super-label">Ajuste de Carreras</div>
+      <div class="super-teams-row">
+        <div class="super-team-ctrl">
+          <div id="superTeamA" class="super-team-name">Local</div>
+          <div class="super-score-btns">
+            <button class="super-btn super-btn-red" onclick="sendCommand('score_adjust','local',-1)">−1</button>
+            <span id="superScoreA" class="super-score-disp">0</span>
+            <button class="super-btn super-btn-green" onclick="sendCommand('score_adjust','local',1)">+1</button>
+          </div>
+        </div>
+        <div class="super-vs">VS</div>
+        <div class="super-team-ctrl">
+          <div id="superTeamB" class="super-team-name">Visitante</div>
+          <div class="super-score-btns">
+            <button class="super-btn super-btn-red" onclick="sendCommand('score_adjust','visitante',-1)">−1</button>
+            <span id="superScoreB" class="super-score-disp">0</span>
+            <button class="super-btn super-btn-green" onclick="sendCommand('score_adjust','visitante',1)">+1</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="super-section">
+      <div class="super-label">Acciones Rápidas</div>
+      <div class="super-actions-grid">
+        <button class="super-action-btn" onclick="sendCommand('undo','',0,'')">↩️ Deshacer</button>
+        <button class="super-action-btn" onclick="sendCommand('state_change','',0,'EN_CURSO')">▶️ Reanudar</button>
+        <button class="super-action-btn" onclick="sendCommand('state_change','',0,'PAUSADO')">⏸️ Pausar</button>
+        <button class="super-action-btn" onclick="sendCommand('state_change','',0,'FINALIZADO')">🏁 Finalizar</button>
+      </div>
+    </div>
+
+    <!-- Message -->
+    <div class="super-section">
+      <div class="super-label">Mensaje al Anotador</div>
+      <div class="super-msg-row">
+        <input type="text" id="superMsgInput" class="super-msg-input" placeholder="Ej: Revisar última jugada..." maxlength="120">
+        <button class="super-send-btn" onclick="sendMsgCommand()">Enviar</button>
+      </div>
+    </div>
+
+    <!-- Status feedback -->
+    <div id="superStatus" class="super-status"></div>
+  </div>
+</div>
+
 <!-- ══════════════════ JS ══════════════════ -->
 <script>
 'use strict';
 
-const APP_VERSION = '1.5';
+const APP_VERSION = '2.0';
 const GITHUB_REPO = 'abylachuela/ABCARDashboard-Android';
 
+// ── CONFIG — nuevo servidor HTTPS :3336 con Bearer auth ──
 const CFG = {
-  server:     'http://38.57.232.64:3335',
-  apiGames:   'http://38.57.232.64:3335/api/games',
-  wsBase:     'ws://38.57.232.64:3335/ws',
-  classicUrl: 'http://38.57.232.64:3335',   // dashboard now served at root of :3335
-  dashServer: 'http://38.57.232.64:3335',
-  appLatest:  'http://38.57.232.64:3335/app/latest',
+  server:     'https://38.57.232.64:3336',
+  apiGames:   'https://38.57.232.64:3336/api/games',
+  wsBase:     'wss://38.57.232.64:3336/ws',
+  loginUrl:   'https://38.57.232.64:3336/auth/login',
+  healthUrl:  'https://38.57.232.64:3336/api/health',
+  appLatest:  null,   // endpoint movido; actualizaciones via GitHub
   pollInterval: 10000,
   wsReconnectMax: 15000,
-  cacheKey: 'abcar_games_cache',
-  cacheTTL: 300000,
+  cacheKey:   'abcar_games_cache',
+  cacheTTL:   300000,
+  tokenKey:   'abcar_auth_token',
+  credsKey:   'abcar_credentials',
 };
 
 // ── STATE ──
@@ -943,7 +1092,60 @@ let state = {
   activeGameId: null,
   wakeLock: null,
   gameHistory: [],
+  authToken: localStorage.getItem(CFG.tokenKey) || null,
 };
+
+// ── AUTH — Bearer token ──
+function authHeaders() {
+  return state.authToken ? { 'Authorization': `Bearer ${state.authToken}` } : {};
+}
+async function authenticate(username, password) {
+  try {
+    const res = await fetch(CFG.loginUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json();
+    if (data.token) {
+      state.authToken = data.token;
+      localStorage.setItem(CFG.tokenKey, data.token);
+      localStorage.setItem(CFG.credsKey, JSON.stringify({ username, password }));
+      return { ok: true };
+    }
+    return { ok: false, error: data.error || 'Credenciales inválidas' };
+  } catch (e) {
+    return { ok: false, error: 'Sin conexión al servidor' };
+  }
+}
+async function ensureAuth() {
+  if (state.authToken) return true;
+  const raw = localStorage.getItem(CFG.credsKey);
+  if (!raw) return false;
+  try {
+    const { username, password } = JSON.parse(raw);
+    const r = await authenticate(username, password);
+    return r.ok;
+  } catch (_) { return false; }
+}
+async function fetchWithAuth(url, opts = {}) {
+  const headers = { ...(opts.headers || {}), ...authHeaders() };
+  let res = await fetch(url, { ...opts, headers });
+  if (res.status === 401) {
+    // Token expirado: re-autenticar y reintentar una vez
+    const raw = localStorage.getItem(CFG.credsKey);
+    if (raw) {
+      const { username, password } = JSON.parse(raw);
+      const r = await authenticate(username, password);
+      if (r.ok) {
+        headers['Authorization'] = `Bearer ${state.authToken}`;
+        res = await fetch(url, { ...opts, headers });
+      }
+    }
+  }
+  return res;
+}
 
 // ── VIBRATION ──
 function vibrate(pattern) {
@@ -968,6 +1170,10 @@ function goScreen(id) {
 
   state.currentScreen = id;
 
+  if (id === 'settings') {
+    populateCredentialsUI();
+    setText('currentVersionLabel', `v${APP_VERSION}`);
+  }
   if (id === 'game') {
     requestWakeLock();
   } else {
@@ -1128,7 +1334,8 @@ function updateCountdownUI() {
 // ── FETCH & PARSE ──
 async function fetchGamesFromServer() {
   try {
-    const res = await fetch(CFG.apiGames, {
+    await ensureAuth();
+    const res = await fetchWithAuth(CFG.apiGames, {
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     });
@@ -1369,8 +1576,9 @@ function startConnMonitor() {
 }
 async function checkConn() {
   try {
-    await fetch(CFG.apiGames, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' });
-    setServerOnline(true);
+    // /api/health is public — no auth needed, perfect for connectivity check
+    const res = await fetch(CFG.healthUrl, { signal: AbortSignal.timeout(5000), cache: 'no-store' });
+    setServerOnline(res.ok);
   } catch (_) {
     setServerOnline(false);
   }
@@ -1390,6 +1598,46 @@ function setServerOnline(online) {
   }
 }
 function updateConnUI(_wsOnline) { /* ws badge removed */ }
+
+// ── CREDENTIALS / AUTH UI ──
+async function saveCredentials() {
+  const u = document.getElementById('credUser')?.value.trim();
+  const p = document.getElementById('credPass')?.value.trim();
+  if (!u || !p) return;
+  const icon  = document.getElementById('authStatusIcon');
+  const label = document.getElementById('authStatusLabel');
+  const row   = document.getElementById('authStatusRow');
+  if (row)   row.style.display = 'flex';
+  if (icon)  icon.textContent  = '⏳';
+  if (label) label.textContent = 'Autenticando...';
+  const r = await authenticate(u, p);
+  if (r.ok) {
+    if (icon)  icon.textContent  = '✅';
+    if (label) label.textContent = `Conectado como ${u}`;
+    vibrate([50, 30, 100]);
+    fetchGamesFromServer();
+    connectWS();
+  } else {
+    if (icon)  icon.textContent  = '❌';
+    if (label) label.textContent = r.error;
+    vibrate([200, 100, 200]);
+  }
+}
+function populateCredentialsUI() {
+  const raw = localStorage.getItem(CFG.credsKey);
+  if (!raw) return;
+  try {
+    const { username } = JSON.parse(raw);
+    const uEl = document.getElementById('credUser');
+    if (uEl) uEl.value = username;
+    const row   = document.getElementById('authStatusRow');
+    const icon  = document.getElementById('authStatusIcon');
+    const label = document.getElementById('authStatusLabel');
+    if (row)   row.style.display = 'flex';
+    if (icon)  icon.textContent  = state.authToken ? '✅' : '🔐';
+    if (label) label.textContent = state.authToken ? `Conectado como ${username}` : `Credenciales guardadas — ${username}`;
+  } catch (_) {}
+}
 
 // ── RENDER GAMES LIST ──
 function renderGamesList() {
@@ -1434,6 +1682,9 @@ function openGame(gameId) {
   state.activeGameId = gameId;
   renderGameDetail(game);
   goScreen('game');
+  // Mostrar FAB de superpoderes solo en partidos activos
+  const fab = document.getElementById('superFab');
+  if (fab) fab.style.display = game.status === 'EN CURSO' || game.status === 'PAUSADO' ? 'flex' : 'none';
 }
 
 // ── RENDER GAME DETAIL ──
@@ -1741,8 +1992,11 @@ function escHtml(str) {
 
 // ── BOOT SEQUENCE ──
 async function boot() {
-  // Start conn monitor in background
+  // Auto-authenticate if saved credentials exist
+  ensureAuth().catch(() => {});
+  // Start conn monitor and WS in background
   startConnMonitor();
+  connectWS();
 
   // Show splash for 1.8s, then transition to home
   await new Promise(r => setTimeout(r, 1800));
@@ -1855,11 +2109,20 @@ async function testServerConn() {
   if (iconEl)   iconEl.textContent  = '⏳';
   if (labelEl)  labelEl.textContent = 'Probando conexión...';
   try {
-    const res = await fetch(CFG.apiGames, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' });
-    const ok = res.ok;
-    setServerOnline(ok);
-    if (iconEl)  iconEl.textContent  = ok ? '✅' : '⚠️';
-    if (labelEl) labelEl.textContent = ok ? 'Servidor en línea' : 'Error de servidor';
+    const res = await fetch(CFG.healthUrl, { signal: AbortSignal.timeout(5000), cache: 'no-store' });
+    const data = res.ok ? await res.json() : null;
+    setServerOnline(res.ok);
+    if (iconEl)  iconEl.textContent  = res.ok ? '✅' : '⚠️';
+    if (labelEl) labelEl.textContent = res.ok
+      ? `Servidor en línea — ${data?.message || 'OK'}`
+      : 'Error de servidor';
+    // Also verify auth
+    if (res.ok) {
+      const authOk = await ensureAuth();
+      if (!authOk && labelEl) {
+        labelEl.textContent += ' (sin credenciales — configura en Cuenta)';
+      }
+    }
   } catch (_) {
     setServerOnline(false);
     if (iconEl)  iconEl.textContent  = '❌';
@@ -1883,14 +2146,23 @@ async function checkForUpdates() {
   if (statusRow) statusRow.style.display = 'none';
   if (log) log.style.display = 'none';
 
+  // /app/latest migrated away — use GitHub releases as source of truth
+  const GITHUB_LATEST = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
   try {
-    const res = await fetch(CFG.appLatest, {
+    const res = await fetch(GITHUB_LATEST, {
+      headers: { Accept: 'application/vnd.github+json' },
       signal: AbortSignal.timeout(10000),
       cache: 'no-store',
     });
 
-    if (!res.ok) throw new Error(`Servidor: ${res.status}`);
-    const info = await res.json();
+    if (!res.ok) throw new Error(`GitHub: ${res.status}`);
+    const release = await res.json();
+    const info = {
+      versionName: (release.tag_name || 'v0').replace(/^v/, ''),
+      url: release.html_url,
+      changelog: release.body || '',
+      mandatory: false,
+    };
 
     const latestVer  = String(info.versionName || '0.0');
     const currentVer = APP_VERSION;
@@ -1989,6 +2261,71 @@ function toggleLiveFullscreen() {
     wrap.requestFullscreen().catch(() => {});
   }
 }
+
+// ── SUPER POWERS ──
+async function sendCommand(type, team, delta, text) {
+  const gameId = state.activeGameId;
+  if (!gameId) return;
+  showSuperStatus('⏳ Enviando...');
+  try {
+    const res = await fetch(`${CFG.server}/api/games/${gameId}/commands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, team, delta: delta || 0, text: text || '' }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showSuperStatus('✅ Enviado');
+    // Update local score display immediately
+    if (type === 'score_adjust') {
+      const game = state.games.find(g => g.id === gameId);
+      if (game) {
+        if (team === 'local') { game.scoreA = Math.max(0, (game.scoreA || 0) + (delta || 0)); setText('superScoreA', game.scoreA); }
+        if (team === 'visitante') { game.scoreB = Math.max(0, (game.scoreB || 0) + (delta || 0)); setText('superScoreB', game.scoreB); }
+        renderGameDetail(game);
+      }
+    }
+    vibrate([50, 30, 50]);
+    setTimeout(() => showSuperStatus(''), 2000);
+  } catch (e) {
+    showSuperStatus('❌ Error: ' + e.message);
+    setTimeout(() => showSuperStatus(''), 3000);
+  }
+}
+
+function sendMsgCommand() {
+  const input = document.getElementById('superMsgInput');
+  const text = input?.value?.trim();
+  if (!text) return;
+  sendCommand('message', '', 0, text);
+  if (input) input.value = '';
+}
+
+function openSuperPanel() {
+  vibrate(40);
+  const game = state.games.find(g => g.id === state.activeGameId);
+  if (game) {
+    setText('superGameTitle', `${game.teamA} vs ${game.teamB}`);
+    setText('superTeamA', game.teamA);
+    setText('superTeamB', game.teamB);
+    setText('superScoreA', game.scoreA);
+    setText('superScoreB', game.scoreB);
+  }
+  const panel = document.getElementById('superPanel');
+  if (panel) panel.classList.add('open');
+}
+
+function closeSuperPanel(e) {
+  if (e?.target?.id !== 'superPanel') return;
+  const panel = document.getElementById('superPanel');
+  if (panel) panel.classList.remove('open');
+}
+
+function showSuperStatus(msg) {
+  const el = document.getElementById('superStatus');
+  if (el) el.textContent = msg;
+}
+
 
 document.addEventListener('DOMContentLoaded', () => { initTheme(); boot(); });
 
