@@ -2,7 +2,7 @@
   "name": "educentro-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Backend de EduCentro (Fase 0: autenticación, sesiones y base de datos)",
+  "description": "Backend de EduCentro (Fase 1 servidor: autenticación, repositorio genérico, autorización y RLS)",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "migrar": "tsx --env-file-if-exists=.env src/cli/migrar.ts",
     "crear-admin": "tsx --env-file-if-exists=.env src/cli/crear-admin.ts",
-    "semilla-dev": "tsx --env-file-if-exists=.env src/cli/semilla-dev.ts"
+    "semilla-dev": "tsx --env-file-if-exists=.env src/cli/semilla-dev.ts",
+    "paridad": "tsx scripts/paridad.ts"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.5",
