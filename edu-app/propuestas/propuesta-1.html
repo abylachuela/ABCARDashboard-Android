@@ -152,7 +152,7 @@ legend{font-family:var(--serif);font-weight:600;color:var(--navy);padding:0 6px}
 .sw{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}.sw input{width:20px;height:20px;accent-color:var(--navy)}
 .agrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
 .msgs{display:flex;flex-direction:column;gap:10px;max-height:480px;overflow:auto;margin:12px 0;padding:2px}
-.msg{padding:10px 12px;border-radius:10px;max-width:92%;font-size:14px}
+.msgs>*{flex:none}.msg{padding:10px 12px;border-radius:10px;max-width:92%;font-size:14px}
 .msg.user{background:#e1ebfa;align-self:flex-end}.msg.ag{background:#faf8f3;border:1px solid var(--line)}
 .prop{border:1px solid var(--navy);border-radius:12px;background:#fff;padding:12px;align-self:stretch;max-width:100%}
 .prop h4{margin:0 0 6px;font:600 16px var(--serif);color:var(--navy)}.prop ul{margin:6px 0;padding-left:18px}
@@ -539,7 +539,7 @@ function build(t,q){
   const m=q.match(/sobre\s+(.+?)(?:\s+(?:de|para|en)\s+(?:matem|lengua|ciencias|historia|ingl)\S*.*)?$/i);
   const tema=(m?m[1]:q.replace(/^(genera|crea|prepara|redacta|prop[oó]n|resume)\w*\s+(un|una|el|la)?\s*/i,'')).replace(/[.?!]+$/,'').trim().slice(0,80)||'Tema libre';
   const subj=subjects.find(s=>norm(q).includes(norm(s).split(' ')[0]))||subjects[0];
-  const base={t,tone:tn,tema,subj};
+  const base={t,tone:tn,tema:(m||t==='plan')?tema:'la unidad actual',subj};
   if(t==='plan'){
     const used=plans.filter(p=>p.week===viewWeek&&p.sec===sections[0]).map(p=>p.day);const day=[0,1,2,3,4].find(d=>!used.includes(d))??0;
     const plan={subj,sec:sections[0],day,hora:'08:00',estado:'borrador',tema:tema.charAt(0).toUpperCase()+tema.slice(1),
@@ -548,8 +548,8 @@ function build(t,q){
       recursos:'Pizarra, material impreso, ejemplos del contexto del estudiante.',evaluacion:'Rúbrica de 4 niveles (inicial, básico, logrado, destacado) sobre participación y producto.',tarea:`Ejercicios de refuerzo sobre ${tema}.`};
     return Object.assign(base,{title:`Plan de clase: ${plan.tema}`,plan,lines:[`${subj} · ${plan.sec} · ${days[day]} ${plan.hora}`,`Objetivo: ${plan.objetivos}`,`Inicio (10 min): ${plan.inicio}`,`Desarrollo (30 min): ${plan.desarrollo}`,`Cierre (10 min): ${plan.cierre}`,`Evaluación: ${plan.evaluacion}`]});
   }
-  if(t==='acts')return Object.assign(base,{title:`Actividades sobre «${tema}»`,lines:['Lluvia de ideas de 5 min con tarjetas.','Estaciones de práctica en equipos de 4.','Reto en parejas con material concreto.','Cierre con mapa conceptual colaborativo.']});
-  if(t==='rubric')return Object.assign(base,{title:`Rúbrica: ${tema}`,lines:['Comprensión: 4 niveles (inicial a destacado), 30 %.','Aplicación y procedimiento: 4 niveles, 30 %.','Comunicación y presentación: 4 niveles, 20 %.','Participación y colaboración: 4 niveles, 20 %.']});
+  if(t==='acts')return Object.assign(base,{title:`Actividades sobre «${base.tema}»`,lines:['Lluvia de ideas de 5 min con tarjetas.','Estaciones de práctica en equipos de 4.','Reto en parejas con material concreto.','Cierre con mapa conceptual colaborativo.']});
+  if(t==='rubric')return Object.assign(base,{title:`Rúbrica: ${base.tema}`,lines:['Comprensión: 4 niveles (inicial a destacado), 30 %.','Aplicación y procedimiento: 4 niveles, 30 %.','Comunicación y presentación: 4 niveles, 20 %.','Participación y colaboración: 4 niveles, 20 %.']});
   if(t==='comms')return Object.assign(base,{title:'Borrador de comunicado a tutores',lines:[`Estimadas familias: les escribimos para informarles sobre el avance del grupo en ${subj}. Agradecemos su acompañamiento en casa y quedamos atentos a sus consultas.`,ag.nosend?'Límite activo: solo borrador, no se envía.':'Pendiente de envío por el docente.']});
   if(t==='summary'){const c=sections[0],av=names.map((n,i)=>avgOf(data[c][subj][i])),g=av.reduce((a,b)=>a+b,0)/av.length,r=av.filter(a=>a<60).length;
     return Object.assign(base,{title:`Resumen de rendimiento · ${subj} · ${c}`,lines:[`Promedio del grupo: ${g.toFixed(1)}.`,`Aprobados: ${av.length-r} de ${av.length}; en riesgo: ${r}.`,'Sugerencia: reforzar con tutoría breve a estudiantes bajo 60.']})}
