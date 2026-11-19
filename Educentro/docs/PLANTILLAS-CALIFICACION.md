@@ -28,3 +28,9 @@ Fuente: Excel aportado por el usuario (6.º de Secundaria, año 2026-27). **No s
 3. Evaluación completiva (50/50), extraordinaria (30/70) y especial como instancias posteriores, con pesos configurables por centro.
 4. Cuadro de honor/meritorios por sección y listado de completivos generados automáticamente.
 5. Importar/exportar a este formato Excel (sin datos reales en el repositorio).
+
+## Implementado (ver docs/API.md §13)
+- Modelo `competencias` por centro (`escalas.modelo`), núcleo `EDU.calculo.calcularCompetencias` con una única regla: efectivo = RP si P < mínimo y hay RP (o máximo, configurable); competencia = media de periodos; CF = media de las 4; CFC 50/50, CEXF 30/70, especial y resultado Aprobado/Reprobado (+ Completiva/Extraordinaria pendiente, Pendiente si el año está incompleto). Pesos y nota mínima por centro.
+- Libro por competencias (C1–C4 × P1–P4/RP), Meritorios (promedio simple + ranking) y Completivos (automático), imprimibles; boletín y reportes leen ambos modelos.
+- Importador `.xlsx` local (hojas de calificaciones con diseños distintos: columnas Apellidos+Nombres o nombre único; Meritorios y Completivo detectados por contenido), mapeo hoja→sección/asignatura, emparejado por nombre normalizado, creación opcional de estudiantes, recálculo e informe de discrepancias (fórmulas solo-P, mezcla P/RP, `#REF!`, valores y A/R distintos, listas de completivo). Exportador con el mismo diseño y fórmulas consistentes.
+- Observado en el archivo real: las hojas no comparten posición de columnas (una hoja tiene una sola columna de nombre y datos desde C; las demás Apellidos/Nombres y datos desde D), las fórmulas de Prom varían por fila (suma de P, mezcla P/RP, IF estándar), hay celdas con errores en caché y listas de completivo sin etiqueta de sección; el importador lo tolera y lo informa sin bloquear.

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Pruebas de planilla.js</title>
+<style>body{font:14px/1.5 system-ui,sans-serif;margin:20px}.ok{color:#17693a}.fail{color:#a82424;font-weight:600}#res{font-weight:700;margin:12px 0}li{margin:2px 0}</style></head>
+<body><h1>EDU.planilla · pruebas (datos ficticios)</h1><div id="res">Ejecutando…</div><ul id="lista"></ul>
+<script src="../js/vendor/xlsx.full.min.js"></script>
+<script src="../js/core/formato.js"></script>
+<script src="../js/core/escala.js"></script>
+<script src="../js/core/calculo.js"></script>
+<script src="../js/core/planilla.js"></script>
+<script>
+(function () {
+  var PL = EDU.planilla, E = EDU.escala.crear({ min: 0, max: 100, notaMinAprobar: 70, modelo: 'competencias' });
+  var pruebas = [], pas = 0, fal = 0;
+  function t(n, f) { pruebas.push([n, f]); }
+  function eq(a, b, m) { if (a !== b) throw new Error((m || 'esperado') + ': ' + JSON.stringify(b) + ' obtenido: ' + JSON.stringify(a)); }
+  function rec(p, rp, cec, cex, esp) { var c = []; for (var i = 0; i < 4; i++) c.push({ p: p.slice(), rp: (rp || [null, null, null, null]).slice() }); return { c: c, cec: cec == null ? null : cec, cex: cex == null ? null : cex, esp: esp == null ? null : esp }; }
+  var ests = [{ apellidos: 'Prueba Uno', nombres: 'Ana María', rec: rec([90, 95, 88, 92]) }, { apellidos: '=CMD() Dos', nombres: 'Beto', rec: rec([60, 60, 60, 60], [null, null, null, null], 90) },
+    { apellidos: 'Prueba Tres', nombres: 'Carla', rec: rec([50, 55, 60, 65], [72, null, null, null], 60, 70) }, { apellidos: 'Prueba Cuatro', nombres: 'Dario', rec: rec([88, 90, null, null]) }];
+  var wb = PL.construirLibro({ escala: E, hojas: [{ nombre: 'MAT A', titulo: '@titulo', estudiantes: ests }] }), bytes = PL.libroABytes(wb);
+  var buf = bytes instanceof ArrayBuffer ? bytes : new Uint8Array(bytes).buffer;
+  t('claveNombre ignora tildes, mayusculas, orden y particulas', function () { eq(PL.claveNombre('Peña de los Santos, José'), PL.claveNombre('jose PENA santos')); });
+  t('neutraliza = + - @ al exportar', function () { eq(PL.neutralizar('=1+1'), "'=1+1"); eq(PL.neutralizar('@x'), "'@x"); eq(PL.neutralizar('Ana'), 'Ana'); var ws = wb.Sheets['MAT A']; eq(ws.B5.v, "'=CMD() Dos"); eq(ws.A1.v, "'@titulo"); });
+  t('validarArchivo: tipo, tamano y firma', function () { eq(PL.validarArchivo('a.xls', 10, null).ok, false); eq(PL.validarArchivo('a.xlsx', 11 * 1024 * 1024, null).ok, false); eq(PL.validarArchivo('a.xlsx', 10, new Uint8Array([1, 2, 3, 4, 5]).buffer).ok, false); eq(PL.validarArchivo('a.xlsx', buf.byteLength, buf).ok, true); });
+  t('exportar y reabrir: detecta la hoja y las 4 filas', function () { var r = PL.analizarLibro(buf, 'x.xlsx'); eq(r.hojas.length, 1); eq(r.hojas[0].tipo, 'calificaciones'); eq(r.hojas[0].filas.length, 4); eq(r.hojas[0].cols.comps.length, 4); });
+  t('ida y vuelta: recalcular no produce discrepancias', function () {
+    var h = PL.analizarLibro(buf, 'x.xlsx').hojas[0];
+    h.filas.forEach(function (f, i) { var r = PL.aplicarFila(f, null, false).rec; var inf = PL.revisarFila(f, r, E).filter(function (x) { return x.tipo !== 'aviso'; }); eq(inf.length, 0, 'fila ' + i + ' ' + JSON.stringify(inf)); eq(JSON.stringify(r.c), JSON.stringify(ests[i].rec.c)); eq(r.cec, ests[i].rec.cec); });
+  });
+  t('emparejar: orden invertido, ambiguo y no encontrado', function () {
+    var l = [{ id: 'a', apellidos: 'Gómez Pérez', nombres: 'María José' }, { id: 'b', apellidos: 'Gómez Pérez', nombres: 'María José' }, { id: 'c', apellidos: 'Reyes Peña', nombres: 'Luis' }];
+    eq(PL.emparejar('LUIS REYES PEÑA', l).est.id, 'c'); eq(PL.emparejar('Gomez Perez Maria Jose', l).estado, 'ambiguo'); eq(PL.emparejar('Gomez Perez Maria Jose', l, new Set(['b'])).est.id, 'b'); eq(PL.emparejar('Nadie Mas', l).estado, 'noEncontrado');
+  });
+  t('aplicarFila: en blanco conserva, vaciar borra', function () {
+    var f = { c: [{ p: [80, null, null, null], rp: [null, null, null, null] }, { p: [], rp: [] }, { p: [], rp: [] }, { p: [], rp: [] }], cec: null, cex: null, esp: null }, ex = rec([50, 60, 70, 80]);
+    var a = PL.aplicarFila(f, ex, false).rec; eq(a.c[0].p[0], 80); eq(a.c[0].p[1], 60); eq(PL.aplicarFila(f, ex, true).rec.c[0].p[1], null);
+  });
+  t('celdas no numericas o fuera de rango se omiten con aviso, sin ejecutar nada', function () {
+    var X = window.XLSX, w = X.utils.aoa_to_sheet([['No.', 'Apellidos', 'Nombres', 'P1', 'RP', 'P2', 'RP', 'P3', 'RP', 'P4', 'RP', 'Prom'], [1, 'Uno', 'Ana', 'AB', null, 150, null, '=HYPERLINK("x")', null, 90, null, null]]), b = X.utils.book_new();
+    X.utils.book_append_sheet(b, w, 'T1'); var u = X.write(b, { bookType: 'xlsx', type: 'array' }), r = PL.analizarLibro(u instanceof ArrayBuffer ? u : new Uint8Array(u).buffer, 'x.xlsx').hojas[0];
+    eq(r.filas[0].c[0].p[0], null); eq(r.filas[0].c[0].p[1], null); eq(r.filas[0].c[0].p[3], 90); eq(r.filas[0].avisos.length >= 2, true);
+  });
+  var ul = document.getElementById('lista');
+  pruebas.forEach(function (p) { var li = document.createElement('li'); try { p[1](); pas++; li.className = 'ok'; li.textContent = 'PASA · ' + p[0]; } catch (e) { fal++; li.className = 'fail'; li.textContent = 'FALLA · ' + p[0] + ' — ' + e.message; } ul.appendChild(li); });
+  var r = document.getElementById('res'); r.textContent = (fal ? 'FALLAN ' + fal : 'TODAS PASAN') + ' (' + pas + '/' + pruebas.length + ')'; r.className = fal ? 'fail' : 'ok'; document.title = fal ? 'FAIL' : 'PASS';
+})();
+</script></body></html>

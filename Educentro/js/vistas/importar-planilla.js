@@ -52,11 +52,12 @@
       cuerpo.appendChild(tabs.el);
 
       /* ================= IMPORTAR ================= */
-      function adivinarCarga(nombreHoja) {
-        var n = PL().norm(nombreHoja).trim(), m = n.match(/^([a-z])\s*\d*$/) || n.match(/^([a-z])\d/), letra = m ? m[1] : null, hallado = [];
+      function adivinarCarga(nombreHoja) { // "A26", "LE A", "Mat-B": letra de sección (última palabra / primera letra) + código de asignatura si aparece
+        var n = PL().norm(nombreHoja).trim(), tk = n.split(/[^a-z0-9]+/).filter(Boolean), letra = null, m;
+        if ((m = n.match(/^([a-z])\s*\d*$/))) letra = m[1]; else if (tk.length > 1 && /^[a-z]$/.test(tk[tk.length - 1])) letra = tk[tk.length - 1];
         if (!letra) return '';
-        cargasOrd.forEach(function (c) { var s = seccionDe(c.id); if (s && PL().norm(s.nombre) === letra) hallado.push(c); });
-        var porAsig = hallado.filter(function (c) { var a = asig(c.asignaturaId); return n.indexOf(PL().norm(a.codigo)) !== -1; });
+        var hallado = cargasOrd.filter(function (c) { var s = seccionDe(c.id); return s && PL().norm(s.nombre) === letra; });
+        var porAsig = hallado.filter(function (c) { var a = asig(c.asignaturaId); return tk.indexOf(PL().norm(a.codigo)) !== -1 || n.indexOf(PL().norm(a.nombre)) !== -1; });
         return porAsig.length === 1 ? porAsig[0].id : '';
       }
       function pintarImp(p) {
@@ -131,7 +132,7 @@
               var info = function (t, det) { plan.informe.push({ hoja: hj.nombre, fila: f.fila, no: f.no, nombre: f.nombreCompleto, tipo: t, detalle: det }); };
               if (f.error) info('error', 'Promedio: ' + f.error);
               if (f.prom !== null && f.media !== null && Math.abs(f.prom - f.media) > 0.01) info('valor', 'Promedio del archivo ' + calc.redondear(f.prom, 2) + ' vs media de sus asignaturas ' + calc.redondear(f.media, 2));
-              if (f.refs !== null && f.refs !== f.nSubj) info('formula', 'La fórmula del promedio usa ' + f.refs + ' celda(s) y hay ' + f.nSubj + ' asignatura(s) con nota');
+              if (f.refs !== null && f.refs !== hj.asignaturas.length) info('formula', 'La fórmula del promedio usa ' + f.refs + ' celda(s) y la hoja tiene ' + hj.asignaturas.length + ' asignatura(s)');
               if (sec) {
                 var m = PL().emparejar(f.nombreCompleto, ests, null);
                 if (m.estado === 'ok') {

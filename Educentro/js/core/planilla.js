@@ -144,7 +144,10 @@
   }
 
   var RE_REF = /\$?([A-Z]{1,3})\$?(\d+)/g;
-  function refsDe(f) { var o = [], m; RE_REF.lastIndex = 0; while ((m = RE_REF.exec(f))) o.push(window.XLSX.utils.decode_col(m[1])); return o; }
+  function refsDe(f) { // columnas referenciadas; los rangos A1:C1 se expanden (celdas individuales y rangos cuentan igual)
+    var o = [], m, X = window.XLSX, sinRangos = String(f).replace(/\$?([A-Z]{1,3})\$?\d+:\$?([A-Z]{1,3})\$?\d+/g, function (t, c1, c2) { for (var k = X.utils.decode_col(c1); k <= X.utils.decode_col(c2); k++) o.push(k); return ' '; });
+    RE_REF.lastIndex = 0; while ((m = RE_REF.exec(sinRangos))) o.push(X.utils.decode_col(m[1])); return o.filter(function (c, i) { return o.indexOf(c) === i; });
+  }
   /** Clasifica la formula de Prom: 'estandar' (IF(P<min,RP,P) o la nuestra), 'solo-P' (ignora RP), 'mezcla' (P y RP mezclados sin regla), 'ref' (#REF!), 'otra', 'valor' (sin formula). */
   function clasificarFormula(f, g) {
     if (!f) return 'valor';
@@ -165,14 +168,14 @@
     if (!R) return null;
     for (i = R.f0; i <= Math.min(R.f1, R.f0 + 10) && fc < 0; i++) for (c = R.c0; c <= R.c1; c++) if (hnorm(celda(ws, i, c).texto) === 'PROMEDIO') { fc = i; break; }
     if (fc < 0) return null;
-    var H = {}, cNom = -1, cAp = -1, cProm = -1, cNo = -1, subj = [];
-    for (c = R.c0; c <= R.c1; c++) { H[c] = hnorm(celda(ws, fc, c).texto); if (H[c] === 'APELLIDOS') cAp = c; else if (H[c] === 'NOMBRES') cNom = c; else if (H[c] === 'PROMEDIO') cProm = c; else if (H[c] === 'NO.') cNo = c; }
-    if (cNom < 0 && cAp < 0) return null;
-    for (c = Math.max(cNom, cAp) + 1; c < cProm; c++) if (H[c]) subj.push({ col: c, cod: String(celda(ws, fc, c).texto || '').slice(0, 20) });
+    var H = {}, cNom = -1, cAp = -1, cProm = -1, cNo = -1, cUn = -1, subj = [];
+    for (c = R.c0; c <= R.c1; c++) { H[c] = hnorm(celda(ws, fc, c).texto); if (H[c] === 'APELLIDOS') cAp = c; else if (H[c] === 'NOMBRES') cNom = c; else if (H[c] && H[c].indexOf('NOMBRE') === 0 && cUn < 0) cUn = c; else if (H[c] === 'PROMEDIO') cProm = c; else if (H[c] === 'NO.') cNo = c; }
+    if (cNom < 0 && cAp < 0 && cUn < 0) return null;
+    for (c = Math.max(cNom, cAp, cUn) + 1; c < cProm; c++) if (H[c]) subj.push({ col: c, cod: String(celda(ws, fc, c).texto || '').slice(0, 20) });
     var titulo = ''; for (i = R.f0; i < fc && !titulo; i++) for (c = R.c0; c <= R.c1; c++) { var t = celda(ws, i, c).texto; if (t) { titulo = t; break; } }
     var filas = [];
     for (i = fc + 1; i <= Math.min(R.f1, fc + LIM.filas); i++) {
-      var n = ((cAp >= 0 ? celda(ws, i, cAp).texto || '' : '') + ' ' + (cNom >= 0 ? celda(ws, i, cNom).texto || '' : '')).trim(); if (!n) continue;
+      var n = ((cAp >= 0 ? celda(ws, i, cAp).texto || '' : '') + ' ' + (cNom >= 0 ? celda(ws, i, cNom).texto || '' : '') + ' ' + (cUn >= 0 ? celda(ws, i, cUn).texto || '' : '')).trim(); if (!n) continue;
       var notas = subj.map(function (s) { var x = celda(ws, i, s.col); return x.v; }), pc = celda(ws, i, cProm), vals = notas.filter(function (x) { return x !== null; });
       var calcMedia = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : null;
       var nrefs = pc.f ? refsDe(pc.f).length : null;
@@ -182,12 +185,13 @@
   }
 
   function analizarCompletivo(ws, nombre) {
-    var R = rango(ws), grupos = [], actual = null, i, titulo = '';
+    var R = rango(ws), grupos = [], actual = null, suelto = null, i, titulo = '';
     if (!R) return null;
     for (i = R.f0; i <= Math.min(R.f1, R.f0 + LIM.filas); i++) {
       var a = celda(ws, i, R.c0), b = celda(ws, i, R.c0 + 1);
       if (a.v === null && !a.texto && b.texto) { // etiqueta de grupo o titulo
         var sig = celda(ws, i + 1, R.c0); if (hnorm(sig.texto) === 'NO.' || hnorm(celda(ws, i + 1, R.c0 + 1).texto) === 'NOMBRE') { actual = { etiqueta: b.texto, nombres: [] }; grupos.push(actual); }
+        else { if (!suelto) { suelto = { etiqueta: 'Sin etiqueta (fila ' + (i + 1) + ')', nombres: [] }; grupos.push(suelto); } suelto.nombres.push({ fila: i + 1, no: null, nombreCompleto: b.texto }); }
       } else if (a.texto && !b.texto && !grupos.length && !titulo) titulo = a.texto;
       else if (a.v !== null && b.texto && actual) actual.nombres.push({ fila: i + 1, no: a.v, nombreCompleto: b.texto });
     }
