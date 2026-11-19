@@ -133,6 +133,10 @@ nav button:active{transform:scale(.94)}
 }
 
 /* planificar */
+.btn,.btn2{white-space:nowrap}
+#v-planificar .sec{flex-wrap:wrap;gap:10px;align-items:center}
+.cls{flex-wrap:wrap}.cls .info{flex:1 1 110px}
+.cls time{min-width:48px}
 .tabs{display:flex;gap:6px;background:var(--paper);border:2px solid var(--line);border-radius:99px;padding:5px;margin:14px 0}
 .tabs button{flex:1;border:0;background:none;border-radius:99px;padding:10px 8px;font-weight:800;cursor:pointer;color:var(--ink2)}
 .tabs button[aria-selected=true]{background:var(--ink);color:#fff}
@@ -542,8 +546,8 @@ function renderWeek(){
   $('#dayclasses').innerHTML=`<h2 style="font-size:1.25rem;margin:4px 4px 10px">${DAYF[selDay]}</h2>`+SLOTS[selDay].map((s,i)=>{
     const p=pl.find(x=>x.day===selDay&&x.time===s[0]);const c=COL[s[2]];
     return `<article class="card cls"><time>${s[0]}</time><span class="dot" style="background:${c[0]}"></span>
-    <div class="info"><b>${esc(s[1])}</b><span class="muted small">${p?esc(p.tema):'Sin plan todavía'}</span></div>
-    ${p?`<span class="chip ${EST[p.est][1]}">${EST[p.est][0]}</span><button class="btn2" type="button" data-edit="${esc(p.id)}">Editar</button>`:`<button class="btn2" type="button" data-new="${i}">Planificar</button>`}</article>`}).join('');
+    <div class="info"><b>${esc(s[1])}</b><span class="muted small">${p?esc(p.tema):'Sin plan todavía'}</span>${p?`<span class="chip ${EST[p.est][1]}" style="margin-top:4px">${EST[p.est][0]}</span>`:''}</div>
+    ${p?`<button class="btn2" type="button" data-edit="${esc(p.id)}">Editar</button>`:`<button class="btn2" type="button" data-new="${i}">Planificar</button>`}</article>`}).join('');
   const sorted=[...pl].sort((a,b)=>a.day-b.day||a.time.localeCompare(b.time));
   $('#plans').innerHTML=sorted.length?sorted.map(p=>`<article class="card plan"><div><h3>${esc(p.tema)}</h3>
     <span class="muted small">${DAYF[p.day]}${p.time?' · '+esc(p.time):''} · ${esc(p.sub)}</span></div>
