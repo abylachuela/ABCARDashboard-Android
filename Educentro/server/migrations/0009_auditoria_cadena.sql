@@ -79,10 +79,13 @@ BEGIN
 END $$;
 CREATE TRIGGER auditoria_cadena BEFORE INSERT ON auditoria FOR EACH ROW EXECUTE FUNCTION auditoria_encadenar();
 
--- La cabeza se lee con RLS por centro (para verificar); nadie la modifica salvo el trigger.
-ALTER TABLE auditoria_cabeza ENABLE ROW LEVEL SECURITY; -- sin FORCE: el propietario (el trigger) la gestiona
-CREATE POLICY cabeza_lectura ON auditoria_cabeza FOR SELECT
-  USING (current_setting('app.rol', true) = 'admin_red' OR centro_id = NULLIF(current_setting('app.centro_id', true), ''));
+-- La cabeza se lee con RLS por centro (para verificar); nadie la modifica salvo el trigger (que corre como propietario
+-- y, con FORCE, también queda sujeto a la política del contexto de la transacción que audita).
+ALTER TABLE auditoria_cabeza ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auditoria_cabeza FORCE ROW LEVEL SECURITY;
+CREATE POLICY cabeza_aislamiento ON auditoria_cabeza
+  USING (current_setting('app.rol', true) = 'admin_red' OR centro_id = NULLIF(current_setting('app.centro_id', true), ''))
+  WITH CHECK (current_setting('app.rol', true) = 'admin_red' OR centro_id = NULLIF(current_setting('app.centro_id', true), ''));
 REVOKE ALL ON auditoria_cabeza FROM PUBLIC;
 GRANT SELECT ON auditoria_cabeza TO educentro_app;
 REVOKE ALL ON FUNCTION auditoria_encadenar() FROM PUBLIC;

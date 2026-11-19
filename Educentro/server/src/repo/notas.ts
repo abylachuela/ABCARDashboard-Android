@@ -109,6 +109,7 @@ export async function loteCategorias(p: Peticion, cuerpoBruto: unknown): Promise
   const carga = await p.carga(cargaId);
   if (!carga) throw new ErrorHttp(404, 'no_encontrado', 'La carga docente no existe.');
   centroDePeticion(p.ses, carga.centroId); // no admin_red: debe ser su centro
+  if (p.ses.rol === 'docente' && !(await p.alcance())?.cargaIds.includes(cargaId)) throw new ErrorHttp(403, 'sin_permiso', 'Sin permiso: la carga docente no es tuya.');
   const nombres = new Set<string>();
   for (const [i, c] of categorias.entries()) {
     const nombre = typeof c.nombre === 'string' ? c.nombre.trim() : '';
@@ -293,7 +294,7 @@ export async function cerrarPeriodo(p: Peticion, periodoId: string, cuerpoBruto:
 
 export async function reabrirPeriodo(p: Peticion, periodoId: string, cuerpoBruto: unknown): Promise<Registro | null> {
   exigirRolCierre(p);
-  const b = z.object({ motivo: z.unknown() }).strict().parse(cuerpoBruto ?? {});
+  const b = z.object({ motivo: z.unknown().optional() }).strict().parse(cuerpoBruto ?? {});
   const motivo = p.motivo ?? validarMotivo(b.motivo, 'motivo');
   const per = await cargarPeriodo(p, periodoId, true);
   if (!per.cerrado) throw new ErrorHttp(409, 'periodo_no_cerrado', `El periodo «${per.nombre}» no está cerrado.`);

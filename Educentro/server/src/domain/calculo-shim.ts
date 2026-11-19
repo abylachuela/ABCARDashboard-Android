@@ -36,7 +36,11 @@ const FORMA: Record<string, readonly string[]> = {
   consultas: ['agrupar', 'escalaDe', 'periodoAbierto', 'resumenNotas'],
 };
 
+/** Objeto EDU cargado (calculo, escala y consultas). Para pruebas y usos avanzados; el resto del servidor usa los métodos tipados. */
+export type EduCompartido = Record<'calculo' | 'escala' | 'consultas', Record<string, (...args: any[]) => any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 export interface CalculoCompartido {
+  edu: EduCompartido;
   /** Huellas SHA-256 de los archivos cargados (para diagnóstico y para la prueba que los vigila). */
   huellas: Record<string, string>;
   aNumero(v: unknown): number | null;
@@ -86,6 +90,7 @@ function cargar(): CalculoCompartido {
   const q = E.consultas as unknown as Record<string, (...a: unknown[]) => unknown>;
   const aplicar = <T>(f: (...a: unknown[]) => unknown) => (...a: unknown[]): T => f(...a) as T;
   const calc: CalculoCompartido = {
+    edu: edu as unknown as EduCompartido,
     huellas,
     aNumero: aplicar(c.aNumero as never),
     redondear: aplicar(c.redondear as never),

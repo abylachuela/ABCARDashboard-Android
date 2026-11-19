@@ -40,6 +40,7 @@ function cuerpoValido(rol: string, col: string): Record<string, unknown> {
   if (col === 'usuarios') return { nombre: 'Nuevo', email: `nuevo${k}@prueba.test`, rol: 'docente', refId: null, ...base };
   if (col === 'centros') return { nombre: `Centro nuevo ${k}` };
   if (col === 'calificaciones') return { ...base, actividadId: 'act1', estudianteId: `est_m${k}`, puntos: 7 };
+  if (col === 'notasCompetencia') return { ...base, cargaId: 'cg1', estudianteId: `est_m${k}`, c: [] };
   if (col === 'asistencia') return { ...base, seccionId: 's1', estudianteId: `est_m${k}`, fecha: `2027-01-${String(k % 28 + 1).padStart(2, '0')}x${k}`, estado: 'P' };
   if (col === 'agenteConfig') return { ...base, docenteId: rol === 'docente' ? 'd1' : 'd9' };
   if (rol === 'estudiante') return { ...base, estudianteId: 'e1', cargaId: 'cg1', autorId: m.s.estA1!.id, texto: 'hola' };

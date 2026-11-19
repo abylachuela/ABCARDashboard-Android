@@ -74,8 +74,8 @@ const plano = (f: FilaAud): Json => ({
   despues: f.despues,
   fecha: f.fecha,
   seq: Number(f.seq),
-  hash: f.hash,
-  prevHash: f.prev_hash,
+  huella: f.hash,
+  huellaPrevia: f.prev_hash,
   ip: f.ip,
   userAgent: f.user_agent,
 });
