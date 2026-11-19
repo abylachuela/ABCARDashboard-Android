@@ -7,7 +7,7 @@ export interface Mailer {
 
 /** Desarrollo: imprime el enlace por consola. Se niega a existir en producción. */
 export class MailerConsola implements Mailer {
-  constructor(private readonly produccion: boolean) {
+  constructor(produccion: boolean) {
     if (produccion) throw new Error('El transporte de correo "consola" no está permitido en producción');
   }
   async enviarRecuperacion(destino: string, _nombre: string, enlace: string, caducaMin: number): Promise<void> {
