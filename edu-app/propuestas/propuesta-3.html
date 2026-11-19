@@ -19,7 +19,7 @@ html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font);background:var(--cream);color:var(--ink);font-size:16px;line-height:1.45;min-height:100vh;
   background-image:radial-gradient(circle at 100% 0,var(--sun-s) 0,transparent 35%),radial-gradient(circle at 0 100%,var(--sky-s) 0,transparent 30%);background-attachment:fixed}
 h1,h2,h3{font-family:var(--head);line-height:1.1}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--sky-d);outline-offset:3px;border-radius:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 svg{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -131,6 +131,73 @@ nav button:active{transform:scale(.94)}
   .split{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}
   .medals{grid-template-columns:repeat(4,1fr)}
 }
+
+/* planificar */
+.tabs{display:flex;gap:6px;background:var(--paper);border:2px solid var(--line);border-radius:99px;padding:5px;margin:14px 0}
+.tabs button{flex:1;border:0;background:none;border-radius:99px;padding:10px 8px;font-weight:800;cursor:pointer;color:var(--ink2)}
+.tabs button[aria-selected=true]{background:var(--ink);color:#fff}
+.tabpanel[hidden]{display:none}
+.weekbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.weekbar b{font-family:var(--head);font-size:1.15rem;text-align:center}
+.ib{border:2px solid var(--line);background:var(--paper);border-radius:99px;min-width:44px;min-height:44px;padding:0 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.ib:hover{background:var(--sun-s)}
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.days button{border:2px solid var(--line);background:var(--paper);border-radius:20px;padding:8px 2px;font-weight:800;cursor:pointer;display:grid;line-height:1.15;min-height:56px}
+.days button span{font-size:.75rem;color:var(--ink2)}
+.days button b{font-family:var(--head);font-size:1.25rem}
+.days button[aria-pressed=true]{background:var(--sun);border-color:var(--ink)}
+.days button[aria-pressed=true] span{color:var(--ink)}
+.cls{display:flex;gap:12px;align-items:center;padding:14px;margin-bottom:10px}
+.cls time{font-family:var(--head);font-weight:800;min-width:54px}
+.cls .info{flex:1;min-width:0}
+.cls .info b{display:block;overflow-wrap:anywhere}
+.btn2{border:2px solid var(--ink);background:var(--paper);border-radius:99px;padding:9px 16px;font-weight:800;cursor:pointer}
+.btn2:hover{background:var(--sun-s)}
+.btn2.danger{border-color:var(--coral-d);color:var(--coral-d)}
+.plan{display:grid;gap:10px;margin-bottom:12px}
+.plan h3{font-size:1.15rem;overflow-wrap:anywhere}
+.plan .acts{display:flex;gap:8px;flex-wrap:wrap}
+dialog{border:0;border-radius:28px 28px 0 0;padding:0;width:100%;max-width:640px;max-height:92vh;margin:auto auto 0;background:var(--cream);color:var(--ink);box-shadow:0 -10px 40px rgba(43,36,51,.3)}
+dialog::backdrop{background:rgba(43,36,51,.5)}
+dialog[open]{animation:sheet .3s ease both}
+@keyframes sheet{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet{padding:18px 16px 20px;display:grid;gap:12px}
+.sheet h2{font-size:1.5rem}
+.sheet label,.cfg label.f{display:grid;gap:4px;font-weight:800;font-size:.9rem}
+.sheet input,.sheet select,.sheet textarea,.cfg input[type=text],.cfg input[type=password],.cfg select,.cfg textarea,.chatf input{border:2px solid var(--ink2);background:#fff;border-radius:16px;padding:11px 14px;min-height:48px;width:100%}
+textarea{resize:vertical;font:inherit;color:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actrow{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:end}
+.sheet .bar2{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;position:sticky;bottom:0;background:var(--cream);padding-top:8px}
+.cfg{display:grid;gap:14px}
+.sw{display:flex;align-items:center;gap:12px;font-weight:800}
+.sw input{width:26px;height:26px;accent-color:var(--coral-d)}
+fieldset{border:2px solid var(--line);border-radius:20px;padding:12px 14px;display:grid;gap:8px;min-width:0}
+legend{font-weight:800;padding:0 6px}
+.opt{display:flex;gap:10px;align-items:flex-start;font-weight:700;min-height:32px}
+.opt input{width:22px;height:22px;margin-top:1px;accent-color:var(--coral-d);flex:none}
+.warn{background:var(--coral-s);color:#5a1608;border:2px solid var(--coral);border-radius:18px;padding:12px 14px;font-weight:700;font-size:.92rem}
+.note{font-size:.82rem;font-weight:700;color:var(--ink2)}
+.chat{display:grid;gap:10px;max-height:420px;overflow:auto;padding:4px;margin:10px 0}
+.msg{padding:10px 14px;border-radius:20px;max-width:92%;overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.u{background:var(--sky-s);justify-self:end}.msg.a{background:var(--sun-s);justify-self:start}
+.prop{border:2px dashed var(--ink2);border-radius:20px;background:#fff;padding:12px;display:grid;gap:8px;justify-self:stretch}
+.prop pre{white-space:pre-wrap;font:inherit;overflow-wrap:anywhere}
+.chatf{display:flex;gap:8px}
+.chatf input{flex:1}
+.log{list-style:none;padding:0;display:grid;gap:6px;font-size:.88rem;font-weight:700;max-height:220px;overflow:auto}
+.log li{padding:8px 12px;background:var(--cream);border-radius:14px;overflow-wrap:anywhere}
+.empty{padding:16px;text-align:center;color:var(--ink2);font-weight:700}
+@media(min-width:860px){
+  dialog{border-radius:28px;margin:auto}
+  .aigrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .days button{min-height:64px}
+}
+@media(max-width:420px){
+  nav{left:8px;right:8px;padding:6px 4px;gap:2px}
+  nav button{font-size:.7rem;padding:8px 0;letter-spacing:-.1px}
+  .two{grid-template-columns:1fr}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -153,6 +220,7 @@ nav button:active{transform:scale(.94)}
 <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 21h8"/></symbol>
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20S4 15 4 9a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z"/></symbol>
 <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-plan" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/></symbol>
 </defs>
 </svg>
 
@@ -162,6 +230,7 @@ nav button:active{transform:scale(.94)}
   <button data-go="inicio" aria-current="page"><svg><use href="#i-home"/></svg>Inicio</button>
   <button data-go="centros"><svg><use href="#i-school"/></svg>Centros</button>
   <button data-go="notas"><svg><use href="#i-note"/></svg>Notas</button>
+  <button data-go="planificar"><svg><use href="#i-plan"/></svg>Planificar</button>
   <button data-go="perfil"><svg><use href="#i-user"/></svg>Perfil</button>
 </nav>
 
@@ -227,6 +296,115 @@ nav button:active{transform:scale(.94)}
     <p class="toast" id="toast" role="status"></p>
   </form>
 </section>
+
+<!-- PLANIFICAR -->
+<section class="view" id="v-planificar" aria-labelledby="t-planificar">
+  <h1 id="t-planificar" style="font-size:2rem">Planificar</h1>
+  <div class="tabs" role="tablist" aria-label="Secciones de planificación">
+    <button role="tab" id="tab-clases" aria-selected="true" aria-controls="p-clases">Mis clases</button>
+    <button role="tab" id="tab-ia" aria-selected="false" aria-controls="p-ia" tabindex="-1">Asistente IA</button>
+  </div>
+
+  <div class="tabpanel" id="p-clases" role="tabpanel" aria-labelledby="tab-clases">
+    <div class="weekbar">
+      <button class="ib" id="wk-prev" aria-label="Semana anterior">‹</button>
+      <b id="wk-label" aria-live="polite"></b>
+      <button class="ib" id="wk-next" aria-label="Semana siguiente">›</button>
+    </div>
+    <div class="days" id="days" role="group" aria-label="Días de la semana"></div>
+    <div id="dayclasses"></div>
+    <div class="sec"><h2>Planes de la semana</h2><button class="btn" id="new-plan" type="button">+ Nuevo plan</button></div>
+    <div id="plans"></div>
+  </div>
+
+  <div class="tabpanel" id="p-ia" role="tabpanel" aria-labelledby="tab-ia" hidden>
+    <div class="aigrid">
+    <form class="card cfg" id="aicfg" autocomplete="off" onsubmit="return false">
+      <h2>Configuración</h2>
+      <label class="sw"><input type="checkbox" id="ai-on"> Activar asistente IA</label>
+      <label class="f">Nombre del asistente<input type="text" id="ai-name" maxlength="40"></label>
+      <label class="f">Proveedor / modelo<select id="ai-model"><option>Claude (Anthropic)</option><option>Otro modelo compatible</option></select></label>
+      <label class="f">API Key<input type="password" id="ai-key" autocomplete="off" aria-describedby="keywarn" placeholder="No se guarda ni se envía"></label>
+      <p class="warn" id="keywarn" role="note"><b>Importante:</b> en producción la clave NUNCA va en el navegador: vive en el servidor. Este prototipo no la guarda ni la envía.</p>
+      <fieldset><legend>Modo de autonomía</legend>
+        <label class="opt"><input type="radio" name="mode" value="suggest"> Solo sugiere</label>
+        <label class="opt"><input type="radio" name="mode" value="approve"> Sugiere y espera aprobación</label>
+        <label class="opt"><input type="radio" name="mode" value="exec"> Ejecuta con registro</label>
+      </fieldset>
+      <fieldset><legend>Tareas habilitadas</legend>
+        <label class="opt"><input type="checkbox" data-task="plan"> Generar plan de clase</label>
+        <label class="opt"><input type="checkbox" data-task="act"> Proponer actividades</label>
+        <label class="opt"><input type="checkbox" data-task="rub"> Crear rúbricas</label>
+        <label class="opt"><input type="checkbox" data-task="com"> Redactar comunicados a tutores</label>
+        <label class="opt"><input type="checkbox" data-task="res"> Resumir rendimiento del grupo</label>
+        <label class="opt"><input type="checkbox" data-task="not" aria-describedby="notnote"> Preparar borrador de notas</label>
+        <p class="note" id="notnote">Esta tarea siempre exige aprobación humana: en modo «Ejecuta» queda bloqueada para ejecución automática.</p>
+      </fieldset>
+      <div class="two">
+        <label class="f">Tono<select id="ai-tone"><option>Cercano</option><option>Formal</option><option>Motivador</option></select></label>
+        <label class="f">Nivel<select id="ai-level"><option>Primaria</option><option>ESO</option><option>Bachillerato</option></select></label>
+      </div>
+      <label class="f">Instrucciones personalizadas<textarea id="ai-instr" rows="3" maxlength="500" placeholder="Ej. Usa ejemplos de la vida cotidiana."></textarea></label>
+      <fieldset><legend>Límites</legend>
+        <label class="opt"><input type="checkbox" id="lim-closed"> No tocar notas cerradas</label>
+        <label class="opt"><input type="checkbox" id="lim-send"> No enviar nada a tutores sin revisión</label>
+        <label class="f">Máximo de acciones por sesión<select id="lim-max"><option>3</option><option>5</option><option>10</option></select></label>
+      </fieldset>
+    </form>
+    <div>
+      <section class="card" aria-labelledby="t-chat">
+        <h2 id="t-chat" style="font-size:1.4rem">Pídele al asistente</h2>
+        <p class="muted small">Simulación sin red. Prueba: «plan de clase sobre fracciones», «rúbrica de redacción», «comunicado a tutores».</p>
+        <div class="chat" id="chat" role="log" aria-live="polite" aria-label="Conversación"></div>
+        <form class="chatf" id="chatf" autocomplete="off">
+          <label class="sr" for="chat-in">Mensaje para el asistente</label>
+          <input id="chat-in" placeholder="Escribe tu petición…" maxlength="200">
+          <button class="btn" type="submit">Enviar</button>
+        </form>
+      </section>
+      <div class="sec"><h2>Registro de actividad</h2></div>
+      <ul class="log card" id="log" aria-live="polite"></ul>
+    </div>
+    </div>
+  </div>
+</section>
+
+<dialog id="dlg-plan" aria-labelledby="dp-title">
+  <form class="sheet" id="planf" method="dialog" autocomplete="off">
+    <h2 id="dp-title">Plan de clase</h2>
+    <label>Tema<input id="p-tema" required maxlength="120"></label>
+    <div class="two">
+      <label>Asignatura<select id="p-sub"></select></label>
+      <label>Estado<select id="p-est"><option value="borrador">Borrador</option><option value="listo">Listo</option><option value="impartido">Impartido</option></select></label>
+      <label>Día<select id="p-dia"><option value="0">Lunes</option><option value="1">Martes</option><option value="2">Miércoles</option><option value="3">Jueves</option><option value="4">Viernes</option></select></label>
+      <label>Hora<input id="p-hora" type="time"></label>
+    </div>
+    <label>Objetivos<textarea id="p-obj" rows="2"></textarea></label>
+    <label>Competencias<textarea id="p-comp" rows="2"></textarea></label>
+    <div class="actrow"><label>Actividad de inicio<textarea id="p-ini" rows="2"></textarea></label><label>Minutos<input id="p-ini-m" type="number" min="0" max="120" inputmode="numeric"></label></div>
+    <div class="actrow"><label>Actividad de desarrollo<textarea id="p-des" rows="2"></textarea></label><label>Minutos<input id="p-des-m" type="number" min="0" max="120" inputmode="numeric"></label></div>
+    <div class="actrow"><label>Actividad de cierre<textarea id="p-cie" rows="2"></textarea></label><label>Minutos<input id="p-cie-m" type="number" min="0" max="120" inputmode="numeric"></label></div>
+    <label>Recursos<textarea id="p-rec" rows="2"></textarea></label>
+    <label>Evaluación / rúbrica<textarea id="p-eva" rows="2"></textarea></label>
+    <label>Tarea<textarea id="p-tar" rows="2"></textarea></label>
+    <p class="toast" id="p-err" role="alert"></p>
+    <div class="bar2">
+      <button type="button" class="btn2 danger" id="p-del" hidden>Eliminar</button>
+      <span style="flex:1"></span>
+      <button type="button" class="btn2" id="p-cancel">Cancelar</button>
+      <button type="submit" class="btn" id="p-save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-dup" aria-labelledby="dd-title">
+  <form class="sheet" id="dupf" method="dialog">
+    <h2 id="dd-title">Duplicar a otra semana</h2>
+    <p class="muted" id="dd-name"></p>
+    <label>Semana de destino<select id="dd-week"></select></label>
+    <div class="bar2"><span style="flex:1"></span><button type="button" class="btn2" id="dd-cancel">Cancelar</button><button type="submit" class="btn">Duplicar</button></div>
+  </form>
+</dialog>
 
 <!-- PERFIL -->
 <section class="view" id="v-perfil" aria-labelledby="t-perfil">
@@ -323,6 +501,205 @@ $('#cap').addEventListener('submit',e=>{
   $('#toast').textContent='¡Guardada! 🎉 Promedio de '+s.n+': '+fmt(wavg(s.g));
 });
 renderCenters();renderSubjects();renderProfile();live();
+
+/* ===== PLANIFICAR ===== */
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KEY='edu3.planificar.v1';
+const DAYS=['Lun','Mar','Mié','Jue','Vie'],DAYF=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const SLOTS=[
+ [['08:30','Matemáticas','coral'],['10:15','Ciencias','mint']],
+ [['09:00','Lengua','sun'],['11:00','Inglés','sky'],['12:30','Matemáticas','coral']],
+ [['08:30','Ciencias','mint'],['10:15','Inglés','sky']],
+ [['08:30','Matemáticas','coral'],['10:15','Ciencias','mint'],['12:00','Lengua','sun'],['15:30','Inglés','sky']],
+ [['09:00','Lengua','sun'],['10:45','Matemáticas','coral']]
+];
+const SUBS=['Matemáticas','Ciencias','Lengua','Inglés','General'];
+const SCOL={Matemáticas:'coral',Ciencias:'mint',Lengua:'sun',Inglés:'sky',General:'sky'};
+const EST={borrador:['Borrador','c-sun'],listo:['Listo','c-mint'],impartido:['Impartido','c-sky']};
+const MODES={suggest:'Solo sugiere',approve:'Sugiere y espera aprobación',exec:'Ejecuta con registro'};
+const TASKN={plan:'Generar plan de clase',act:'Proponer actividades',rub:'Crear rúbricas',com:'Redactar comunicados',res:'Resumir rendimiento',not:'Borrador de notas'};
+const mkPlan=(o)=>Object.assign({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),week:0,day:3,time:'',sub:'Matemáticas',tema:'',obj:'',comp:'',ini:'',iniM:10,des:'',desM:30,cie:'',cieM:10,rec:'',eva:'',tar:'',est:'borrador'},o);
+let ST3={
+ plans:[mkPlan({day:3,time:'08:30',sub:'Matemáticas',tema:'Fracciones equivalentes',obj:'Reconocer y generar fracciones equivalentes.',comp:'Competencia matemática; aprender a aprender.',ini:'Pregunta detonante con pizzas.',des:'Trabajo en parejas con tiras de fracciones.',cie:'Ticket de salida.',rec:'Tiras de papel, pizarra.',eva:'Rúbrica de 4 niveles.',tar:'Ficha 3',est:'listo'}),
+        mkPlan({day:1,time:'11:00',sub:'Inglés',tema:'Present perfect: introducción',est:'borrador'})],
+ ai:{on:true,name:'Profe Asistente',model:'Claude (Anthropic)',mode:'approve',tasks:{plan:1,act:1,rub:1,com:0,res:1,not:0},tone:'Cercano',level:'ESO',instr:'',closed:true,send:true,max:'5'}
+};
+try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&Array.isArray(r.plans)&&r.ai){ST3={plans:r.plans,ai:Object.assign(ST3.ai,r.ai)}}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(ST3))}catch(e){}}
+let wk=0,selDay=(()=>{const d=new Date().getDay();return d>=1&&d<=5?d-1:3})(),editId=null,dupId=null,actions=0;
+
+const monday=w=>{const d=new Date();const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k+7*w);d.setHours(0,0,0,0);return d};
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const dstr=d=>d.getDate()+' '+MES[d.getMonth()];
+const weekLabel=w=>'Semana del '+dstr(monday(w));
+
+function renderWeek(){
+  $('#wk-label').textContent=weekLabel(wk)+(wk===0?' (actual)':'');
+  const m=monday(wk);
+  $('#days').innerHTML=DAYS.map((n,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);
+    return `<button type="button" data-d="${i}" aria-pressed="${i===selDay}" aria-label="${DAYF[i]} ${d.getDate()}"><span>${n}</span><b>${d.getDate()}</b></button>`}).join('');
+  const pl=ST3.plans.filter(p=>p.week===wk);
+  $('#dayclasses').innerHTML=`<h2 style="font-size:1.25rem;margin:4px 4px 10px">${DAYF[selDay]}</h2>`+SLOTS[selDay].map((s,i)=>{
+    const p=pl.find(x=>x.day===selDay&&x.time===s[0]);const c=COL[s[2]];
+    return `<article class="card cls"><time>${s[0]}</time><span class="dot" style="background:${c[0]}"></span>
+    <div class="info"><b>${esc(s[1])}</b><span class="muted small">${p?esc(p.tema):'Sin plan todavía'}</span></div>
+    ${p?`<span class="chip ${EST[p.est][1]}">${EST[p.est][0]}</span><button class="btn2" type="button" data-edit="${esc(p.id)}">Editar</button>`:`<button class="btn2" type="button" data-new="${i}">Planificar</button>`}</article>`}).join('');
+  const sorted=[...pl].sort((a,b)=>a.day-b.day||a.time.localeCompare(b.time));
+  $('#plans').innerHTML=sorted.length?sorted.map(p=>`<article class="card plan"><div><h3>${esc(p.tema)}</h3>
+    <span class="muted small">${DAYF[p.day]}${p.time?' · '+esc(p.time):''} · ${esc(p.sub)}</span></div>
+    <div class="meta"><span class="chip ${EST[p.est][1]}">${EST[p.est][0]}</span><span class="chip c-sky">${(+p.iniM||0)+(+p.desM||0)+(+p.cieM||0)} min</span></div>
+    <div class="acts"><button class="btn2" type="button" data-edit="${esc(p.id)}">Editar</button><button class="btn2" type="button" data-dup="${esc(p.id)}">Duplicar a otra semana</button></div></article>`).join(''):'<p class="card empty">Aún no hay planes esta semana. Crea el primero.</p>';
+}
+$('#wk-prev').onclick=()=>{wk--;renderWeek()};
+$('#wk-next').onclick=()=>{wk++;renderWeek()};
+$('#days').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){selDay=+b.dataset.d;renderWeek();$(`#days [data-d="${selDay}"]`).focus()}});
+
+/* editor */
+const F=['tema','sub','est','dia','hora','obj','comp','ini','ini-m','des','des-m','cie','cie-m','rec','eva','tar'];
+$('#p-sub').innerHTML=SUBS.map(s=>`<option>${esc(s)}</option>`).join('');
+let delArm=false;
+function openEditor(p,isNew){
+  editId=isNew?null:p.id;delArm=false;
+  $('#dp-title').textContent=isNew?'Nuevo plan de clase':'Editar plan';
+  $('#p-tema').value=p.tema;$('#p-sub').value=p.sub;$('#p-est').value=p.est;$('#p-dia').value=p.day;$('#p-hora').value=p.time;
+  $('#p-obj').value=p.obj;$('#p-comp').value=p.comp;$('#p-ini').value=p.ini;$('#p-ini-m').value=p.iniM;$('#p-des').value=p.des;$('#p-des-m').value=p.desM;
+  $('#p-cie').value=p.cie;$('#p-cie-m').value=p.cieM;$('#p-rec').value=p.rec;$('#p-eva').value=p.eva;$('#p-tar').value=p.tar;
+  $('#p-del').hidden=isNew;$('#p-del').textContent='Eliminar';$('#p-err').textContent='';
+  lastFocus=document.activeElement;$('#dlg-plan').showModal();$('#p-tema').focus();
+}
+let lastFocus=null;
+const restore=()=>{try{lastFocus&&lastFocus.isConnected&&lastFocus.focus()}catch(e){}};
+$('#dlg-plan').addEventListener('close',restore);$('#dlg-dup').addEventListener('close',restore);
+$('#new-plan').onclick=()=>openEditor(mkPlan({week:wk,day:selDay}),true);
+$('#planf').addEventListener('submit',e=>{
+  e.preventDefault();
+  const tema=$('#p-tema').value.trim();
+  if(!tema){$('#p-err').textContent='El tema es obligatorio.';$('#p-tema').focus();return}
+  const mins=['ini','des','cie'].map(k=>$('#p-'+k+'-m').value);
+  if(mins.some(m=>m!==''&&(isNaN(+m)||+m<0))){$('#p-err').textContent='Los minutos deben ser números positivos.';return}
+  const data={tema,sub:$('#p-sub').value,est:$('#p-est').value,day:+$('#p-dia').value,time:$('#p-hora').value,obj:$('#p-obj').value.trim(),comp:$('#p-comp').value.trim(),
+    ini:$('#p-ini').value.trim(),iniM:+mins[0]||0,des:$('#p-des').value.trim(),desM:+mins[1]||0,cie:$('#p-cie').value.trim(),cieM:+mins[2]||0,
+    rec:$('#p-rec').value.trim(),eva:$('#p-eva').value.trim(),tar:$('#p-tar').value.trim()};
+  if(editId){Object.assign(ST3.plans.find(p=>p.id===editId),data)}else{ST3.plans.push(mkPlan(Object.assign(data,{week:wk})))}
+  save();selDay=data.day;$('#dlg-plan').close();renderWeek();
+});
+$('#p-cancel').onclick=()=>$('#dlg-plan').close();
+$('#p-del').onclick=()=>{
+  if(!delArm){delArm=true;$('#p-del').textContent='¿Seguro? Pulsa de nuevo para eliminar';return}
+  ST3.plans=ST3.plans.filter(p=>p.id!==editId);save();$('#dlg-plan').close();renderWeek();
+};
+/* duplicar */
+function openDup(p){
+  dupId=p.id;$('#dd-name').textContent='Plan: '+p.tema;
+  const opts=[];for(let w=-1;w<=6;w++)if(w!==p.week)opts.push(`<option value="${w}">${esc(weekLabel(w))}${w===0?' (actual)':''}</option>`);
+  $('#dd-week').innerHTML=opts.join('');$('#dd-week').value=String(p.week+1);
+  lastFocus=document.activeElement;$('#dlg-dup').showModal();$('#dd-week').focus();
+}
+$('#dd-cancel').onclick=()=>$('#dlg-dup').close();
+$('#dupf').addEventListener('submit',e=>{
+  e.preventDefault();const p=ST3.plans.find(x=>x.id===dupId);if(!p)return;
+  const w=+$('#dd-week').value;
+  ST3.plans.push(mkPlan(Object.assign({},p,{id:undefined,week:w,est:'borrador'})));
+  ST3.plans[ST3.plans.length-1].id=mkPlan({}).id;
+  save();$('#dlg-dup').close();wk=w;renderWeek();
+});
+$('#p-clases').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]'),dp=e.target.closest('[data-dup]'),nw=e.target.closest('[data-new]');
+  if(ed)openEditor(ST3.plans.find(p=>p.id===ed.dataset.edit),false);
+  else if(dp)openDup(ST3.plans.find(p=>p.id===dp.dataset.dup));
+  else if(nw){const s=SLOTS[selDay][+nw.dataset.new];openEditor(mkPlan({week:wk,day:selDay,time:s[0],sub:s[1]}),true)}
+});
+
+/* tabs */
+const tabs=[$('#tab-clases'),$('#tab-ia')];
+function showTab(i,focus){tabs.forEach((t,j)=>{t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1;$('#'+t.getAttribute('aria-controls')).hidden=j!==i});if(focus)tabs[i].focus()}
+tabs.forEach((t,i)=>{t.onclick=()=>showTab(i);t.onkeydown=e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();showTab(1-i,true)}}});
+
+/* ===== Asistente IA ===== */
+const A=()=>ST3.ai;
+function loadCfg(){
+  const a=A();$('#ai-on').checked=!!a.on;$('#ai-name').value=a.name;$('#ai-model').value=a.model;
+  $$('input[name=mode]').forEach(r=>r.checked=r.value===a.mode);
+  $$('[data-task]').forEach(c=>c.checked=!!a.tasks[c.dataset.task]);
+  $('#ai-tone').value=a.tone;$('#ai-level').value=a.level;$('#ai-instr').value=a.instr;
+  $('#lim-closed').checked=!!a.closed;$('#lim-send').checked=!!a.send;$('#lim-max').value=a.max;
+}
+$('#aicfg').addEventListener('input',()=>{
+  const a=A();a.on=$('#ai-on').checked;a.name=$('#ai-name').value.slice(0,40);a.model=$('#ai-model').value;
+  const r=$('input[name=mode]:checked');if(r)a.mode=r.value;
+  $$('[data-task]').forEach(c=>a.tasks[c.dataset.task]=c.checked?1:0);
+  a.tone=$('#ai-tone').value;a.level=$('#ai-level').value;a.instr=$('#ai-instr').value;
+  a.closed=$('#lim-closed').checked;a.send=$('#lim-send').checked;a.max=$('#lim-max').value;
+  save(); // la API key nunca se lee ni se guarda
+});
+const logs=[];
+function addLog(t){logs.unshift(new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})+' · '+t);if(logs.length>40)logs.pop();$('#log').innerHTML=logs.map(l=>`<li>${esc(l)}</li>`).join('')}
+function say(cls,html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;$('#chat').appendChild(d);$('#chat').scrollTop=1e6;return d}
+const detect=t=>{t=t.toLowerCase();
+  if(/nota/.test(t)&&/borrador|prepar/.test(t))return'not';
+  if(/comunicad|tutor|famil/.test(t))return'com';
+  if(/r[uú]brica/.test(t))return'rub';
+  if(/rendimiento|resum/.test(t))return'res';
+  if(/actividad/.test(t))return'act';
+  if(/plan|clase/.test(t))return'plan';return null};
+const topicOf=t=>{const m=t.match(/\b(?:sobre|de|del|para)\s+(.{3,60})$/i);return(m?m[1]:t).replace(/[.?!]+$/,'').trim()||'Tema libre'};
+function build(task,req){
+  const a=A(),tema=topicOf(req),cap=tema.charAt(0).toUpperCase()+tema.slice(1);
+  const tag=`(${a.tone}, ${a.level})`;
+  switch(task){
+   case'plan':return{title:'Plan de clase: '+cap,text:`Tema: ${cap} ${tag}\nObjetivo: comprender y aplicar ${tema}.\nInicio (10 min): pregunta detonante.\nDesarrollo (30 min): trabajo guiado en parejas.\nCierre (10 min): ticket de salida.\nEvaluación: rúbrica de 4 niveles.`,plan:mkPlan({tema:cap,obj:'Comprender y aplicar '+tema+'.',comp:'Competencia clave según '+a.level,ini:'Pregunta detonante',iniM:10,des:'Trabajo guiado en parejas',desM:30,cie:'Ticket de salida',cieM:10,rec:'Pizarra, fichas',eva:'Rúbrica de 4 niveles',tar:'Ficha breve',est:'borrador'})};
+   case'act':return{title:'Actividades: '+cap,text:`1. Lluvia de ideas sobre ${tema}.\n2. Estaciones de trabajo cooperativo.\n3. Mini-juego de repaso.\nTono ${a.tone.toLowerCase()}, nivel ${a.level}.`};
+   case'rub':return{title:'Rúbrica: '+cap,text:`Criterios: comprensión, aplicación, comunicación.\nNiveles: Inicial (1) · Básico (2) · Notable (3) · Excelente (4).\nAjustada a ${a.level}.`};
+   case'com':return{title:'Comunicado a tutores',text:`Estimadas familias: esta semana trabajamos ${tema}. Agradecemos su apoyo en casa. Un cordial saludo. (${a.tone})`};
+   case'res':return{title:'Resumen del grupo',text:`Media del grupo 7,9. Fortalezas: participación y práctica de laboratorio. A reforzar: examen de Matemáticas T1. (Datos de ejemplo)`};
+   case'not':return{title:'Borrador de notas',text:`Propuesta para actividades abiertas: Deberes T3 · media 7,8. ${a.closed?'Las notas cerradas no se modifican.':'Incluye notas cerradas (límite desactivado).'}`};
+  }
+}
+let pending=0;
+function applyProposal(task,prop,how){
+  if(task==='plan'){const p=prop.plan;
+    const free=SLOTS[selDay].find(s=>!ST3.plans.some(x=>x.week===wk&&x.day===selDay&&x.time===s[0]));
+    p.week=wk;p.day=selDay;p.time=free?free[0]:'';p.sub=free?free[1]:'General';
+    ST3.plans.push(p);save();renderWeek();addLog(`${how}: plan «${p.tema}» añadido como borrador`)}
+  else addLog(`${how}: ${prop.title}`);
+}
+function propose(task,req){
+  const a=A(),prop=build(task,req);
+  const forced=task==='not';
+  say('a',`${esc(a.name)} ha preparado una propuesta.`);
+  const box=document.createElement('div');box.className='prop';
+  box.innerHTML=`<b>${esc(prop.title)}</b><pre>${esc(prop.text)}</pre>`;
+  $('#chat').appendChild(box);
+  if(a.mode==='exec'&&!forced){
+    box.insertAdjacentHTML('beforeend','<span class="chip c-mint">Ejecutado y registrado</span>');applyProposal(task,prop,'Ejecutado');
+  }else if(a.mode==='suggest'){
+    box.insertAdjacentHTML('beforeend','<span class="chip c-sky">Solo sugerencia: no se aplica nada</span>');addLog('Sugerido: '+prop.title);
+  }else{
+    if(forced&&a.mode==='exec')box.insertAdjacentHTML('beforeend','<span class="note">Esta tarea siempre requiere aprobación humana.</span>');
+    const row=document.createElement('div');row.className='acts';row.style.cssText='display:flex;gap:8px';
+    row.innerHTML='<button class="btn" type="button">Aprobar</button><button class="btn2" type="button">Rechazar</button>';
+    box.appendChild(row);const [ok,no]=row.children;
+    const done=(msg,cls)=>{row.outerHTML=`<span class="chip ${cls}" role="status">${esc(msg)}</span>`};
+    ok.onclick=()=>{applyProposal(task,prop,'Aprobado');done('Aprobado','c-mint')};
+    no.onclick=()=>{addLog('Rechazado: '+prop.title);done('Rechazado','c-coral')};
+    ok.focus({preventScroll:true});
+  }
+  $('#chat').scrollTop=1e6;
+}
+$('#chatf').addEventListener('submit',e=>{
+  e.preventDefault();const t=$('#chat-in').value.trim();if(!t)return;$('#chat-in').value='';
+  const a=A();say('u',esc(t));
+  if(!a.on){say('a','El asistente está desactivado. Actívalo en la configuración.');return}
+  const task=detect(t);
+  if(!task){say('a','No he entendido la petición. Prueba con plan, actividades, rúbrica, comunicado, resumen o notas.');return}
+  if(!a.tasks[task]){say('a',`La tarea «${esc(TASKN[task])}» no está habilitada.`);addLog('Bloqueado: tarea no habilitada ('+TASKN[task]+')');return}
+  if(task==='com'&&a.send&&a.mode==='exec'){addLog('Límite: comunicado queda como borrador sin enviar')}
+  if(task==='not'&&a.closed)addLog('Límite: notas cerradas protegidas');
+  if(++actions>+a.max){say('a','Has alcanzado el máximo de acciones por sesión.');addLog('Bloqueado: límite de acciones');return}
+  propose(task,t);
+});
+$('#chat').innerHTML='';say('a','¡Hola! Soy tu asistente. Pídeme algo cuando quieras.');addLog('Sesión iniciada (simulada, sin red)');
+loadCfg();renderWeek();
 </script>
 </body>
 </html>

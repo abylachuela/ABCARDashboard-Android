@@ -104,6 +104,66 @@ dt{color:var(--muted)}dd{margin:0;font-weight:500}
 .track i{display:block;height:100%;border-radius:99px;background:var(--ok)}.track i.bad{background:var(--bad)}
 .track::after{content:"";position:absolute;left:60%;top:0;bottom:0;width:2px;background:var(--navy)}
 .row b{text-align:right}
+/* planning */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
+.tabs button{all:unset;box-sizing:border-box;cursor:pointer;padding:10px 18px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0}
+.tabs button:hover{color:var(--navy);background:#efece4}
+.tabs button[aria-selected=true]{color:var(--navy);border-bottom-color:var(--amber)}
+.tabs button:focus-visible{outline:3px solid var(--amber);outline-offset:-2px}
+.btn{font:inherit;font-weight:600;cursor:pointer;padding:9px 16px;border-radius:9px;border:1px solid var(--navy);background:var(--navy);color:#fff}
+.btn:hover{background:var(--navy-2)}
+.btn.sec{background:#fff;color:var(--navy)}.btn.sec:hover{background:#eef2f9}
+.btn.amb{background:var(--amber);border-color:var(--amber);color:var(--navy-900)}.btn.amb:hover{background:#ffb743}
+.btn.dng{background:#fff;color:var(--bad);border-color:var(--bad)}.btn.dng:hover,.btn.dng[data-armed]{background:var(--bad);color:#fff}
+.btn.sm{padding:5px 11px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+.toolbar .sp{flex:1}
+.wk{font-family:var(--serif);font-size:20px;color:var(--navy);font-weight:600;min-width:210px;text-align:center}
+.calw{overflow-x:auto;margin-bottom:18px}
+.cal{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:10px;min-width:820px}
+.day{background:var(--card);border:1px solid #efece4;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.day h3{font-size:15px;display:flex;justify-content:space-between;align-items:baseline}.day h3 small{font:500 12px var(--sans);color:var(--muted)}
+.blk{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:9px;background:#faf8f3;border-left:5px solid var(--c,var(--navy));font-size:13px}
+.blk:hover{background:#f0ece1}.blk:focus-visible{outline:3px solid var(--amber)}
+.blk .t{font-size:12px;color:var(--muted);font-weight:600}.blk strong{color:var(--c,var(--navy))}.blk em{font-style:normal;color:var(--ink)}
+.empty{margin:0;font-size:12.5px;color:var(--muted)}
+.addb{all:unset;cursor:pointer;margin-top:auto;font-size:13px;color:var(--navy);font-weight:600;padding:6px;border-radius:8px;text-align:center;border:1px dashed #b9b3a4}
+.addb:hover{background:#eef2f9}.addb:focus-visible{outline:3px solid var(--amber)}
+.st{border-radius:99px;padding:2px 9px;font-size:12px;font-weight:600;align-self:flex-start;display:inline-block}
+.st-borrador{background:var(--amber-soft);color:var(--amber-ink)}.st-listo{background:#e1ebfa;color:var(--navy)}.st-impartido{background:var(--ok-bg);color:var(--ok)}
+.plist{list-style:none;margin:0;padding:0}
+.plist li{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+.plist li:last-child{border-bottom:0}
+.plist .inf{flex:1;min-width:200px}.plist .inf small{display:block;color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.fgrid .full{grid-column:1/-1}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+.fld input,.fld textarea,.fld select{padding:8px 10px;border:1px solid #b9b3a4;border-radius:8px;background:#fff;font:inherit;color:var(--ink);width:100%;min-width:0}
+.fld textarea{min-height:68px;resize:vertical}
+.fld input[aria-invalid=true]{border-color:var(--bad);background:var(--bad-bg)}
+.err{color:var(--bad);font-size:12.5px;min-height:1em}
+.act{display:grid;grid-template-columns:1fr 110px;gap:10px}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:12px 16px 14px;margin:0 0 16px;min-width:0}
+legend{font-family:var(--serif);font-weight:600;color:var(--navy);padding:0 6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.opt input{margin-top:4px;accent-color:var(--navy)}.opt small{display:block;color:var(--muted)}
+.warn{background:var(--bad-bg);border-left:4px solid var(--bad);color:#5a2020;padding:10px 12px;border-radius:8px;font-size:13.5px;margin-top:8px}
+.sw{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}.sw input{width:20px;height:20px;accent-color:var(--navy)}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.msgs{display:flex;flex-direction:column;gap:10px;max-height:480px;overflow:auto;margin:12px 0;padding:2px}
+.msg{padding:10px 12px;border-radius:10px;max-width:92%;font-size:14px}
+.msg.user{background:#e1ebfa;align-self:flex-end}.msg.ag{background:#faf8f3;border:1px solid var(--line)}
+.prop{border:1px solid var(--navy);border-radius:12px;background:#fff;padding:12px;align-self:stretch;max-width:100%}
+.prop h4{margin:0 0 6px;font:600 16px var(--serif);color:var(--navy)}.prop ul{margin:6px 0;padding-left:18px}
+.prop .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.ask{display:flex;gap:10px}.ask input{flex:1;min-width:0;padding:9px 12px;border:1px solid #b9b3a4;border-radius:8px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sugg button{font:inherit;font-size:12.5px;cursor:pointer;background:#eef2f9;color:var(--navy);border:0;border-radius:99px;padding:4px 10px}
+.logl{list-style:none;margin:0;padding:0;font-size:13px;max-height:260px;overflow:auto}
+.logl li{padding:6px 0;border-bottom:1px solid var(--line)}.logl time{color:var(--muted);margin-right:8px;font-variant-numeric:tabular-nums}
+@media(max-width:960px){.agrid{grid-template-columns:1fr}}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr}.wk{min-width:0;flex:1 1 100%;order:-1}}
 /* responsive */
 .scrim{display:none}
 @media(max-width:960px){
@@ -130,6 +190,7 @@ dt{color:var(--muted)}dd{margin:0;font-weight:500}
     <button data-v="centros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v9h14v-9M9 19v-5h6v5"/></svg>Centros educativos</button>
     <button data-v="notas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg>Calificaciones</button>
     <button data-v="estudiante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Estudiante</button>
+    <button data-v="planificacion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/></svg>Planificación</button>
   </nav>
   <div class="who"><div class="av" aria-hidden="true">LM</div><div><strong>Lucía Mendoza</strong><br><span style="opacity:.8">Coordinadora académica</span></div></div>
 </aside>
@@ -182,6 +243,81 @@ dt{color:var(--muted)}dd{margin:0;font-weight:500}
       <div class="card" id="ficha"></div>
       <div class="card"><h2 style="font-size:20px">Mini boletín</h2><p class="note" style="margin:2px 0 14px">La línea azul marca el mínimo para aprobar (60).</p><div class="bol" id="bol"></div>
         <p id="bsum" style="margin:18px 0 0;font-weight:600" aria-live="polite"></p></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-planificacion" aria-labelledby="t-planificacion">
+    <div class="head"><div class="eyebrow">Docencia</div><h1 id="t-planificacion">Planificación</h1><p>Planifica tus clases de la semana y configura tu asistente de IA.</p></div>
+    <div class="tabs" role="tablist" aria-label="Secciones de planificación">
+      <button role="tab" id="tab-planes" aria-controls="pn-planes" aria-selected="true">Planes de clase</button>
+      <button role="tab" id="tab-agente" aria-controls="pn-agente" aria-selected="false" tabindex="-1">Agente IA</button>
+    </div>
+
+    <div role="tabpanel" id="pn-planes" aria-labelledby="tab-planes">
+      <div class="toolbar">
+        <button class="btn sec" id="wkPrev" aria-label="Semana anterior">&#9664;</button>
+        <div class="wk" id="wkLabel" aria-live="polite"></div>
+        <button class="btn sec" id="wkNext" aria-label="Semana siguiente">&#9654;</button>
+        <div class="sp"></div>
+        <button class="btn amb" id="newPlan">+ Nuevo plan</button>
+        <label class="sel">Semana destino<select id="dupSel"></select></label>
+        <button class="btn sec" id="dupBtn">Duplicar a otra semana</button>
+      </div>
+      <p class="note" id="pMsg" role="status" aria-live="polite" style="margin:-6px 0 12px"></p>
+      <div class="calw"><div class="cal" id="cal"></div></div>
+      <div class="card" id="pEditor" hidden></div>
+      <div class="card" style="margin-top:18px">
+        <div class="toolbar" style="margin-bottom:6px"><h2 style="font-size:20px">Todos los planes</h2><div class="sp"></div>
+          <label class="sel">Filtrar por estado<select id="pFilter"><option value="">Todos</option><option value="borrador">Borrador</option><option value="listo">Listo</option><option value="impartido">Impartido</option></select></label></div>
+        <ul class="plist" id="plist"></ul>
+      </div>
+    </div>
+
+    <div role="tabpanel" id="pn-agente" aria-labelledby="tab-agente" hidden>
+      <div class="agrid">
+        <form class="card" id="agForm" onsubmit="return false" autocomplete="off">
+          <h2 style="font-size:20px;margin-bottom:12px">Configuración del agente</h2>
+          <label class="sw"><input type="checkbox" id="agOn"> Activar agente</label>
+          <div class="fgrid" style="margin:14px 0">
+            <label class="fld">Nombre del agente<input id="agName" maxlength="40"></label>
+            <label class="fld">Proveedor / modelo<select id="agProv"><option value="claude-rec">Claude · modelo recomendado</option><option value="claude-fast">Claude · modelo rápido</option><option value="otro">Otro proveedor compatible</option></select></label>
+            <label class="fld full">API Key<input id="agKey" type="password" autocomplete="off" placeholder="No se guarda ni se envía en este prototipo" aria-describedby="keyWarn"></label>
+            <div class="warn full" id="keyWarn" role="note"><strong>Seguridad:</strong> en producción la API Key NUNCA va en el navegador, sino en el servidor. Este prototipo no la guarda ni la envía a ningún sitio.</div>
+          </div>
+          <fieldset><legend>Modo de autonomía</legend>
+            <label class="opt"><input type="radio" name="agMode" value="suggest"><span>Solo sugiere<small>El agente propone; tú decides qué usar.</small></span></label>
+            <label class="opt"><input type="radio" name="agMode" value="approval"><span>Sugiere y espera aprobación<small>Cada propuesta se aplica solo si la apruebas.</small></span></label>
+            <label class="opt"><input type="radio" name="agMode" value="auto"><span>Ejecuta con registro<small>Aplica directamente y deja constancia en el registro.</small></span></label>
+          </fieldset>
+          <fieldset><legend>Tareas habilitadas</legend>
+            <label class="opt"><input type="checkbox" data-task="plan"><span>Generar plan de clase</span></label>
+            <label class="opt"><input type="checkbox" data-task="acts"><span>Proponer actividades</span></label>
+            <label class="opt"><input type="checkbox" data-task="rubric"><span>Crear rúbricas</span></label>
+            <label class="opt"><input type="checkbox" data-task="comms"><span>Redactar comunicados a tutores</span></label>
+            <label class="opt"><input type="checkbox" data-task="summary"><span>Resumir rendimiento del grupo</span></label>
+            <label class="opt"><input type="checkbox" data-task="grades"><span>Preparar borrador de notas<small id="gradeHint">Siempre exige aprobación humana; nunca se ejecuta automáticamente.</small></span></label>
+          </fieldset>
+          <div class="fgrid" style="margin-bottom:14px">
+            <label class="fld">Tono<select id="agTone"><option value="cercano">Cercano y motivador</option><option value="formal">Formal</option><option value="conciso">Conciso</option></select></label>
+            <label class="fld">Nivel<select id="agLevel"><option value="Primaria">Primaria</option><option value="Secundaria">Secundaria</option><option value="Bachillerato">Bachillerato</option></select></label>
+            <label class="fld full">Instrucciones personalizadas<textarea id="agInstr" maxlength="500" placeholder="Ej.: Incluye siempre una actividad en parejas."></textarea></label>
+          </div>
+          <fieldset><legend>Límites</legend>
+            <label class="opt"><input type="checkbox" id="limClosed"><span>No tocar notas cerradas</span></label>
+            <label class="opt"><input type="checkbox" id="limSend"><span>Nunca enviar comunicados: solo redactar borradores</span></label>
+            <label class="fld" style="max-width:260px;margin-top:6px">Máx. acciones por sesión<input id="limMax" type="number" min="1" max="50"></label>
+          </fieldset>
+        </form>
+        <div style="display:grid;gap:18px">
+          <section class="card" aria-labelledby="askT">
+            <h2 id="askT" style="font-size:20px">Pídele al agente</h2>
+            <div class="msgs" id="agOut" role="log" aria-live="polite" aria-relevant="additions" tabindex="0" aria-label="Conversación con el agente"><div class="msg ag">Hola, soy tu asistente. Escribe qué necesitas.</div></div>
+            <form class="ask" id="askForm"><label for="askIn" class="sr" style="position:absolute;left:-999px">Tu petición al agente</label><input id="askIn" placeholder="Ej.: Genera un plan de clase sobre fracciones" maxlength="300"><button class="btn" type="submit">Enviar</button></form>
+            <div class="sugg" aria-label="Ejemplos"><button type="button">Genera un plan de clase sobre fracciones de Matemática</button><button type="button">Crea una rúbrica para un ensayo</button><button type="button">Redacta un comunicado a tutores</button><button type="button">Prepara un borrador de notas</button></div>
+          </section>
+          <section class="card" aria-labelledby="logT"><h2 id="logT" style="font-size:20px;margin-bottom:8px">Registro de actividad</h2><ol class="logl" id="agLog"><li>Sin actividad todavía.</li></ol></section>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -282,9 +418,179 @@ function renderStu(){
   const g=res.reduce((a,r)=>a+r.a,0)/res.length,f=res.filter(r=>r.a<60).length;
   $('bsum').textContent=`Promedio general: ${g.toFixed(1)} · ${f?f+' asignatura(s) en riesgo':'Todas las asignaturas aprobadas'}`;
 }
+/* planning */
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const sections=['3.º B Secundaria','2.º A Secundaria'],days=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const subjColor=['#14315c','#7a4b00','#17693a','#6b3fa0','#a82424'],ESTADOS={borrador:'Borrador',listo:'Listo',impartido:'Impartido'};
+const isoD=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const monOf=d=>{const x=new Date(d);x.setHours(12,0,0,0);return addDays(x,-((x.getDay()+6)%7))};
+const fromIso=w=>new Date(w+'T12:00:00'),fmt=d=>d.toLocaleDateString('es',{day:'numeric',month:'short'});
+const uid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const subjCol=s=>subjColor[Math.max(0,subjects.indexOf(s))];
+let viewWeek=isoD(monOf(new Date())),editing=null,lastFocus=null;
+const mkPlan=o=>Object.assign({id:uid(),week:viewWeek,day:0,hora:'08:00',subj:subjects[0],sec:sections[0],estado:'borrador',tema:'',objetivos:'',competencias:'',inicio:'',inicioMin:10,desarrollo:'',desarrolloMin:30,cierre:'',cierreMin:10,recursos:'',evaluacion:'',tarea:''},o);
+let plans=store.get('edu_plans_v1',null);
+if(!Array.isArray(plans))plans=[
+ mkPlan({day:0,hora:'08:00',subj:'Matemática',tema:'Fracciones equivalentes',objetivos:'Identificar y generar fracciones equivalentes.',competencias:'Resolución de problemas',inicio:'Pregunta detonante con pizzas',desarrollo:'Práctica guiada con tiras de fracciones',cierre:'Ticket de salida',recursos:'Tiras de fracciones, pizarra',evaluacion:'Rúbrica de 4 niveles',tarea:'Ficha 12',estado:'listo'}),
+ mkPlan({day:1,hora:'09:30',subj:'Lengua Española',sec:sections[1],tema:'El texto argumentativo',estado:'borrador'}),
+ mkPlan({day:2,hora:'10:15',subj:'Ciencias',tema:'La célula y sus organelos',estado:'impartido'}),
+ mkPlan({day:3,hora:'08:00',subj:'Historia',sec:sections[1],tema:'Independencia dominicana',estado:'listo'})];
+const savePlans=()=>store.set('edu_plans_v1',plans);
+const msg=t=>{$('pMsg').textContent=t};
+const stChip=e=>`<span class="st st-${e}">${ESTADOS[e]||''}</span>`;
+function renderPlan(){
+  const mon=fromIso(viewWeek);
+  $('wkLabel').textContent=`Semana del ${fmt(mon)} al ${fmt(addDays(mon,4))}`;
+  $('cal').innerHTML=days.map((d,i)=>{const ps=plans.filter(p=>p.week===viewWeek&&p.day===i).sort((a,b)=>a.hora.localeCompare(b.hora));
+    return `<div class="day" role="group" aria-label="${d} ${fmt(addDays(mon,i))}"><h3>${d}<small>${fmt(addDays(mon,i))}</small></h3>${ps.map(p=>`<button class="blk" style="--c:${subjCol(p.subj)}" data-edit="${esc(p.id)}"><span class="t">${esc(p.hora)}</span><strong>${esc(p.subj)}</strong><span>${esc(p.sec)}</span><em>${esc(p.tema)}</em>${stChip(p.estado)}</button>`).join('')||'<p class="empty">Sin clases planificadas</p>'}<button class="addb" data-day="${i}" aria-label="Añadir plan el ${d}">+ Añadir</button></div>`}).join('');
+  const f=$('pFilter').value;
+  const list=plans.filter(p=>!f||p.estado===f).sort((a,b)=>a.week.localeCompare(b.week)||a.day-b.day||a.hora.localeCompare(b.hora));
+  $('plist').innerHTML=list.map(p=>`<li><div class="inf"><strong>${esc(p.tema)||'(Sin tema)'}</strong><small>${esc(p.subj)} · ${esc(p.sec)} · ${days[p.day]} ${fmt(addDays(fromIso(p.week),p.day))} · ${esc(p.hora)}</small></div>${stChip(p.estado)}<button class="btn sec sm" data-edit="${esc(p.id)}">Editar</button><button class="btn dng sm" data-del="${esc(p.id)}">Eliminar</button></li>`).join('')||'<li>No hay planes con este filtro.</li>';
+  const opts=[];for(let k=-1;k<=6;k++){if(!k)continue;const w=addDays(mon,7*k);opts.push(`<option value="${isoD(w)}">Semana del ${fmt(w)}</option>`)}
+  const keep=$('dupSel').value;$('dupSel').innerHTML=opts.join('');if(keep&&[...$('dupSel').options].some(o=>o.value===keep))$('dupSel').value=keep;else $('dupSel').selectedIndex=1;
+}
+function shiftWeek(n){viewWeek=isoD(addDays(fromIso(viewWeek),7*n));closeEditor(false);renderPlan()}
+$('wkPrev').onclick=()=>shiftWeek(-1);$('wkNext').onclick=()=>shiftWeek(1);
+$('pFilter').onchange=renderPlan;
+$('dupBtn').onclick=()=>{
+  const src=plans.filter(p=>p.week===viewWeek),t=$('dupSel').value;
+  if(!src.length){msg('No hay planes en esta semana para duplicar.');return}
+  src.forEach(p=>plans.push(Object.assign({},p,{id:uid(),week:t,estado:'borrador'})));
+  savePlans();renderPlan();msg(`Se duplicaron ${src.length} plan(es) como borrador a la semana del ${fmt(fromIso(t))}.`);
+};
+$('newPlan').onclick=e=>openEditor(null,0,e.currentTarget);
+function field(n,l,v,o={}){const id='pe-'+n;return `<label class="fld ${o.full?'full':''}" for="${id}">${l}${o.ta?`<textarea id="${id}" name="${n}">${esc(v)}</textarea>`:`<input id="${id}" name="${n}" type="${o.type||'text'}" value="${esc(v)}" ${o.attr||''}>`}</label>`}
+function sel(n,l,opts,v){return `<label class="fld" for="pe-${n}">${l}<select id="pe-${n}" name="${n}">${opts.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`}
+function openEditor(id,day,opener){
+  lastFocus=opener||document.activeElement;editing=id;
+  const p=id?plans.find(x=>x.id===id):mkPlan({day:day||0});if(!p)return;
+  const act=(k,l,tx,mn)=>`<div class="act full">${field(k,l,tx,{ta:1})}${field(k+'Min','Minutos',mn,{type:'number',attr:'min="0" max="240"'})}</div>`;
+  $('pEditor').hidden=false;
+  $('pEditor').innerHTML=`<form id="pForm" novalidate aria-labelledby="peT"><h2 id="peT" style="font-size:20px;margin-bottom:14px">${id?'Editar plan':'Nuevo plan'}</h2><div class="fgrid">
+   ${sel('subj','Asignatura',subjects.map(s=>[s,s]),p.subj)}${sel('sec','Sección',sections.map(s=>[s,s]),p.sec)}
+   ${sel('day','Día',days.map((d,i)=>[i,d]),p.day)}${field('hora','Hora',p.hora,{type:'time'})}
+   ${sel('estado','Estado',Object.entries(ESTADOS),p.estado)}<div></div>
+   <div class="full"><label class="fld" for="pe-tema">Tema *<input id="pe-tema" name="tema" value="${esc(p.tema)}" aria-describedby="temaErr" required></label><div class="err" id="temaErr" role="alert"></div></div>
+   ${field('objetivos','Objetivos',p.objetivos,{ta:1,full:1})}${field('competencias','Competencias',p.competencias,{ta:1,full:1})}
+   ${act('inicio','Actividades · Inicio',p.inicio,p.inicioMin)}${act('desarrollo','Actividades · Desarrollo',p.desarrollo,p.desarrolloMin)}${act('cierre','Actividades · Cierre',p.cierre,p.cierreMin)}
+   <p class="note full" id="peTot" aria-live="polite" style="margin:0"></p>
+   ${field('recursos','Recursos',p.recursos,{ta:1,full:1})}${field('evaluacion','Evaluación / rúbrica',p.evaluacion,{ta:1,full:1})}${field('tarea','Tarea',p.tarea,{ta:1,full:1})}
+  </div><div class="toolbar" style="margin:18px 0 0"><button class="btn amb" type="submit">Guardar plan</button><button class="btn sec" type="button" id="peCancel">Cancelar</button><div class="sp"></div>${id?'<button class="btn dng" type="button" id="peDel">Eliminar</button>':''}</div></form>`;
+  const tot=()=>{const f=$('pForm');const t=['inicioMin','desarrolloMin','cierreMin'].reduce((a,k)=>a+(+f.elements[k].value||0),0);$('peTot').textContent=`Duración total de actividades: ${t} min`};
+  $('pForm').addEventListener('input',tot);tot();
+  $('pForm').onsubmit=e=>{e.preventDefault();savePlan()};
+  $('peCancel').onclick=()=>closeEditor(true);
+  if($('peDel'))$('peDel').onclick=e=>delPlan(editing,e.currentTarget);
+  $('pEditor').scrollIntoView({block:'nearest'});$('pe-tema').focus();
+}
+function closeEditor(restore){$('pEditor').hidden=true;$('pEditor').innerHTML='';editing=null;if(restore&&lastFocus&&document.contains(lastFocus))lastFocus.focus()}
+function savePlan(){
+  const f=$('pForm').elements,tema=f.tema.value.trim();
+  if(!tema){f.tema.setAttribute('aria-invalid','true');$('temaErr').textContent='El tema es obligatorio.';f.tema.focus();return}
+  const o={};['subj','sec','hora','estado','tema','objetivos','competencias','inicio','desarrollo','cierre','recursos','evaluacion','tarea'].forEach(k=>o[k]=f[k].value.trim());
+  o.tema=tema;o.day=+f.day.value;['inicioMin','desarrolloMin','cierreMin'].forEach(k=>o[k]=Math.max(0,+f[k].value||0));
+  if(editing)Object.assign(plans.find(p=>p.id===editing),o);else plans.push(mkPlan(o));
+  savePlans();closeEditor(true);renderPlan();msg(`Plan «${tema}» guardado.`);
+}
+function delPlan(id,btn){
+  if(!btn.dataset.armed){btn.dataset.armed='1';btn.textContent='¿Confirmar eliminar?';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='Eliminar'}},4000);return}
+  const p=plans.find(x=>x.id===id);plans=plans.filter(x=>x.id!==id);savePlans();if(editing===id)closeEditor(false);renderPlan();msg(`Plan «${p?p.tema:''}» eliminado.`);$('newPlan').focus();
+}
+document.getElementById('pn-planes').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.edit)openEditor(b.dataset.edit,0,b);else if(b.dataset.day!==undefined)openEditor(null,+b.dataset.day,b);else if(b.dataset.del)delPlan(b.dataset.del,b);
+});
+/* tabs */
+const tabs=[...document.querySelectorAll('.tabs [role=tab]')];
+function selTab(t,focus){tabs.forEach(x=>{const on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;$(x.getAttribute('aria-controls')).hidden=!on});if(focus)t.focus()}
+tabs.forEach((t,i)=>{t.onclick=()=>selTab(t);t.onkeydown=e=>{const k={ArrowRight:1,ArrowLeft:-1}[e.key];if(k){e.preventDefault();selTab(tabs[(i+k+tabs.length)%tabs.length],true)}else if(e.key==='Home'){e.preventDefault();selTab(tabs[0],true)}else if(e.key==='End'){e.preventDefault();selTab(tabs[tabs.length-1],true)}}});
+
+/* agent (simulated, no network) */
+const TASKS={plan:'Generar plan de clase',acts:'Proponer actividades',rubric:'Crear rúbricas',comms:'Redactar comunicados a tutores',summary:'Resumir rendimiento del grupo',grades:'Preparar borrador de notas'};
+let ag=Object.assign({on:true,name:'Asistente Edu',prov:'claude-rec',mode:'approval',tasks:{plan:true,acts:true,rubric:true,comms:false,summary:true,grades:true},tone:'cercano',level:'Secundaria',instr:'',closed:true,nosend:true,max:10},store.get('edu_agent_v1',{}));
+let agActions=0,pend={},agLogL=[];
+const saveAg=()=>store.set('edu_agent_v1',ag);
+function loadAg(){
+  $('agOn').checked=ag.on;$('agName').value=ag.name;$('agProv').value=ag.prov;$('agTone').value=ag.tone;$('agLevel').value=ag.level;$('agInstr').value=ag.instr;
+  $('limClosed').checked=ag.closed;$('limSend').checked=ag.nosend;$('limMax').value=ag.max;
+  document.querySelectorAll('[name=agMode]').forEach(r=>r.checked=r.value===ag.mode);
+  document.querySelectorAll('[data-task]').forEach(c=>c.checked=!!ag.tasks[c.dataset.task]);
+  hint();
+}
+function hint(){$('gradeHint').textContent=ag.mode==='auto'?'Bloqueada en «Ejecuta con registro»: siempre requiere tu aprobación explícita.':'Siempre exige aprobación humana; nunca se ejecuta automáticamente.'}
+$('agForm').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='agOn')ag.on=t.checked;else if(t.id==='agName')ag.name=t.value.trim()||'Asistente Edu';else if(t.id==='agProv')ag.prov=t.value;else if(t.id==='agTone')ag.tone=t.value;else if(t.id==='agLevel')ag.level=t.value;
+  else if(t.id==='agInstr')ag.instr=t.value;else if(t.id==='limClosed')ag.closed=t.checked;else if(t.id==='limSend')ag.nosend=t.checked;else if(t.id==='limMax')ag.max=Math.min(50,Math.max(1,+t.value||10));
+  else if(t.name==='agMode'){ag.mode=t.value;hint()}else if(t.dataset.task)ag.tasks[t.dataset.task]=t.checked;
+  saveAg();logA(`Configuración actualizada (${t.id||t.name||t.dataset.task}).`);
+});
+$('agForm').addEventListener('input',e=>{if(e.target.id==='agInstr')ag.instr=e.target.value});
+function logA(t){agLogL.unshift({h:new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),t});$('agLog').innerHTML=agLogL.slice(0,40).map(l=>`<li><time>${l.h}</time>${esc(l.t)}</li>`).join('')}
+function addMsg(who,html){const d=document.createElement('div');d.className='msg '+who;d.innerHTML=html;$('agOut').appendChild(d);$('agOut').scrollTop=1e9;return d}
+function detect(q){const s=q.toLowerCase();
+  if(/r[úu]brica/.test(s))return'rubric';if(/\bnotas?\b|calificaci/.test(s))return'grades';if(/comunicad|tutor|padres|carta/.test(s))return'comms';if(/resum|rendimiento|desempe/.test(s))return'summary';
+  if(/plan|clase|lecci/.test(s))return'plan';if(/actividad|din[áa]mica/.test(s))return'acts';if(/evalu/.test(s))return'rubric';return null}
+const norm=x=>x.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function build(t,q){
+  const tn={cercano:'cercano y motivador',formal:'formal',conciso:'conciso'}[ag.tone];
+  const m=q.match(/sobre\s+(.+?)(?:\s+(?:de|para|en)\s+(?:matem|lengua|ciencias|historia|ingl)\S*.*)?$/i);
+  const tema=(m?m[1]:q.replace(/^(genera|crea|prepara|redacta|prop[oó]n|resume)\w*\s+(un|una|el|la)?\s*/i,'')).replace(/[.?!]+$/,'').trim().slice(0,80)||'Tema libre';
+  const subj=subjects.find(s=>norm(q).includes(norm(s).split(' ')[0]))||subjects[0];
+  const base={t,tone:tn,tema,subj};
+  if(t==='plan'){
+    const used=plans.filter(p=>p.week===viewWeek&&p.sec===sections[0]).map(p=>p.day);const day=[0,1,2,3,4].find(d=>!used.includes(d))??0;
+    const plan={subj,sec:sections[0],day,hora:'08:00',estado:'borrador',tema:tema.charAt(0).toUpperCase()+tema.slice(1),
+      objetivos:`Comprender y aplicar «${tema}» en situaciones cotidianas (nivel ${ag.level}).`,competencias:'Pensamiento lógico y crítico; Comunicativa; Resolución de problemas',
+      inicio:`Pregunta detonante y activación de saberes previos sobre ${tema}.`,inicioMin:10,desarrollo:`Explicación ${tn} con ejemplos; práctica guiada y trabajo en parejas.`,desarrolloMin:30,cierre:'Puesta en común y ticket de salida.',cierreMin:10,
+      recursos:'Pizarra, material impreso, ejemplos del contexto del estudiante.',evaluacion:'Rúbrica de 4 niveles (inicial, básico, logrado, destacado) sobre participación y producto.',tarea:`Ejercicios de refuerzo sobre ${tema}.`};
+    return Object.assign(base,{title:`Plan de clase: ${plan.tema}`,plan,lines:[`${subj} · ${plan.sec} · ${days[day]} ${plan.hora}`,`Objetivo: ${plan.objetivos}`,`Inicio (10 min): ${plan.inicio}`,`Desarrollo (30 min): ${plan.desarrollo}`,`Cierre (10 min): ${plan.cierre}`,`Evaluación: ${plan.evaluacion}`]});
+  }
+  if(t==='acts')return Object.assign(base,{title:`Actividades sobre «${tema}»`,lines:['Lluvia de ideas de 5 min con tarjetas.','Estaciones de práctica en equipos de 4.','Reto en parejas con material concreto.','Cierre con mapa conceptual colaborativo.']});
+  if(t==='rubric')return Object.assign(base,{title:`Rúbrica: ${tema}`,lines:['Comprensión: 4 niveles (inicial a destacado), 30 %.','Aplicación y procedimiento: 4 niveles, 30 %.','Comunicación y presentación: 4 niveles, 20 %.','Participación y colaboración: 4 niveles, 20 %.']});
+  if(t==='comms')return Object.assign(base,{title:'Borrador de comunicado a tutores',lines:[`Estimadas familias: les escribimos para informarles sobre el avance del grupo en ${subj}. Agradecemos su acompañamiento en casa y quedamos atentos a sus consultas.`,ag.nosend?'Límite activo: solo borrador, no se envía.':'Pendiente de envío por el docente.']});
+  if(t==='summary'){const c=sections[0],av=names.map((n,i)=>avgOf(data[c][subj][i])),g=av.reduce((a,b)=>a+b,0)/av.length,r=av.filter(a=>a<60).length;
+    return Object.assign(base,{title:`Resumen de rendimiento · ${subj} · ${c}`,lines:[`Promedio del grupo: ${g.toFixed(1)}.`,`Aprobados: ${av.length-r} de ${av.length}; en riesgo: ${r}.`,'Sugerencia: reforzar con tutoría breve a estudiantes bajo 60.']})}
+  const c=sections[0];return Object.assign(base,{title:`Borrador de notas · ${subj} · ${c}`,lines:[...names.slice(0,4).map((n,i)=>`${n}: ${avgOf(data[c][subj][i]).toFixed(1)} (promedio ponderado actual)`),'… (resto del grupo omitido en la vista)',ag.closed?'Límite activo: no se modifican notas cerradas.':'Aviso: los límites de notas cerradas están desactivados.']});
+}
+function applyProp(id,ok){
+  const x=pend[id];if(!x||x.done)return;x.done=true;const el=document.getElementById(id);
+  let st;
+  if(!ok)st='Rechazada';
+  else{st=x.mode==='auto'?'Ejecutada':'Aprobada';
+    if(x.prop.t==='plan'){plans.push(mkPlan(Object.assign({week:viewWeek},x.prop.plan)));savePlans();renderPlan();st+=' · añadida como borrador a Planes de clase'}}
+  el.querySelector('.acts').innerHTML=`<span class="st st-${ok?'listo':'borrador'}">${esc(st)}</span>`;
+  logA(`${st}: ${x.prop.title}`);
+  const live=document.createElement('span');live.className='sr';live.style.cssText='position:absolute;left:-999px';live.textContent=`Propuesta ${st.toLowerCase()}.`;$('agOut').appendChild(live);
+}
+function ask(q){
+  addMsg('user',esc(q));logA(`Petición: ${q.slice(0,80)}`);
+  if(!ag.on){addMsg('ag',`El agente está desactivado. Actívalo en la configuración para usarlo.`);logA('Petición ignorada: agente desactivado.');return}
+  const t=detect(q);
+  if(!t){addMsg('ag',`No identifiqué una tarea. Tareas habilitadas: ${esc(Object.keys(TASKS).filter(k=>ag.tasks[k]).map(k=>TASKS[k]).join(', ')||'ninguna')}.`);return}
+  if(!ag.tasks[t]){addMsg('ag',`La tarea «${esc(TASKS[t])}» no está habilitada. Actívala en la configuración.`);logA(`Bloqueada: ${TASKS[t]} no habilitada.`);return}
+  if(agActions>=ag.max){addMsg('ag',`Se alcanzó el límite de ${ag.max} acciones por sesión.`);logA('Bloqueada por límite de acciones.');return}
+  agActions++;
+  const prop=build(t,q),mode=(t==='grades'&&ag.mode==='auto')?'approval':ag.mode,id='pr'+agActions+Date.now().toString(36);
+  pend[id]={prop,mode};
+  const lock=t==='grades'&&ag.mode==='auto'?'<p class="note">Esta tarea siempre exige aprobación humana, incluso en modo «Ejecuta».</p>':'';
+  const note=ag.instr.trim()?`<p class="note">Instrucciones aplicadas: ${esc(ag.instr.trim().slice(0,120))}</p>`:'';
+  const card=addMsg('prop',`<h4>${esc(prop.title)}</h4><p class="note" style="margin:0">${esc(ag.name)} · tono ${esc(prop.tone)} · ${esc(ag.level)}</p><ul>${prop.lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>${note}${lock}<div class="acts"></div>`);
+  card.id=id;card.setAttribute('role','group');card.setAttribute('aria-label','Propuesta: '+prop.title);
+  const a=card.querySelector('.acts');
+  if(mode==='auto'){a.innerHTML='';applyProp(id,true)}
+  else if(mode==='suggest')a.innerHTML=`<button class="btn sm" data-pr="${id}" data-ok="1">Usar sugerencia</button><button class="btn sec sm" data-pr="${id}">Descartar</button>`;
+  else a.innerHTML=`<button class="btn sm" data-pr="${id}" data-ok="1">Aprobar</button><button class="btn dng sm" data-pr="${id}">Rechazar</button>`;
+  logA(`Propuesta generada (${TASKS[t]}) en modo ${{suggest:'solo sugiere',approval:'con aprobación',auto:'ejecuta'}[ag.mode]}.`);
+}
+$('agOut').addEventListener('click',e=>{const b=e.target.closest('[data-pr]');if(b)applyProp(b.dataset.pr,!!b.dataset.ok)});
+$('askForm').onsubmit=e=>{e.preventDefault();const v=$('askIn').value.trim();if(!v)return;$('askIn').value='';ask(v);$('askIn').focus()};
+document.querySelector('.sugg').onclick=e=>{const b=e.target.closest('button');if(b){$('askIn').value=b.textContent;$('askIn').focus()}};
 /* init */
-renderSel();renderCenters();renderDash();renderGrades();renderStu();
-const h=location.hash.slice(1);go(['dashboard','centros','notas','estudiante'].includes(h)?h:'dashboard');
+renderSel();renderCenters();renderDash();renderGrades();renderStu();renderPlan();loadAg();
+const h=location.hash.slice(1);go(['dashboard','centros','notas','estudiante','planificacion'].includes(h)?h:'dashboard');
 </script>
 </body>
 </html>

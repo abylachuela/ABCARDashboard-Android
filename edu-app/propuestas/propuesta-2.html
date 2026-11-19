@@ -88,6 +88,50 @@ input.g:hover{border-color:var(--teal)}
 .ficha .big{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,var(--vio),var(--teal));display:grid;place-items:center;font-size:26px;font-weight:700;color:#07151a;flex:none}
 .ficha dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}.ficha dt{color:var(--mut)}.ficha dd{margin:0}
 .note{font-size:12.5px;color:var(--mut);margin-top:10px}
+/* planificacion */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs [role=tab]{background:none;border:0;border-bottom:2px solid transparent;color:var(--mut);font:500 14px var(--sans);padding:10px 16px;cursor:pointer;white-space:nowrap}
+.tabs [role=tab]:hover{color:var(--tx)}.tabs [role=tab][aria-selected=true]{color:var(--teal);border-bottom-color:var(--teal)}
+.pane[hidden]{display:none}
+.btn{background:var(--surf2);color:var(--tx);border:1px solid var(--line2);border-radius:8px;padding:7px 13px;font:500 13.5px var(--sans);cursor:pointer}
+.btn:hover{border-color:var(--teal)}.btn.pri{background:var(--teal);color:#04201c;border-color:var(--teal)}.btn.dng{color:var(--bad);border-color:rgba(248,113,113,.5)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fld{display:grid;gap:4px;font-size:12.5px;color:var(--mut);min-width:0}
+.fld input,.fld select,.fld textarea,.inp{background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font:14px var(--sans);width:100%;min-width:0}
+.fld textarea{resize:vertical;min-height:58px}
+.fld input:hover,.fld select:hover,.fld textarea:hover{border-color:var(--teal)}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;min-width:0}
+legend{font-size:12px;color:var(--mut);padding:0 6px;text-transform:uppercase;letter-spacing:.06em}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:6px 0;color:var(--tx)}.chk input{margin-top:4px;accent-color:var(--teal)}
+.chk small{display:block;color:var(--mut);font-size:12px}
+.wk{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.day{min-width:0;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:8px;display:grid;gap:6px;align-content:start;min-height:130px}
+.day h4{font:500 12px var(--mono);color:var(--mut);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.day h4 button{background:none;border:1px solid var(--line2);color:var(--teal);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:15px;line-height:1}
+.blk{min-width:0;overflow:hidden;text-align:left;background:var(--surf);border:1px solid var(--line);border-left:4px solid var(--c,var(--teal));border-radius:8px;padding:6px 8px;color:var(--tx);font:12.5px/1.3 var(--sans);cursor:pointer;width:100%}
+.blk:hover,.blk[aria-pressed=true]{background:var(--bg);border-color:var(--c,var(--teal))}
+.blk b{display:block;font-weight:600}.blk span{color:var(--mut);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-cy{color:var(--cyan);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.08)}
+.plist{list-style:none;padding:0;display:grid;gap:8px}
+.plist li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surf2)}
+.plist li>button.t{all:unset;cursor:pointer;flex:1;min-width:160px}.plist li>button.t:focus-visible{outline:2px solid var(--cyan)}
+.plist .t strong{display:block;font-weight:500;font-size:14px}.plist .t span{font-size:12.5px;color:var(--mut)}
+.cov{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.cov .rows{flex:1;min-width:180px;display:grid;gap:8px;font-size:12.5px}
+.cov .rows div{display:grid;gap:3px}.cov .rows span{display:flex;justify-content:space-between;color:var(--mut)}
+.warnbox{border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.08);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13.5px;margin:10px 0}
+.minutes{display:grid;grid-template-columns:1fr 84px;gap:8px;align-items:start}
+.cons{display:grid;gap:10px}
+.msg{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surf2);font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{border-color:var(--line2);background:var(--bg);color:var(--cyan)}
+.prop{border:1px solid var(--vio);border-radius:12px;padding:12px;background:rgba(167,139,250,.07)}
+.prop h4{font-size:14px;margin-bottom:6px}.prop pre{font:12.5px/1.5 var(--mono);white-space:pre-wrap;color:var(--tx);overflow-wrap:anywhere;margin-bottom:10px}
+.logl{list-style:none;padding:0;font:12.5px var(--mono);color:var(--mut);display:grid;gap:4px;max-height:220px;overflow:auto}
+.logl b{color:var(--teal);font-weight:500}
+.sr{position:absolute;left:-999px}
+@media(max-width:900px){.wk{grid-template-columns:1fr}.day{min-height:0}}
 /* responsive */
 @media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g2b{grid-template-columns:1fr}}
 @media(max-width:720px){
@@ -143,6 +187,72 @@ input.g:hover{border-color:var(--teal)}
     <div class="card"><h3>Evolución de notas <span class="legend" id="eleg"></span></h3><div id="line"></div></div>
   </div>
 </section>
+<section class="view" id="v-plan" aria-labelledby="h-plan">
+  <div class="head"><div><h2 id="h-plan">Planificación</h2><p>Planes de clase y agente de IA · datos ficticios, prototipo sin red</p></div></div>
+  <div class="tabs" role="tablist" aria-label="Planificación">
+    <button role="tab" id="tab-planes" aria-controls="pn-planes" aria-selected="true">Planes de clase</button>
+    <button role="tab" id="tab-agente" aria-controls="pn-agente" aria-selected="false" tabindex="-1">Agente IA</button>
+  </div>
+  <div class="pane" id="pn-planes" role="tabpanel" aria-labelledby="tab-planes">
+    <p class="sr" id="pstatus" role="status" aria-live="polite"></p>
+    <div class="grid g2" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
+      <div class="grid" style="align-content:start;min-width:0">
+        <div class="card"><h3>Semana <span class="row"><button class="btn" id="wPrev" aria-label="Semana anterior">&lsaquo;</button><span class="mono" id="wLabel" style="color:var(--tx);text-transform:none;letter-spacing:0"></span><button class="btn" id="wNext" aria-label="Semana siguiente">&rsaquo;</button></span></h3>
+          <div class="wk" id="wk"></div>
+          <div class="row" style="margin-top:12px"><label class="fld" style="grid-auto-flow:column;align-items:center;gap:8px">Duplicar semana a<select id="dupWeekTo"></select></label><button class="btn" id="dupWeek">Duplicar semana</button></div>
+        </div>
+        <div class="card"><h3>Planes <span class="row"><label class="sr" for="fEstado">Filtrar por estado</label><select id="fEstado" class="sel"><option value="">Todos</option><option>borrador</option><option>listo</option><option>impartido</option></select><button class="btn pri" id="newPlan">+ Nuevo plan</button></span></h3><ul class="plist" id="plist"></ul></div>
+      </div>
+      <div class="grid" style="align-content:start">
+        <div class="card"><h3>Cobertura curricular</h3><div class="cov" id="cov"></div><p class="note">Sesiones impartidas frente al objetivo del trimestre por asignatura.</p></div>
+        <div class="card"><h3 id="edTitle">Editor de plan</h3>
+          <form id="pform" autocomplete="off" novalidate>
+            <div class="fg"><label class="fld">Tema<input id="f-tema" required maxlength="120"></label>
+              <label class="fld">Asignatura<select id="f-asig"></select></label>
+              <label class="fld">Sección<select id="f-sec"></select></label></div>
+            <div class="fg"><label class="fld">Semana<select id="f-sem"></select></label><label class="fld">Día<select id="f-dia"></select></label><label class="fld">Hora<select id="f-hora"></select></label><label class="fld">Estado<select id="f-estado"><option>borrador</option><option>listo</option><option>impartido</option></select></label></div>
+            <label class="fld" style="margin-bottom:10px">Objetivos<textarea id="f-obj"></textarea></label>
+            <fieldset><legend>Competencias</legend><div class="row" id="f-comp"></div></fieldset>
+            <fieldset><legend>Actividades · minutos</legend><div id="f-acts"></div><p class="note" id="minTot" aria-live="polite"></p></fieldset>
+            <label class="fld" style="margin-bottom:10px">Recursos<textarea id="f-rec"></textarea></label>
+            <label class="fld" style="margin-bottom:10px">Evaluación / rúbrica<textarea id="f-eval"></textarea></label>
+            <label class="fld" style="margin-bottom:12px">Tarea<textarea id="f-tarea"></textarea></label>
+            <p class="warnbox" id="ferr" role="alert" hidden></p>
+            <div class="row"><button class="btn pri" type="submit">Guardar plan</button><button class="btn" type="button" id="delPlan">Eliminar</button>
+              <label class="fld" style="grid-auto-flow:column;align-items:center;gap:8px">Duplicar a<select id="dupTo"></select></label><button class="btn" type="button" id="dupPlan">Duplicar a otra semana</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pane" id="pn-agente" role="tabpanel" aria-labelledby="tab-agente" hidden>
+    <div class="grid g2b">
+      <div class="card"><h3>Configuración del agente</h3>
+        <form id="aform" autocomplete="off" onsubmit="return false">
+          <label class="chk"><input type="checkbox" id="a-on"><span>Activar agente<small>Desactivado, la consola no responde a peticiones.</small></span></label>
+          <div class="fg"><label class="fld">Nombre del agente<input id="a-name" maxlength="40"></label>
+            <label class="fld">Proveedor / modelo<select id="a-model"><option>Claude (Anthropic)</option><option>Otro modelo compatible</option></select></label></div>
+          <label class="fld">API Key<input id="a-key" type="password" autocomplete="off" placeholder="No se guarda ni se envía"></label>
+          <p class="warnbox" id="keywarn"><strong>Aviso de seguridad:</strong> en producción la clave NUNCA va en el navegador: se guarda en el servidor y el navegador solo habla con tu backend. Este prototipo no guarda ni envía esta clave.</p>
+          <fieldset><legend>Modo de autonomía</legend>
+            <label class="chk"><input type="radio" name="a-mode" value="suggest"><span>Solo sugiere</span></label>
+            <label class="chk"><input type="radio" name="a-mode" value="approve"><span>Sugiere y espera aprobación</span></label>
+            <label class="chk"><input type="radio" name="a-mode" value="exec"><span>Ejecuta con registro<small>El borrador de notas sigue exigiendo aprobación humana: aquí queda bloqueado.</small></span></label></fieldset>
+          <fieldset><legend>Tareas habilitadas</legend><div id="a-tasks"></div></fieldset>
+          <div class="fg"><label class="fld">Tono<select id="a-tono"><option>Cercano</option><option>Formal</option><option>Motivador</option></select></label>
+            <label class="fld">Nivel<select id="a-nivel"><option>Básico</option><option>Intermedio</option><option>Avanzado</option></select></label></div>
+          <label class="fld" style="margin-bottom:10px">Instrucciones personalizadas<textarea id="a-inst" maxlength="600" placeholder="Ej.: usa ejemplos de la vida cotidiana"></textarea></label>
+          <fieldset><legend>Límites</legend><div id="a-lims"></div></fieldset>
+        </form></div>
+      <div class="grid" style="align-content:start">
+        <div class="card"><h3>Pídele al agente <span class="pill" id="agState"></span></h3>
+          <form class="row" id="cform" style="flex-wrap:nowrap;margin-bottom:12px"><label class="sr" for="c-in">Petición al agente</label><input class="inp" id="c-in" placeholder="Ej.: genera un plan de clase de Ciencias sobre la fotosíntesis" maxlength="300"><button class="btn pri" type="submit">Enviar</button></form>
+          <div class="cons" id="cons" role="log" aria-live="polite" aria-relevant="additions"></div></div>
+        <div class="card"><h3>Registro de actividad</h3><ul class="logl" id="alog"><li>Sin actividad todavía.</li></ul></div>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 
 <script>
@@ -168,7 +278,7 @@ const centros=[
 const alertas=[["Hugo Castillo","3.º ESO · 3 asignaturas suspensas","bad"],["Carla Medina","1.º Bach. · asistencia 71%","bad"],["Pablo Herrera","2.º ESO · caída de 2,1 pts en T2","warn"],["Noa Santos","4.º ESO · 2 entregas pendientes","warn"],["Álvaro Gil","3.º ESO · Matemáticas 4,6","bad"]];
 
 /* ---- navegación ---- */
-const views=[["dashboard","Panel","<path d='M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-4H4z'/>"],["centros","Centros","<path d='M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'/>"],["notas","Notas","<path d='M5 3h11l3 3v15H5zM9 9h6M9 13h6M9 17h3'/>"],["est","Alumno","<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/>"]];
+const views=[["dashboard","Panel","<path d='M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-4H4z'/>"],["centros","Centros","<path d='M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'/>"],["notas","Notas","<path d='M5 3h11l3 3v15H5zM9 9h6M9 13h6M9 17h3'/>"],["plan","Plan","<path d='M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3'/>"],["est","Alumno","<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/>"]];
 $(".rail").innerHTML=views.map(([id,t,p])=>`<button data-v="${id}" aria-label="${t}" title="${t}"><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>${t}</button>`).join("");
 function go(id){if(!views.some(v=>v[0]===id))id="dashboard";
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="v-"+id));
@@ -227,6 +337,120 @@ function renderEst(){const i=+$("#selEst").value,e=evo[i],avg=e.flat().reduce((a
  $("#line").innerHTML=s+`</svg><div class="legend" style="flex-wrap:wrap;margin-top:8px">${asig.map((a,j)=>`<span><i style="background:${colors[j]}"></i>${a}</span>`).join("")}<span style="color:var(--bad)">- - umbral 5</span></div>`}
 $("#selEst").onchange=renderEst;renderEst();
 function openEst(i){$("#selEst").value=i;renderEst();go("est");scrollTo(0,0)}
+/* ---- planificacion ---- */
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+const DIAS=["Lunes","Martes","Miércoles","Jueves","Viernes"],HORAS=["08:30","09:30","11:00","12:00","13:00"],SECS=["1.º ESO A","2.º ESO B","3.º ESO A","4.º ESO C"];
+const ACOL={Matemáticas:"#2dd4bf",Lengua:"#a78bfa",Ciencias:"#22d3ee",Historia:"#fbbf24",Inglés:"#f472b6"},OBJ={Matemáticas:6,Lengua:6,Ciencias:5,Historia:4,Inglés:5};
+const COMP=["Comunicación lingüística","Matemática y científica","Digital","Aprender a aprender","Social y cívica"];
+const ISO=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const monday=(off=0)=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*off);return d};
+const wkOf=off=>ISO(monday(off)),wkLabel=off=>{const a=monday(off),b=new Date(a);b.setDate(b.getDate()+4);const f=d=>d.toLocaleDateString("es",{day:"numeric",month:"short"});return f(a)+" – "+f(b)};
+const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const mk=(w,dia,hora,asig,sec,tema,estado)=>({id:uid(),w:wkOf(w),dia,hora,asig,sec,tema,estado,obj:"Comprender y aplicar los conceptos clave del tema.",comp:[COMP[3]],ini:["Activación de conocimientos previos",10],des:["Trabajo guiado y práctica en parejas",35],cie:["Puesta en común y ticket de salida",10],rec:"Pizarra, cuaderno, ficha",eval:"Rúbrica 4 niveles: comprensión, procedimiento, comunicación",tarea:"Ficha de refuerzo"});
+let planes=store.get("edu.p2.planes",null)||[mk(-1,0,0,"Matemáticas","1.º ESO A","Fracciones equivalentes","impartido"),mk(-1,2,1,"Lengua","2.º ESO B","El texto narrativo","impartido"),mk(-1,3,2,"Ciencias","3.º ESO A","La célula","impartido"),mk(0,0,1,"Matemáticas","1.º ESO A","Operaciones con fracciones","listo"),mk(0,1,0,"Historia","4.º ESO C","La Revolución Industrial","listo"),mk(0,2,3,"Inglés","2.º ESO B","Present perfect","borrador"),mk(0,4,1,"Lengua","2.º ESO B","El texto expositivo","borrador"),mk(1,1,2,"Ciencias","3.º ESO A","Los ecosistemas","borrador")];
+let wOff=0,curId=null,delArm=false;
+const saveP=()=>{const ok=store.set("edu.p2.planes",planes);if(!ok)say("Aviso: no se pudo guardar en el navegador; los cambios viven solo en memoria.")};
+const say=t=>{$("#pstatus").textContent="";setTimeout(()=>$("#pstatus").textContent=t,30)};
+const bcl={borrador:"b-warn",listo:"b-cy",impartido:"b-ok"};
+const wopts=()=>[-2,-1,0,1,2,3,4].map(o=>`<option value="${o}">${esc(wkLabel(o))}</option>`).join("");
+$("#f-sem").innerHTML=wopts();$("#dupTo").innerHTML=wopts();$("#dupWeekTo").innerHTML=wopts();$("#dupTo").value=1;$("#dupWeekTo").value=1;
+$("#f-asig").innerHTML=Object.keys(OBJ).map(a=>`<option>${a}</option>`).join("");$("#f-sec").innerHTML=SECS.map(a=>`<option>${a}</option>`).join("");
+$("#f-dia").innerHTML=DIAS.map((d,i)=>`<option value="${i}">${d}</option>`).join("");$("#f-hora").innerHTML=HORAS.map((h,i)=>`<option value="${i}">${h}</option>`).join("");
+$("#f-comp").innerHTML=COMP.map((c,i)=>`<label class="chk" style="margin:0"><input type="checkbox" name="comp" value="${esc(c)}">${esc(c)}</label>`).join("");
+const ACTS=[["ini","Inicio"],["des","Desarrollo"],["cie","Cierre"]];
+$("#f-acts").innerHTML=ACTS.map(([k,t])=>`<div class="minutes"><label class="fld">${t}<textarea id="a_${k}" rows="2"></textarea></label><label class="fld">Min<input id="m_${k}" type="number" min="0" max="120" step="1"></label></div>`).join("");
+const weekIdx=iso=>{for(let o=-8;o<=12;o++)if(wkOf(o)===iso)return o;return null};
+function renderCal(){$("#wLabel").textContent=wkLabel(wOff);const iso=wkOf(wOff);
+ $("#wk").innerHTML=DIAS.map((d,i)=>{const bl=planes.filter(p=>p.w===iso&&p.dia===i).sort((a,b)=>a.hora-b.hora);
+  return `<div class="day"><h4><span>${d.slice(0,3)}</span><button data-add="${i}" aria-label="Añadir plan el ${d}">+</button></h4>${bl.map(p=>`<button class="blk" style="--c:${ACOL[p.asig]||"#2dd4bf"}" data-id="${esc(p.id)}" aria-pressed="${p.id===curId}"><b>${esc(HORAS[p.hora])} · ${esc(p.asig)}</b><span>${esc(p.sec)} · ${esc(p.tema)}</span><span>${esc(p.estado)}</span></button>`).join("")||'<span class="note" style="margin:0">Libre</span>'}</div>`}).join("")}
+function renderList(){const f=$("#fEstado").value,l=planes.filter(p=>!f||p.estado===f).sort((a,b)=>(b.w+b.dia).localeCompare(a.w+a.dia));
+ $("#plist").innerHTML=l.map(p=>{const o=weekIdx(p.w);return `<li><button class="t" data-id="${esc(p.id)}"><strong>${esc(p.tema||"(sin tema)")}</strong><span>${esc(p.asig)} · ${esc(p.sec)} · ${esc(DIAS[p.dia])} ${o===null?esc(p.w):esc(wkLabel(o))}</span></button><span class="badge ${bcl[p.estado]}">${esc(p.estado)}</span></li>`}).join("")||'<li>No hay planes con este filtro.</li>'}
+function ring(pct){const r=38,c=2*Math.PI*r;return `<svg width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="Cobertura curricular ${pct}%"><circle cx="52" cy="52" r="${r}" fill="none" stroke="var(--line)" stroke-width="10"/><circle cx="52" cy="52" r="${r}" fill="none" stroke="var(--teal)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${c*pct/100} ${c}" transform="rotate(-90 52 52)"/><text x="52" y="57" text-anchor="middle" style="fill:var(--tx);font-size:20px">${pct}%</text></svg>`}
+function renderCov(){let tot=0,max=0;const rows=Object.entries(OBJ).map(([a,o])=>{const n=planes.filter(p=>p.asig===a&&p.estado==="impartido").length,v=Math.min(n,o);tot+=v;max+=o;return `<div><span><span>${esc(a)}</span><span class="mono">${n}/${o}</span></span><div class="bar"><i style="width:${v/o*100}%;background:${ACOL[a]}"></i></div></div>`}).join("");
+ $("#cov").innerHTML=ring(Math.round(tot/max*100))+`<div class="rows">${rows}</div>`}
+const refresh=()=>{renderCal();renderList();renderCov()};
+const sumMin=()=>{const t=ACTS.reduce((s,[k])=>s+(+$("#m_"+k).value||0),0);$("#minTot").textContent=`Total: ${t} min de 55 previstos`+(t>55?" (excede la sesión)":"");$("#minTot").style.color=t>55?"var(--warn)":"";return t};
+function fill(p){curId=p.id;delArm=false;$("#delPlan").textContent="Eliminar";$("#ferr").hidden=true;
+ $("#f-tema").value=p.tema;$("#f-asig").value=p.asig;$("#f-sec").value=p.sec;$("#f-sem").value=weekIdx(p.w)??0;$("#f-dia").value=p.dia;$("#f-hora").value=p.hora;$("#f-estado").value=p.estado;
+ $("#f-obj").value=p.obj;document.querySelectorAll("[name=comp]").forEach(c=>c.checked=p.comp.includes(c.value));
+ ACTS.forEach(([k])=>{$("#a_"+k).value=p[k][0];$("#m_"+k).value=p[k][1]});$("#f-rec").value=p.rec;$("#f-eval").value=p.eval;$("#f-tarea").value=p.tarea;
+ $("#edTitle").textContent=p.tema&&planes.some(x=>x.id===p.id)?"Editando plan":"Nuevo plan";sumMin();renderCal()}
+function blank(dia=0){return {id:uid(),w:wkOf(wOff),dia,hora:0,asig:"Matemáticas",sec:SECS[0],tema:"",estado:"borrador",obj:"",comp:[],ini:["",10],des:["",35],cie:["",10],rec:"",eval:"",tarea:""}}
+function open(p,foc=true){fill(p);if(foc)$("#f-tema").focus()}
+$("#wk").addEventListener("click",e=>{const a=e.target.closest("[data-add]"),b=e.target.closest("[data-id]");if(a)open(blank(+a.dataset.add));else if(b)open(planes.find(p=>p.id===b.dataset.id))});
+$("#plist").addEventListener("click",e=>{const b=e.target.closest("[data-id]");if(b){const p=planes.find(p=>p.id===b.dataset.id);const o=weekIdx(p.w);if(o!==null)wOff=o;open(p);renderCal()}});
+$("#wPrev").onclick=()=>{wOff--;renderCal()};$("#wNext").onclick=()=>{wOff++;renderCal()};
+$("#fEstado").onchange=renderList;$("#newPlan").onclick=()=>open(blank());
+$("#pform").addEventListener("input",sumMin);
+$("#pform").addEventListener("submit",e=>{e.preventDefault();const tema=$("#f-tema").value.trim();
+ if(!tema){$("#ferr").textContent="El tema es obligatorio.";$("#ferr").hidden=false;$("#f-tema").focus();return}
+ $("#ferr").hidden=true;const w=wkOf(+$("#f-sem").value),old=planes.find(p=>p.id===curId)||{id:curId||uid()};
+ const p=Object.assign(old,{w,dia:+$("#f-dia").value,hora:+$("#f-hora").value,asig:$("#f-asig").value,sec:$("#f-sec").value,tema,estado:$("#f-estado").value,obj:$("#f-obj").value,comp:[...document.querySelectorAll("[name=comp]:checked")].map(c=>c.value),rec:$("#f-rec").value,eval:$("#f-eval").value,tarea:$("#f-tarea").value});
+ ACTS.forEach(([k])=>p[k]=[$("#a_"+k).value,Math.max(0,+$("#m_"+k).value||0)]);
+ if(!planes.includes(old))planes.push(p);curId=p.id;saveP();const o=weekIdx(w);if(o!==null)wOff=o;refresh();$("#edTitle").textContent="Editando plan";say("Plan guardado: "+tema)});
+$("#delPlan").onclick=()=>{const i=planes.findIndex(p=>p.id===curId);if(i<0){open(blank(),false);return}
+ if(!delArm){delArm=true;$("#delPlan").textContent="Confirmar eliminación";$("#delPlan").classList.add("dng");return}
+ const t=planes[i].tema;planes.splice(i,1);saveP();$("#delPlan").classList.remove("dng");open(blank(),false);refresh();say("Plan eliminado: "+t)};
+function dupPlans(list,off){const w=wkOf(off);const c=list.map(p=>({...JSON.parse(JSON.stringify(p)),id:uid(),w,estado:"borrador"}));planes.push(...c);saveP();refresh();return c.length}
+$("#dupPlan").onclick=()=>{const p=planes.find(p=>p.id===curId);if(!p){$("#ferr").textContent="Guarda el plan antes de duplicarlo.";$("#ferr").hidden=false;return}
+ dupPlans([p],+$("#dupTo").value);say("Plan duplicado como borrador en la semana "+wkLabel(+$("#dupTo").value))};
+$("#dupWeek").onclick=()=>{const l=planes.filter(p=>p.w===wkOf(wOff)),t=+$("#dupWeekTo").value;if(!l.length){say("No hay planes en esta semana.");return}
+ const n=dupPlans(l,t);say(`${n} planes duplicados como borrador a ${wkLabel(t)}`)};
+$("#pform").addEventListener("reset",e=>e.preventDefault());
+/* tabs */
+const tabs=[...document.querySelectorAll(".tabs [role=tab]")];
+function tab(i,f){tabs.forEach((t,j)=>{t.setAttribute("aria-selected",i===j);t.tabIndex=i===j?0:-1;$("#"+t.getAttribute("aria-controls")).hidden=i!==j});if(f)tabs[i].focus()}
+tabs.forEach((t,i)=>{t.onclick=()=>tab(i);t.onkeydown=e=>{const k={ArrowRight:1,ArrowLeft:-1}[e.key];if(k){e.preventDefault();tab((i+k+tabs.length)%tabs.length,true)}else if(e.key==="Home"){e.preventDefault();tab(0,true)}else if(e.key==="End"){e.preventDefault();tab(tabs.length-1,true)}}});
+/* ---- agente ---- */
+const TASKS=[["plan","Generar plan de clase"],["act","Proponer actividades"],["rub","Crear rúbricas"],["com","Redactar comunicados a tutores"],["res","Resumir rendimiento del grupo"],["notas","Preparar borrador de notas","Siempre exige aprobación humana"]];
+const LIMS=[["cerr","No tocar notas cerradas"],["pii","No incluir datos personales identificables en los textos"],["envio","No enviar nada fuera de la plataforma"]];
+const defA={on:true,name:"Asistente Aula",model:"Claude (Anthropic)",mode:"approve",tasks:{plan:1,act:1,rub:1,com:1,res:1,notas:0},tono:"Cercano",nivel:"Intermedio",inst:"",lims:{cerr:1,pii:1,envio:1}};
+let ag=Object.assign({},defA,store.get("edu.p2.agente",{}));ag.tasks=Object.assign({},defA.tasks,ag.tasks);ag.lims=Object.assign({},defA.lims,ag.lims);
+$("#a-tasks").innerHTML=TASKS.map(([k,t,h])=>`<label class="chk"><input type="checkbox" data-t="${k}"><span>${esc(t)}${h?`<small>${esc(h)}</small>`:""}</span></label>`).join("");
+$("#a-lims").innerHTML=LIMS.map(([k,t])=>`<label class="chk"><input type="checkbox" data-l="${k}"><span>${esc(t)}</span></label>`).join("");
+function loadA(){$("#a-on").checked=!!ag.on;$("#a-name").value=ag.name;$("#a-model").value=ag.model;document.querySelectorAll("[name=a-mode]").forEach(r=>r.checked=r.value===ag.mode);
+ document.querySelectorAll("[data-t]").forEach(c=>c.checked=!!ag.tasks[c.dataset.t]);document.querySelectorAll("[data-l]").forEach(c=>c.checked=!!ag.lims[c.dataset.l]);
+ $("#a-tono").value=ag.tono;$("#a-nivel").value=ag.nivel;$("#a-inst").value=ag.inst;stA()}
+const stA=()=>{$("#agState").textContent=(ag.on?"activo":"inactivo")+" · "+({suggest:"solo sugiere",approve:"con aprobación",exec:"ejecuta"}[ag.mode])};
+$("#aform").addEventListener("input",()=>{ag.on=$("#a-on").checked;ag.name=$("#a-name").value.trim()||"Agente";ag.model=$("#a-model").value;ag.mode=(document.querySelector("[name=a-mode]:checked")||{}).value||"approve";
+ document.querySelectorAll("[data-t]").forEach(c=>ag.tasks[c.dataset.t]=c.checked?1:0);document.querySelectorAll("[data-l]").forEach(c=>ag.lims[c.dataset.l]=c.checked?1:0);ag.tono=$("#a-tono").value;ag.nivel=$("#a-nivel").value;ag.inst=$("#a-inst").value;store.set("edu.p2.agente",ag);stA()}); /* la API key nunca se persiste ni se lee */
+const logA=[];function alog(t){logA.unshift([new Date().toLocaleTimeString("es"),t]);logA.length=Math.min(logA.length,40);$("#alog").innerHTML=logA.map(l=>`<li><b>${esc(l[0])}</b> ${esc(l[1])}</li>`).join("")}
+const cons=$("#cons");const props={};
+const addMsg=(t,me)=>{const d=document.createElement("div");d.className="msg"+(me?" me":"");d.textContent=t;cons.append(d)};
+const pick=t=>{const a=Object.keys(OBJ).find(a=>t.toLowerCase().includes(a.toLowerCase()))||"Matemáticas";return a};
+const topicOf=(t,a)=>{const m=t.match(/\b(?:sobre|de|del|acerca de)\s+(?!clase\b)(.+)$/i);let s=(m?m[1]:"").replace(new RegExp("^"+a+"\\s*(sobre|de)?\\s*","i"),"").replace(/[.?!]+$/,"").trim();return (s||"Tema propuesto por el agente").slice(0,80)}
+const GRP="1.º ESO|Matemáticas";
+function genPlan(t){const a=pick(t),tema=topicOf(t,a),niv=ag.nivel,hi=niv==="Avanzado",lo=niv==="Básico";
+ return {id:uid(),w:wkOf(wOff),dia:planes.filter(p=>p.w===wkOf(wOff)).length%5,hora:1,asig:a,sec:SECS[0],tema,estado:"borrador",obj:`Comprender ${tema} (nivel ${niv.toLowerCase()}).\n${hi?"Resolver situaciones abiertas y justificar el razonamiento.":lo?"Reconocer los conceptos básicos con apoyo visual.":"Aplicar lo aprendido en ejercicios graduados."}`,comp:[COMP[3],COMP[0]],ini:[`${ag.tono==="Motivador"?"Reto inicial sorpresa":"Pregunta de activación"} sobre ${tema}`,10],des:[`Exposición breve y práctica guiada${hi?" con problemas abiertos":""}`,35],cie:["Puesta en común y ticket de salida",10],rec:"Pizarra, ficha, recursos digitales",eval:"Rúbrica 4 niveles: comprensión, procedimiento, comunicación, autonomía",tarea:`Ficha de repaso de ${tema}`+(ag.inst?`\n(Instrucción: ${ag.inst})`:"")}}
+function planTxt(p){return `Asignatura: ${p.asig} · ${p.sec}\nTema: ${p.tema}\nObjetivos: ${p.obj.replace(/\n/g," ")}\nInicio (${p.ini[1]} min): ${p.ini[0]}\nDesarrollo (${p.des[1]} min): ${p.des[0]}\nCierre (${p.cie[1]} min): ${p.cie[0]}\nEvaluación: ${p.eval}\nTarea: ${p.tarea}`}
+function build(kind,t){const nombre=ag.lims.pii?"el grupo":"Lucía Fernández";
+ if(kind==="plan"){const p=genPlan(t);return {title:"Plan de clase: "+p.tema,body:planTxt(p),plan:p}}
+ if(kind==="act"){const a=pick(t);return {title:"Actividades para "+a,body:`1. Calentamiento de 5 min: lluvia de ideas\n2. Trabajo en parejas con ficha graduada (${ag.nivel.toLowerCase()})\n3. Mini-reto en grupos de 4\n4. Ticket de salida individual`}}
+ if(kind==="rub")return {title:"Rúbrica de 4 niveles",body:"Criterios: comprensión · procedimiento · comunicación · autonomía\nNiveles: Inicial (1) · En desarrollo (2) · Logrado (3) · Destacado (4)\nPeso: 30% / 30% / 20% / 20%"};
+ if(kind==="com"){const o={Cercano:"Hola familias:",Formal:"Estimadas familias:",Motivador:"¡Buenas noticias, familias!"}[ag.tono];return {title:"Comunicado a tutores",body:`${o}\nOs escribimos para compartir el avance de ${nombre} en este trimestre y las próximas actividades. Quedamos a vuestra disposición en tutoría.\nUn saludo,\nMaría Lozano`}}
+ if(kind==="res"){const av=notas[GRP].map(wavg),m=av.reduce((a,b)=>a+b)/av.length;return {title:"Resumen de rendimiento · "+GRP.replace("|"," · "),body:`Promedio del grupo: ${fmt(m)}\nÓptimos: ${av.filter(v=>v>=7).length} · En seguimiento: ${av.filter(v=>v>=5&&v<7).length} · En riesgo: ${av.filter(v=>v<5).length}\nSugerencia: refuerzo en pequeños grupos para quienes están bajo 5.`}}
+ const av=notas[GRP].slice(0,4).map(wavg);return {title:"Borrador de notas (no se registra hasta aprobar)",body:av.map((v,i)=>`${ag.lims.pii?"Alumno "+(i+1):nombres[i]}: ${fmt(v)}`).join("\n")+(ag.lims.cerr?"\nLímite activo: las notas cerradas no se modifican.":"")}}
+const KINDS=[["com",/comunicad|tutor|famil|padres/i],["res",/resum|rendimiento/i],["notas",/nota|calific/i],["rub",/r[uú]brica/i],["act",/actividad/i],["plan",/plan|clase|planific|lecci[oó]n/i]];
+function apply(id,how){const p=props[id];if(!p||p.done)return;p.done=how;
+ if(p.plan){planes.push(p.plan);saveP();refresh();say("Plan generado por el agente añadido como borrador")}
+ else if(p.kind==="rub"){$("#f-eval").value=($("#f-eval").value+"\n"+p.body).trim()}else if(p.kind==="act"){$("#a_des").value=($("#a_des").value+"\n"+p.body).trim()}
+ alog(`${how==="exec"?"Ejecutado":"Aprobado"}: ${p.title}`)}
+function card(id,mode){const p=props[id],el=document.createElement("div");el.className="prop";el.id="pr-"+id;
+ el.innerHTML=`<h4>${esc(p.title)}</h4><pre>${esc(p.body)}</pre><div class="row" data-act>${mode==="exec"?`<span class="badge b-ok">Ejecutado y registrado</span>`:`<button class="btn pri" data-a="ok">Aprobar</button><button class="btn" data-a="no">Rechazar</button>${mode==="suggest"?'<span class="note" style="margin:0">Solo sugiere: al aprobar, la aplicas tú.</span>':""}`}</div>`;cons.append(el)}
+cons.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const el=b.closest(".prop"),id=el.id.slice(3),p=props[id];
+ if(b.dataset.a==="ok"){apply(id,"ok");el.querySelector("[data-act]").innerHTML=`<span class="badge b-ok" role="status">Aprobado${p.plan?" · añadido como borrador":""}</span>`}
+ else{p.done="no";alog("Rechazado: "+p.title);el.querySelector("[data-act]").innerHTML='<span class="badge b-bad" role="status">Rechazado</span>'}});
+$("#cform").addEventListener("submit",e=>{e.preventDefault();const t=$("#c-in").value.trim();if(!t)return;$("#c-in").value="";addMsg("Tú: "+t,true);
+ if(!ag.on){addMsg(ag.name+": estoy desactivado. Actívame en la configuración.");alog("Petición ignorada: agente desactivado");return}
+ const k=(KINDS.find(x=>x[1].test(t))||[])[0];
+ if(!k){addMsg(`${ag.name}: no he entendido la petición. Prueba con "plan de clase", "actividades", "rúbrica", "comunicado", "resumen" o "borrador de notas".`);alog("Petición sin tarea reconocida");return}
+ if(!ag.tasks[k]){addMsg(`${ag.name}: la tarea "${TASKS.find(x=>x[0]===k)[1]}" no está habilitada.`);alog("Bloqueado: tarea deshabilitada ("+k+")");return}
+ const r=build(k,t),id=uid();props[id]={...r,kind:k};let mode=ag.mode;
+ if(k==="notas"&&mode==="exec"){mode="approve";addMsg(`${ag.name}: el borrador de notas siempre requiere aprobación humana; no se ejecuta automáticamente.`);alog("Notas: ejecución bloqueada, requiere aprobación")}
+ alog("Propuesta generada: "+r.title+" (simulada, sin red)");
+ if(mode==="exec"){apply(id,"exec");card(id,"exec")}else card(id,mode)});
+loadA();refresh();open(blank(),false);$("#edTitle").textContent="Nuevo plan";
 go(location.hash.slice(1)||"dashboard");
 </script>
 </body>
