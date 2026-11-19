@@ -10,6 +10,7 @@ import { exigirSesion } from './auth/guardia.js';
 import type { Config } from './config.js';
 import { crearPool, type Pool } from './db/pool.js';
 import { aRespuesta, ErrorHttp } from './errores.js';
+import { rutasApi } from './routes/api.js';
 import { rutasSalud } from './routes/salud.js';
 
 export interface Dependencias {
@@ -138,6 +139,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
   await app.register(
     async (v1) => {
       await v1.register(rutasAuth, { prefix: '/auth' });
+      await v1.register(rutasApi);
       v1.get('/ping', { preHandler: exigirSesion() }, async (req) => ({
         pong: true,
         usuario: req.sesion?.usuario.id,

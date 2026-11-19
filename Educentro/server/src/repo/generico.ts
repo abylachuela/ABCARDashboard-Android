@@ -122,6 +122,8 @@ export interface OpcionesEscritura {
   ifMatch?: string | null;
   /** Solo la carga de datos de desarrollo: conserva creadoEn/actualizadoEn del registro. */
   conservarFechas?: boolean;
+  /** Solo la carga de datos de desarrollo: no genera filas de auditoría. */
+  sinAuditoria?: boolean;
 }
 
 export interface Resultado {
@@ -205,6 +207,8 @@ export async function guardar(p: Peticion, meta: MetaColeccion, cuerpo: Registro
     else delete bruto.lecturas;
   }
 
+  // agenteLog: quien lo escribe sin ser gestor queda registrado con su propio usuario (el cliente no decide la autoría).
+  if (meta.nombre === 'agenteLog' && (ses.rol === 'docente' || ses.rol === 'secretaria')) bruto.usuarioId = ses.usuarioId;
   const nuevoPlano: Registro = { ...bruto, id, centroId: centro };
   const bytes = Buffer.byteLength(JSON.stringify(bruto), 'utf8');
   if (bytes > MAX_DATOS_BYTES) {
@@ -243,7 +247,7 @@ export async function guardar(p: Peticion, meta: MetaColeccion, cuerpo: Registro
     guardada = u.rows[0] as Fila;
   }
   const registro = aPlano(guardada);
-  if (AUDITADAS.includes(meta.nombre)) {
+  if (AUDITADAS.includes(meta.nombre) && !op.sinAuditoria) {
     await registrarAuditoria(tx, ses, centro, { accion: antes ? 'editar' : 'crear', coleccion: meta.nombre, registroId: id, antes, despues: registro });
   }
   return { registro, antes, creado: !antes };

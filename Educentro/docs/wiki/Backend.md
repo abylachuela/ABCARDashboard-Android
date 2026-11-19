@@ -2,7 +2,9 @@
 
 El servidor vive en `Educentro/server/` (Node.js 22, Fastify 5, PostgreSQL 16, TypeScript, SQL plano sin ORM). Plan completo en `docs/BACKEND.md`; guía de uso en `server/README.md`.
 
-> **Estado: Fase 0 implementada.** Hay autenticación real, pero el frontend todavía **no** la usa y los datos siguen en `localStorage`: sigue sin ser apto para datos reales de estudiantes hasta la Fase 1.
+> **Estado: Fase 0 y Fase 1 (tramo servidor) implementadas.** La API REST de las colecciones, la autorización por rol/centro/alcance y la RLS de PostgreSQL ya existen y están probadas (362 pruebas); contrato en `docs/API-REST.md`. El cliente todavía no la usa (siguiente tramo).
+>
+> Estado de la Fase 0: Hay autenticación real, pero el frontend todavía **no** la usa y los datos siguen en `localStorage`: sigue sin ser apto para datos reales de estudiantes hasta la Fase 1.
 
 ## Qué hay hoy
 - **Autenticación** en `/api/v1/auth`: `login`, `logout`, `me`, `cambiar-clave`, `recuperar`, `restablecer`. Más `GET /api/health` y `GET /api/v1/ping`.
@@ -15,8 +17,15 @@ El servidor vive en `Educentro/server/` (Node.js 22, Fastify 5, PostgreSQL 16, T
 - **Despliegue**: `deploy.mjs` con `WITH_API=1` añade el proxy `/api/` en nginx (modo solo estático intacto). Opcional: lanzarlo desde GitHub Actions con un runner propio en la VM (`deploy/RUNNER.md`, workflow `deploy-vm.yml`, manual y con aprobación).
 - **CI**: `educentro-server.yml` (lint, tipos, 86 pruebas contra PostgreSQL real, `npm audit`).
 
+## Fase 1 (servidor)
+- **API genérica** `/api/v1/c/:col` (listar con filtros/orden/paginación, obtener, crear, editar con `If-Match`, borrar lógico, lote de hasta 500), más `/auditoria`, `/comunicados/:id/lectura` y `/respaldo/exportar`.
+- **Permisos en el servidor**: fuente única `permisos.json` generada desde `permisos.js` (CI falla si divergen), alcance de docente/tutor/estudiante resuelto en SQL y reglas de propiedad.
+- **Aislamiento multi-centro** con RLS en PostgreSQL (rol no propietario; sin contexto no se ve nada) además de la capa de aplicación.
+- **Usuarios** sin hash en ninguna respuesta; alta con contraseña temporal; «borrar» desactiva.
+- **Auditoría** inmutable de calificaciones y notas por competencias.
+
 ## Qué falta
-Autorización por rol/centro/alcance y repositorio genérico (Fase 1), notas y auditoría inmutable de calificaciones (Fase 2), resto de módulos, aula, archivos y proxy del agente IA (Fases 3–4), migración de datos y producción (Fase 5), app móvil (Fase 6). También: 2FA, altas por invitación, copia de seguridad fuera de la VM y prueba de restauración.
+El cliente `repo-api.js` (siguiente tramo), notas y auditoría inmutable de calificaciones (Fase 2), resto de módulos, aula, archivos y proxy del agente IA (Fases 3–4), migración de datos y producción (Fase 5), app móvil (Fase 6). También: 2FA, altas por invitación, copia de seguridad fuera de la VM y prueba de restauración.
 
 ## Arrancar en local
 Ver `server/README.md`: crear roles con `db/roles.sql`, `npm run migrar`, `npm run crear-admin`, `npm run dev`.

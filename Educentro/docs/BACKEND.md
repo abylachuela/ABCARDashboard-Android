@@ -1,6 +1,6 @@
 # Plan del backend de Educentro
 
-Estado: **Fase 0 implementada** (ver «Estado de la Fase 0» abajo); las Fases 1–6 siguen siendo plan. Sustituye el almacenamiento en `localStorage` por un servidor real con control de acceso en el servidor (el punto crítico de `SEGURIDAD.md`). Repositorio privado de GitHub; una sola VM Linux; datos de menores.
+Estado: **Fase 0 implementada y Fase 1 (tramo servidor) implementada** (ver «Estado de la Fase 0» abajo); las Fases 1–6 siguen siendo plan. Sustituye el almacenamiento en `localStorage` por un servidor real con control de acceso en el servidor (el punto crítico de `SEGURIDAD.md`). Repositorio privado de GitHub; una sola VM Linux; datos de menores.
 
 ## Estado de la Fase 0 (implementada en `Educentro/server/`)
 Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `npm audit --omit=dev` sin vulnerabilidades): configuración validada (`src/config.ts`), migraciones SQL con ejecutor transaccional, `centros`/`usuarios`/`sesiones`/`tokens_recuperacion`/`auditoria_accesos` (append-only), autenticación bajo `/api/v1/auth` (login, logout, me, cambiar-clave, recuperar, restablecer), `/api/health`, `/api/v1/ping`, CLI `crear-admin` y `semilla-dev`, Dockerfile, `compose.yml` (api, db, migrar, backup), `deploy.mjs` con `WITH_API=1` (probado con nginx real) y CI (`.github/workflows/educentro-server.yml`). Guía de uso: `server/README.md`.
@@ -19,6 +19,20 @@ Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `n
 - **Copias**: `pg_dump` + gzip + GPG AES-256 diario con retención de 30 días; **la copia fuera de la VM y la prueba de restauración trimestral siguen pendientes**. WAL/PITR no está implementado.
 - **No hecho aún** (según el plan): altas por invitación desde la API, 2FA, autorización por rol/centro/alcance, RLS por colección, repositorio genérico y `repo-api.js` (Fase 1).
 - **No probado aquí**: `docker build`/`docker compose up` (sin daemon de Docker en el entorno; solo se validó `docker compose config`, y se ejecutaron por separado `backup.sh`, `db/roles.sql`, el build de producción con `npm ci --omit=dev` y la API detrás de nginx real), SMTP real, Let's Encrypt.
+
+## Estado de la Fase 1, tramo servidor (implementado en `Educentro/server/`)
+Hecho y probado con PostgreSQL 16 real (362 pruebas: las 86 de la Fase 0 + paridad de permisos, RLS directa en SQL, matriz de 6 roles × 39 colecciones × 5 acciones, aislamiento entre centros, alcance docente/tutor/estudiante, escalada, mass-assignment, inyección en filtros/orden, límites, 409 optimista, CSRF/Origin, auditoría inmutable y ausencia de hashes). Contrato: `docs/API-REST.md`. **El frontend aún no usa la API** (`repo-api.js` es el tramo cliente).
+
+**Lo que difiere del plan**
+- **Tablas genéricas** (`id, centro_id NOT NULL FK, datos jsonb, creado_en, actualizado_en, borrado_en`) en lugar de columnas por campo; las columnas «calientes» se normalizan después. Índices por `centro_id` y expresiones sobre `datos` (calificaciones, actividades, cargas, matrículas, asistencia…); sin GIN (no se justifica aún). Únicos de negocio: calificaciones y asistencia. `centro_id` es `NOT NULL` (el plan decía nulo): todo registro pertenece a un centro.
+- **Colecciones**: son 39 (no 37) en `repo-local.js`; 36 con tabla genérica, `centros` con tabla propia (+`datos`), `usuarios` proyectada sobre la tabla de autenticación y `auditoria` en tabla append-only.
+- **RLS**: ENABLE+FORCE en las 36 tablas y `auditoria`; `centros` solo ENABLE; **`usuarios`/`sesiones`/`tokens_recuperacion` sin RLS** (login previo al contexto), protegidas por la capa de aplicación y pruebas.
+- **Borrado lógico** para todas las colecciones (la API no tiene `DELETE`); `usuarios` se desactiva.
+- **Lectura por colección**: `agenteConfig`, `agenteLog`, `planes`, `secuencias` y `auditoria` no las lee cualquier rol (ver API-REST §3). Alcance de lectura aplicado en SQL también en listados; edición/borrado de un registro fuera de alcance responde `404`.
+- **Auditoría automática** de calificaciones y notasCompetencia en la misma transacción; `exportar_respaldo` también se audita. La auditoría con periodos cerrados/recalculo de notas sigue siendo Fase 2.
+- **Alta de usuarios**: contraseña temporal aleatoria devuelta una vez (no hay invitación por correo todavía; el mailer solo envía recuperación).
+- **Lote**: 500 registros máx., pero el cuerpo sigue limitado a 1 MB. `cuestionarios.correcta` aún viaja al estudiante (rediseño en Fase 4). `respaldo/importar` → 501 (Fase 5).
+- **No probado aquí**: despliegue con Docker, CI real en GitHub (se ejecutó el mismo flujo localmente), rendimiento con volúmenes grandes, y el cliente (`repo-api.js`).
 
 ## Lo que condiciona el diseño (hallazgos del código actual)
 - `EDU.repo` (`js/data/repo.js`) ya actúa de controlador: centro activo, escritura por colección (`ESCRIBE`), propiedad (docente→sus cargas, estudiante→lo propio), auditoría de calificaciones, `auditar`, `registrarLectura`, `exportarTodo/importarTodo`. Casi todo se traslada 1:1 al servidor.

@@ -83,6 +83,9 @@ object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker
 ## Backend, Fase 0 (`Educentro/server/`)
 Existe ya la base del servidor: login real con sesión en cookie opaca `__Host-edu_sid` (HttpOnly, Secure, SameSite=Lax; solo se guarda su hash), argon2id, bloqueo con retroceso y rate limit, CSRF (`X-EDU-CSRF` + `Origin`), recuperación por token de un solo uso y auditoría de accesos append-only en PostgreSQL (rol de la app distinto del propietario). **Aún no protege los datos del frontend**: la autorización por rol/centro/alcance, la RLS y la conexión de `EDU.repo` llegan en la Fase 1, así que las limitaciones de abajo siguen vigentes hasta entonces. Ver `docs/BACKEND.md` y `server/README.md`.
 
+## Backend, Fase 1 (servidor): autorización y aislamiento
+La API `/api/v1/c/:col` aplica en el **servidor** rol → colección, centro, alcance (docente/tutor/estudiante) y propiedad, y el aislamiento entre centros se refuerza con **RLS de PostgreSQL** (rol de BD no propietario, `SET LOCAL app.centro_id/app.rol` por transacción, sin contexto = 0 filas; verificado con SQL directo). Permisos con fuente única (`permisos.json` ↔ `permisos.js`, comprobado en CI), `centroId` impuesto por el servidor, sin escalada de rol, filtros/orden parametrizados, auditoría append-only de calificaciones y respuestas de `usuarios` sin hash. Límites: `usuarios`/sesiones sin RLS (login previo al contexto); `cuestionarios.correcta` sigue llegando al cliente hasta la Fase 4; el frontend aún no usa la API, así que los hallazgos del cliente siguen vigentes hasta el tramo cliente. Detalle en `docs/API-REST.md` y `docs/BACKEND.md`.
+
 ## Limitaciones conocidas (requieren backend)
 1. Autenticación y autorización reales (hoy el login es un selector de usuarios demo y la sesión es editable en `localStorage`).
 2. Datos en el servidor, no en el navegador: cifrado en reposo, copias, retención, borrado.

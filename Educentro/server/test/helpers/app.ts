@@ -32,7 +32,11 @@ export async function prepararBD(): Promise<void> {
 }
 
 export async function limpiarBD(): Promise<void> {
-  await owner().query('TRUNCATE usuarios, centros CASCADE'); // sesiones y tokens caen en cascada
+  await owner().query('TRUNCATE usuarios, centros CASCADE'); // sesiones, tokens y colecciones caen en cascada
+  // `auditoria` es append-only (ni TRUNCATE): solo el propietario de pruebas desactiva el trigger para limpiarla.
+  await owner().query('ALTER TABLE auditoria DISABLE TRIGGER USER');
+  await owner().query('TRUNCATE auditoria');
+  await owner().query('ALTER TABLE auditoria ENABLE TRIGGER USER');
 }
 
 export const envBase = (extra: Record<string, string> = {}): Record<string, string> => ({

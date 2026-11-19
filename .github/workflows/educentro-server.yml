@@ -5,10 +5,16 @@ on:
   push:
     paths:
       - 'Educentro/server/**'
+      - 'Educentro/js/core/permisos.js'   # fuente de permisos.json (paridad)
+      - 'Educentro/js/data/repo-local.js' # lista de colecciones
+      - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'
   pull_request:
     paths:
       - 'Educentro/server/**'
+      - 'Educentro/js/core/permisos.js'
+      - 'Educentro/js/data/repo-local.js'
+      - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'
 
 permissions:
@@ -53,7 +59,10 @@ jobs:
       - run: psql --version   # las pruebas crean roles y BD con db/roles.sql vía psql
       - run: npm ci
       - run: npm run lint
+      - run: npm run paridad   # permisos.json debe coincidir con js/core/permisos.js
       - run: npm run typecheck
+      # Las pruebas recrean la BD con db/roles.sql (roles educentro_owner y educentro_app NO propietario: la RLS le aplica),
+      # aplican las migraciones y ejecutan paridad, RLS, matriz de permisos y seguridad de la API contra PostgreSQL real.
       - run: npm test
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
