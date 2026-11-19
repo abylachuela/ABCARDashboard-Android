@@ -56,8 +56,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
     },
     genReqId: () => randomUUID(),
     requestIdHeader: false,
-    // Fastify admite también un número de saltos (proxy-addr), aunque su tipo no lo declare.
-    trustProxy: config.trustProxy as boolean | string[],
+    trustProxy: config.trustProxy,
     bodyLimit: 1_048_576, // 1 MB
     routerOptions: { maxParamLength: 200 },
   });
@@ -74,6 +73,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
   });
   app.decorateRequest('sesion', undefined);
 
+  app.removeContentTypeParser('text/plain'); // solo JSON (y sin cuerpo)
   await app.register(cookie);
   await app.register(rateLimit, {
     global: false,

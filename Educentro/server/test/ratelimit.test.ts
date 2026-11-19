@@ -38,7 +38,7 @@ describe('rate limit por IP en /auth/*', () => {
   });
 
   it('con TRUST_PROXY la clave del límite es la IP de X-Forwarded-For; sin él se ignora la cabecera', async () => {
-    const con = await crearApp({ RATE_LIMIT_AUTH_MAX: '1', TRUST_PROXY: '1' });
+    const con = await crearApp({ RATE_LIMIT_AUTH_MAX: '1', TRUST_PROXY: '127.0.0.1' });
     const sin = await crearApp({ RATE_LIMIT_AUTH_MAX: '1' });
     try {
       const intento = (a: typeof con.app, ip: string) => login(a, 'a@b.test', 'Mala-clave-123', { 'x-forwarded-for': ip });

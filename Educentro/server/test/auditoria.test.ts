@@ -55,9 +55,9 @@ describe('auditoría de accesos (append-only)', () => {
   it('UPDATE, DELETE y TRUNCATE fallan incluso para el propietario (trigger)', async () => {
     const u = await crearUsuario();
     await login(ctx.app, u.email, u.clave);
-    await expect(owner().query("UPDATE auditoria_accesos SET evento = 'logout'")).rejects.toThrow(/solo de anexado/);
-    await expect(owner().query('DELETE FROM auditoria_accesos')).rejects.toThrow(/solo de anexado/);
-    await expect(owner().query('TRUNCATE auditoria_accesos')).rejects.toThrow(/solo de anexado/);
+    await expect(owner().query("UPDATE auditoria_accesos SET evento = 'logout'")).rejects.toThrow(/solo anexado/);
+    await expect(owner().query('DELETE FROM auditoria_accesos')).rejects.toThrow(/solo anexado/);
+    await expect(owner().query('TRUNCATE auditoria_accesos')).rejects.toThrow(/solo anexado/);
   });
 
   it('sobrevive al borrado del usuario (sin clave foránea)', async () => {

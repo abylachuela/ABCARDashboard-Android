@@ -70,9 +70,10 @@ describe('configuración', () => {
     expect(txt).not.toContain('educentro_app');
   });
 
-  it('TRUST_PROXY admite booleano, saltos y CIDR', () => {
+  it('TRUST_PROXY admite booleano y listas de IP/CIDR (no saltos)', () => {
     const base = { NODE_ENV: 'test', DATABASE_URL: PROD.DATABASE_URL };
-    expect(cargarConfig({ ...base, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+    expect(() => cargarConfig({ ...base, TRUST_PROXY: '1' })).toThrow(/TRUST_PROXY/);
+    expect(cargarConfig({ ...base, TRUST_PROXY: 'loopback,uniquelocal' }).trustProxy).toEqual(['loopback', 'uniquelocal']);
     expect(cargarConfig({ ...base, TRUST_PROXY: 'true' }).trustProxy).toBe(true);
     expect(cargarConfig({ ...base, TRUST_PROXY: '127.0.0.1, 10.0.0.0/8' }).trustProxy).toEqual(['127.0.0.1', '10.0.0.0/8']);
     expect(() => cargarConfig({ ...base, TRUST_PROXY: 'cualquiera!' })).toThrow(/TRUST_PROXY/);

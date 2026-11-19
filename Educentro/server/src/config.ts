@@ -10,7 +10,7 @@ export class ConfigError extends Error {
   }
 }
 
-export type TrustProxy = boolean | number | string[];
+export type TrustProxy = boolean | string[];
 
 export interface Config {
   entorno: 'development' | 'test' | 'production';
@@ -103,12 +103,14 @@ const esquema = z.object({
 function parsearTrustProxy(v: string | undefined, problemas: string[]): TrustProxy {
   if (v === undefined) return false;
   const t = v.trim().toLowerCase();
-  if (t === 'false' || t === '0') return false;
+  if (t === 'false') return false;
   if (t === 'true') return true;
-  if (/^\d+$/.test(t)) return Number(t);
+  // Fastify 5 no admite "número de saltos" (falla cerrado): se exige una lista explícita de proxys de confianza.
   const lista = v.split(',').map((s) => s.trim()).filter(Boolean);
-  if (lista.length === 0 || lista.some((x) => !/^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(x))) {
-    problemas.push('TRUST_PROXY: use false, true, un número de saltos o una lista de IP/CIDR');
+  const valido = (x: string) =>
+    ['loopback', 'linklocal', 'uniquelocal'].includes(x) || /^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(x);
+  if (lista.length === 0 || lista.some((x) => !valido(x)) || lista.some((x) => /^\d+$/.test(x))) {
+    problemas.push('TRUST_PROXY: use false, true o una lista de IP/CIDR (también loopback, linklocal, uniquelocal)');
     return false;
   }
   return lista;
