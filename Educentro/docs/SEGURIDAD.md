@@ -75,6 +75,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker
 ```
 + `<meta name="referrer" content="no-referrer">`. Verificado en Chromium por `file://`: la app completa funciona; `eval`, `new Function`, scripts inline y manejadores inline quedan **bloqueados**. Notas: (1) una `<meta>` CSP no puede fijar `frame-ancestors`; si se sirve por HTTP, enviar la cabecera real; (2) el script inline que `sync-web.js` inyectaba (botón atrás) pasó a `native.js`; (3) **verificar en un dispositivo** que el puente de Capacitor (que Android inyecta al inicio del documento) no se bloquee: si el botón atrás deja de funcionar, añadir el hash del script inyectado a `script-src`; no se pudo construir el APK en este entorno.
 
+## Agente IA: tarea `proponer_horario`
+- Sensible: siempre exige aprobación humana (también en `ejecuta_con_registro`); el agente nunca guarda horarios. Solo director/secretaría/admin_red con `horarios.editar`, comprobado al solicitar y al aprobar; el docente, el tutor y el estudiante no la ven ni pueden solicitarla.
+- El contexto enviado es una lista blanca de ids, horas y restricciones; los docentes viajan como alias `D01…` y el texto libre (≤ 300 caracteres) pasa por `limpiarTexto`. El simulado no usa red; la API key sigue solo en el servidor.
+- La salida del proveedor se valida por esquema (ids conocidos, días 1–5, franjas de clase), se descarta lo inválido y el motor re-valida conflictos antes de la vista previa; todo dato mostrado pasa por `EDU.esc` y la resolución queda en `agenteLog` y `auditoria` (`EDU.repo.auditar`). Para ello `secretaria` recibió escritura en `agenteLog`.
+
 ## Limitaciones conocidas (requieren backend)
 1. Autenticación y autorización reales (hoy el login es un selector de usuarios demo y la sesión es editable en `localStorage`).
 2. Datos en el servidor, no en el navegador: cifrado en reposo, copias, retención, borrado.

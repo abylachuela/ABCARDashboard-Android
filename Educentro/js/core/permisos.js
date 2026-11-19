@@ -52,7 +52,7 @@
     admin_red: TODAS.concat(['centros']),
     director: TODAS.filter(function (c) { return c !== 'calificaciones'; }).concat(['calificaciones']),
     docente: ['aulaContenidos', 'tareas', 'entregas', 'cuestionarios', 'intentos', 'foros', 'foroMensajes', 'anuncios', 'inscripciones', 'calificaciones', 'notasCompetencia', 'actividades', 'categorias', 'asistencia', 'planes', 'horarios', 'secuencias', 'agenteConfig', 'agenteLog'],
-    secretaria: ['notasCompetencia', 'franjas', 'horarios', 'disponibilidad', 'cursosExtra', 'inscripciones', 'estudiantes', 'tutores', 'matriculas', 'comunicados', 'asistencia'],
+    secretaria: ['notasCompetencia', 'franjas', 'horarios', 'disponibilidad', 'cursosExtra', 'inscripciones', 'estudiantes', 'tutores', 'matriculas', 'comunicados', 'asistencia', 'agenteLog'], // agenteLog: solo para registrar la tarea proponer_horario del agente
     tutor: [], estudiante: ['entregas', 'intentos', 'foroMensajes']
   };
 

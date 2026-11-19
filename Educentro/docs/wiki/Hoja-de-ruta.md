@@ -16,7 +16,6 @@ Lo ya hecho está en [Historial](Historial). Pendiente, por prioridad.
 - Migrar estilos inline a hojas para quitar `'unsafe-inline'`.
 
 ## 3. Funcionalidad
-- **Tarea `proponer_horario` del agente IA**, usando `EDU.horarios.registrarProponedor` con el contexto mínimo ([Horarios](Horarios)).
 - **Enlace de cursos virtuales (`cursosExtra` tipo `virtual`) con el aula**: abrir un curso virtual propio con los inscritos como participantes, y unir su horario al del estudiante.
 - Choque de horario de cursos contra el horario de secciones.
 

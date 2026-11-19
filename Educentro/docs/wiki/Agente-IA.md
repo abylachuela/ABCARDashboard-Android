@@ -13,7 +13,7 @@ Una del centro (`docenteId:null`, techo) y opcionalmente una por docente, que so
 | `ejecuta_con_registro` | Aplica solo borradores que no tocan notas y lo registra. |
 
 ## Tareas
-`generar_plan` (al aprobar crea un borrador en Planificación), `proponer_actividades`, `crear_rubricas`, `redactar_comunicado` (borrador, nunca se publica solo), `resumir_rendimiento`, `borrador_notas`. Esta última es **sensible**: siempre exige aprobación humana, solo llena celdas vacías, nunca toca periodos cerrados (se revalida al aprobar) y las notas aplicadas quedan auditadas. Pestañas: *Pídele al agente*, *Configuración*, *Registro de actividad*.
+`generar_plan` (al aprobar crea un borrador en Planificación), `proponer_actividades`, `crear_rubricas`, `redactar_comunicado` (borrador, nunca se publica solo), `resumir_rendimiento`, `borrador_notas` y `proponer_horario`. `borrador_notas` es **sensible**: siempre exige aprobación humana, solo llena celdas vacías, nunca toca periodos cerrados (se revalida al aprobar) y las notas aplicadas quedan auditadas. Pestañas: *Pídele al agente*, *Configuración*, *Registro de actividad*.
 
 ## Seguridad
 - La API key **nunca** está en el navegador: el campo de la UI es informativo y está deshabilitado.
@@ -27,5 +27,5 @@ EDU.agente.registrarProveedor('backend', EDU.agente.crearProveedorHttp({ url: '/
 ```
 Luego elegir `proveedor: 'backend'` en la configuración. El adaptador hace `POST {version:1, tarea, contexto, modelo, tono}` con `credentials:'same-origin'` y **sin Authorization**. El servidor debe autenticar la sesión, añadir la API key, llamar al modelo, aplicar límites, **re-anonimizar y validar** y responder la propuesta JSON. Cualquier objeto con `solicitar(tarea, contexto)` sirve como proveedor. La CSP actual (`connect-src 'self'`) obliga a servir el backend en el mismo origen o ampliarla.
 
-## Horarios
-Los horarios tienen un punto de extensión para proponedores (`EDU.horarios.registrarProponedor`), pero **la tarea `proponer_horario` del agente aún no existe** ([Horarios](Horarios), [Hoja de ruta](Hoja-de-ruta)).
+## Tarea `proponer_horario`
+También **sensible**: siempre exige aprobación humana (incluso en `ejecuta_con_registro`) y el agente nunca guarda horarios. La solicitan solo director, secretaría y admin_red con permiso de edición en Horarios (se comprueba al solicitar y al aprobar); aparece en *Configuración* (techo del centro) y en la consola, pero un docente no la ve. Contexto mínimo: ids, horas, franjas, bloques fijos y no disponibilidades, con los docentes como alias `D01…`, más una restricción opcional de texto libre (≤ 300 caracteres, saneada). El proveedor simulado es local y determinista (reutiliza el algoritmo del motor con otra heurística: asignaturas pesadas en las primeras franjas y sin huecos; no interpreta el texto libre); el `backend` real devuelve JSON `{tipo:'horario', asignaciones, sinColocar?, notas?}` validado por esquema (el contrato está en `docs/API.md`). Se usa desde *Horarios* (proponedor «Agente IA», vista previa con conflictos) o desde la consola; lo inválido se descarta y se muestra como no colocado ([Horarios](Horarios)).

@@ -139,7 +139,7 @@
 
   /* ---------------- propuesta automatica ---------------- */
   /**
-   * proponerLocal(ctx, {conservar:true, seccionId?, cargaIds?, maxNodos}) -> {asignaciones:[{cargaId,dia,franjaId,aula}], sinColocar:[{cargaId,faltan}], nodos, completo, algoritmo, validacion}
+   * proponerLocal(ctx, {conservar:true, seccionId?, cargaIds?, maxNodos, ajuste?(carga, {dia,f,pos}, {ocupadas:[franja]}) -> numero que se SUMA al puntaje (menor = mas preferido)}) -> {asignaciones:[{cargaId,dia,franjaId,aula}], sinColocar:[{cargaId,faltan}], nodos, completo, algoritmo, validacion}
    * Heuristica voraz (la carga con menos opciones primero; MRV) + retroceso limitado (maxNodos). Respeta: docente libre, seccion libre,
    * disponibilidad y franjas de clase de la tanda de la seccion. Distribuye (evita repetir la asignatura el mismo dia y equilibra los dias).
    */
@@ -181,7 +181,9 @@
       slots(c).forEach(function (s) {
         if (!libre(busySec[c.seccionId], s.dia, s.f) || !libre(busyDoc[c.docenteId || ''], s.dia, s.f)) return;
         if (c.docenteId && noDisponible(ctx, c.docenteId, s.dia, s.f)) return;
-        out.push({ dia: s.dia, f: s.f, sc: (nCD[c.id + '|' + s.dia] || 0) * 20 + (nDD[(c.docenteId || '') + '|' + s.dia] || 0) * 2 + (nSD[c.seccionId + '|' + s.dia] || 0) + s.pos * 0.5 + s.dia * 0.01 });
+        var sc = (nCD[c.id + '|' + s.dia] || 0) * 20 + (nDD[(c.docenteId || '') + '|' + s.dia] || 0) * 2 + (nSD[c.seccionId + '|' + s.dia] || 0) + s.pos * 0.5 + s.dia * 0.01;
+        if (o.ajuste) sc += +o.ajuste(c, s, { ocupadas: (busySec[c.seccionId] || []).filter(function (x) { return x.dia === s.dia; }).map(function (x) { return x.f; }) }) || 0; // sesgo opcional (p. ej. proponedor del agente)
+        out.push({ dia: s.dia, f: s.f, sc: sc });
       });
       if (limite) out.sort(function (a, b) { return a.sc - b.sc; });
       return out;
@@ -227,10 +229,13 @@
     return {
       version: 1, conservar: o.conservar !== false, seccionId: o.seccionId || null,
       franjas: ctx.franjas.map(function (f) { return { id: f.id, tanda: f.tanda, inicio: f.inicio, fin: f.fin, tipo: f.tipo }; }),
-      cargas: ctx.cargas.filter(function (c) { return !o.seccionId || c.seccionId === o.seccionId; }).map(function (c) {
-        var s = ctx.seccionPor[c.seccionId]; return { id: c.id, seccionId: c.seccionId, asignaturaId: c.asignaturaId, docenteId: c.docenteId, horasSemana: horasDe(c), tanda: s ? tandaDe(s) : 'matutina' };
+      // Todas las cargas (los bloques fijos de otras secciones ocupan a sus docentes); `enAlcance` marca las que hay que completar.
+      cargas: ctx.cargas.map(function (c) {
+        var s = ctx.seccionPor[c.seccionId]; return { id: c.id, seccionId: c.seccionId, asignaturaId: c.asignaturaId, docenteId: c.docenteId, horasSemana: horasDe(c), tanda: s ? tandaDe(s) : 'matutina', enAlcance: !o.seccionId || c.seccionId === o.seccionId };
       }),
-      fijos: o.conservar === false ? [] : ctx.horarios.map(function (e) { return { cargaId: e.cargaId, dia: e.dia, franjaId: e.franjaId }; }),
+      // conservar:false -> solo se descartan los bloques de las cargas del alcance (igual que la re-validacion de proponer()).
+      fijos: ctx.horarios.filter(function (e) { var c = ctx.cargaPor[e.cargaId]; return o.conservar !== false ? true : !(c && (!o.seccionId || c.seccionId === o.seccionId)); })
+        .map(function (e) { return { cargaId: e.cargaId, dia: e.dia, franjaId: e.franjaId }; }),
       noDisponible: ctx.disp.map(function (x) { return { docenteId: x.docenteId, dia: x.dia, franjaId: x.franjaId }; }),
       topes: { defecto: ctx.topeDefecto, porDocente: ctx.topes }
     };
@@ -248,12 +253,23 @@
     var fijos = o && o.conservar === false ? ctx.horarios.filter(function (e) { var c = ctx.cargaPor[e.cargaId]; return !(c && (!o.seccionId || c.seccionId === o.seccionId)); }) : ctx.horarios;
     var todo = fijos.concat(asign.map(function (a, i) { return Object.assign({ _k: 'p' + i }, a); }));
     var val = validar(ctx, todo);
-    var cnt = {}; asign.forEach(function (a) { cnt[a.cargaId] = (cnt[a.cargaId] || 0) + 1; });
-    return Object.assign({}, r, { asignaciones: asign, validacion: val, todo: todo, sinColocar: r.sinColocar || [], algoritmo: r.algoritmo || nombre || 'local', fijos: fijos });
+    var sin = (Array.isArray(r.sinColocar) ? r.sinColocar : []).filter(function (x) { return x && ctx.cargaPor[x.cargaId] && +x.faltan > 0; }).map(function (x) { return { cargaId: x.cargaId, faltan: +x.faltan }; });
+    return Object.assign({}, r, { asignaciones: asign, validacion: val, todo: todo, sinColocar: sin, invalidas: r.asignaciones.length - asign.length, algoritmo: r.algoritmo || nombre || 'local', fijos: fijos });
   }
+  /** def: {etiqueta, proponer(ctx, opts, contextoMinimo), disponible?() -> Promise<{ok, motivo}>, admiteTexto?: acepta opts.restriccion (texto libre)}. */
   function registrarProponedor(nombre, def) {
     if (!nombre || !def || typeof def.proponer !== 'function') throw new Error('registrarProponedor(nombre, {etiqueta, proponer(ctx, opts, contextoMinimo)})');
-    proponedores[nombre] = { etiqueta: def.etiqueta || nombre, proponer: def.proponer };
+    proponedores[nombre] = { etiqueta: def.etiqueta || nombre, proponer: def.proponer, disponible: typeof def.disponible === 'function' ? def.disponible : null, admiteTexto: !!def.admiteTexto };
+  }
+  /** Lista los proponedores con su disponibilidad para el usuario actual: [{id, etiqueta, ok, motivo, admiteTexto}]. */
+  async function proponedoresDisponibles() {
+    var out = [];
+    for (var k of Object.keys(proponedores)) {
+      var p = proponedores[k], r = { ok: true, motivo: '' };
+      if (p.disponible) { try { r = (await p.disponible()) || { ok: false, motivo: 'No disponible.' }; } catch (e) { r = { ok: false, motivo: e.message || 'No disponible.' }; } }
+      out.push({ id: k, etiqueta: p.etiqueta, ok: !!r.ok, motivo: r.motivo || '', admiteTexto: !!p.admiteTexto });
+    }
+    return out;
   }
 
   /* ---------------- CSV ---------------- */
@@ -311,7 +327,7 @@
   EDU.horarios = {
     DIAS: DIAS, DIAS_CORTO: DIAS_CORTO, TANDAS: TANDAS, TIPOS: TIPOS, TOPE_DEFECTO: TOPE_DEFECTO, PLANTILLAS: PLANTILLAS,
     deHoy: deHoy, deSemana: deSemana,
-    proponer: proponer, registrarProponedor: registrarProponedor, proponedores: function () { return Object.keys(proponedores).map(function (k) { return { id: k, etiqueta: proponedores[k].etiqueta }; }); },
+    proponer: proponer, registrarProponedor: registrarProponedor, proponedores: function () { return Object.keys(proponedores).map(function (k) { return { id: k, etiqueta: proponedores[k].etiqueta }; }); }, proponedoresDisponibles: proponedoresDisponibles,
     contextoParaProponedor: contextoParaProponedor,
     motor: { armar: armar, validar: validar, validarFranjas: validarFranjas, proponerLocal: proponerLocal, plantillaFranjas: plantillaFranjas, tandaDe: tandaDe, solapa: solapa, mins: mins, hhmm: hhmm,
       csvCelda: csvCelda, csvFila: csvFila, etiquetaSeccion: etiquetaSeccion, nombreAsig: nombreAsig, nombreDoc: nombreDoc, etiquetaCarga: etiquetaCarga, horasDe: horasDe, topeDe: topeDe,

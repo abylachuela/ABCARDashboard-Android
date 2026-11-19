@@ -1,7 +1,7 @@
 /* Vista "agente" + capa EDU.agente: configuracion del agente IA, consola "Pidele al agente" (respuestas SIMULADAS locales),
    registro de actividad (agenteLog) y proveedor intercambiable (simulado / backend real). Ver docs/API.md seccion "Agente IA".
-   Reglas: la API key NUNCA vive en el navegador; el contexto se minimiza/anonimiza; borrador_notas SIEMPRE exige aprobacion humana
-   y nunca toca periodos cerrados. */
+   Reglas: la API key NUNCA vive en el navegador; el contexto se minimiza/anonimiza; borrador_notas y proponer_horario SIEMPRE exigen
+   aprobacion humana (el agente nunca guarda horarios ni notas por si mismo); borrador_notas nunca toca periodos cerrados. */
 (function () {
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
@@ -13,8 +13,17 @@
     crear_rubricas: { titulo: 'Crear rúbricas', desc: 'Criterios y niveles de desempeño.', sensible: false },
     redactar_comunicado: { titulo: 'Comunicados a tutores', desc: 'Redacta el texto; nunca se publica sin aprobación.', sensible: false },
     resumir_rendimiento: { titulo: 'Resumen de rendimiento', desc: 'Resumen agregado de notas de una asignatura/sección.', sensible: false },
-    borrador_notas: { titulo: 'Borrador de notas', desc: 'Estimación preliminar de notas faltantes. SIEMPRE requiere aprobación humana; nunca toca periodos cerrados.', sensible: true }
+    borrador_notas: { titulo: 'Borrador de notas', desc: 'Estimación preliminar de notas faltantes. SIEMPRE requiere aprobación humana; nunca toca periodos cerrados.', sensible: true },
+    proponer_horario: { titulo: 'Proponer horario', desc: 'Propuesta de horario semanal con vista previa y conflictos. SIEMPRE requiere aprobación humana: el agente nunca guarda horarios. Solo dirección, secretaría y administración de red con permiso de edición en Horarios.', sensible: true,
+      roles: ['director', 'secretaria', 'admin_red'], permiso: ['horarios', 'editar'] }
   };
+  var MAX_RESTRICCION = 300, MAX_ASIGNACIONES = 2000;
+  /** ¿Puede este rol solicitar/aprobar la tarea? Las tareas con `roles` exigen rol listado Y el permiso indicado (no dependen del modulo agente); el resto, agente.ver. */
+  function puedeTarea(rol, tarea) {
+    var T = TAREAS[tarea]; if (!T) return false;
+    if (T.roles) return T.roles.indexOf(rol) !== -1 && EDU.permisos.puede(rol, T.permiso[0], T.permiso[1]);
+    return EDU.permisos.puede(rol, 'agente', 'ver');
+  }
   var AUTONOMIAS = {
     sugiere: { titulo: 'Solo sugiere', desc: 'El agente propone; usted decide qué usar. No se aplica ningún cambio automático.' },
     sugiere_y_aprueba: { titulo: 'Sugiere y espera aprobación', desc: 'Cada propuesta queda pendiente hasta que usted la apruebe o rechace.' },
@@ -90,6 +99,7 @@
       generadoEn: new Date().toISOString() }, extra);
   }
   function generarSimulada(tarea, c, opts) {
+    if (tarea === 'proponer_horario') return generarHorarioSimulado(c, opts);
     var tema = c.tema || 'el tema de la unidad', asig = c.asignatura || 'la asignatura', grado = c.grado || 'el grado', s = hash(tarea + tema + asig);
     var formal = c.tono === 'formal';
     if (tarea === 'generar_plan') {
@@ -143,6 +153,35 @@
     throw new Error('Tarea desconocida: ' + tarea);
   }
 
+  /** Proponer horario SIMULADO (local, determinista, sin red): reconstruye un ctx del motor a partir del contexto MINIMO (docentes = alias) y reutiliza
+      proponerLocal con una heuristica distinta a la del boton automatico: (1) las asignaturas pesadas (>= 4 h semanales) se reparten en las primeras
+      franjas; (2) se penalizan los huecos dentro del dia de cada seccion (se pega a los bloques ya puestos y se empieza en la primera franja);
+      (3) desempate determinista por hash(cargaId) + dia. El texto libre NO se interpreta (solo un backend real lo haria). */
+  function generarHorarioSimulado(c, opts) {
+    var H = EDU.horarios; if (!H || !H.motor) throw new Error('El módulo de Horarios no está cargado.');
+    var M = H.motor, secs = {}, alc = [];
+    (c.cargas || []).forEach(function (x) { if (!secs[x.seccionId]) secs[x.seccionId] = { id: x.seccionId, nombre: x.seccionId, tanda: x.tanda }; if (x.enAlcance) alc.push(x.id); });
+    var ctx = M.armar({ franjas: c.franjas || [], horarios: (c.fijos || []).map(function (e, i) { return { id: 'fx' + i, cargaId: e.cargaId, dia: e.dia, franjaId: e.franjaId, aula: '' }; }),
+      disponibilidad: (c.noDisponible || []).map(function (x) { return { docenteId: x.docente, dia: x.dia, franjaId: x.franjaId, disponible: false }; }),
+      cargas: (c.cargas || []).map(function (x) { return { id: x.id, seccionId: x.seccionId, asignaturaId: x.asignaturaId, docenteId: x.docente, horasSemana: x.horasSemana }; }),
+      secciones: Object.keys(secs).map(function (k) { return secs[k]; }), cursos: [], asignaturas: [], docentes: [] });
+    ctx.topeDefecto = (c.topes && c.topes.defecto) || ctx.topeDefecto; ctx.topes = (c.topes && c.topes.porDocente) || {};
+    var posDe = {}, porTanda = {};
+    ctx.franjas.forEach(function (f) { if (f.tipo === 'clase') (porTanda[f.tanda] = porTanda[f.tanda] || []).push(f); });
+    Object.keys(porTanda).forEach(function (t) { porTanda[t].forEach(function (f, i) { posDe[f.id] = i; }); });
+    function ajuste(carga, sl, aux) {
+      var pesada = M.horasDe(carga) >= 4, sc = pesada ? sl.pos * 1.5 : -sl.pos * 0.1;
+      var occ = aux.ocupadas.map(function (f) { return posDe[f.id]; }).filter(function (n) { return typeof n === 'number'; });
+      if (!occ.length) sc += sl.pos; else sc += Math.max(0, Math.min.apply(null, occ.map(function (o) { return Math.abs(o - sl.pos); })) - 1) * 3;
+      return sc + ((hash(carga.id) + sl.dia * 7) % 11) * 0.01;
+    }
+    var r = M.proponerLocal(ctx, { conservar: true, cargaIds: alc, ajuste: ajuste, maxNodos: 4000 });
+    var notas = ['Propuesta simulada determinista (sin red): asignaturas de 4 o más horas semanales en las primeras franjas y días sin huecos.'];
+    if (c.restriccionTexto) notas.push('La restricción de texto libre se registró, pero el proveedor simulado no la interpreta; un backend real sí podría aplicarla.');
+    if (!r.completo) notas.push('No se pudieron colocar todas las horas con las restricciones actuales.');
+    return base('proponer_horario', 'horario', 'Propuesta de horario (simulada): ' + r.asignaciones.length + ' bloque(s)', c, opts, { asignaciones: r.asignaciones, sinColocar: r.sinColocar, notas: notas });
+  }
+
   var proveedores = { simulado: simulado };
   var proveedor = {
     nombre: 'despachador',
@@ -169,10 +208,37 @@
   }
   function validarPropuesta(p) {
     if (!p || typeof p !== 'object' || typeof p.tipo !== 'string' || typeof p.resumen !== 'string') throw new Error('Respuesta del proveedor inválida (se espera {tipo, resumen, ...}).');
-    var req = { plan: 'plan', actividades: 'items', rubrica: 'criterios', comunicado: 'cuerpo', resumen: 'hallazgos', notas: 'items' }[p.tipo];
+    var req = { plan: 'plan', actividades: 'items', rubrica: 'criterios', comunicado: 'cuerpo', resumen: 'hallazgos', notas: 'items', horario: 'asignaciones' }[p.tipo];
     if (!req) throw new Error('Tipo de propuesta desconocido: ' + p.tipo);
     if (p[req] == null) throw new Error('La propuesta no incluye «' + req + '».');
+    if (p.tipo === 'horario' && !Array.isArray(p.asignaciones)) throw new Error('La propuesta de horario debe incluir «asignaciones» como lista.');
     return p;
+  }
+  function txt(v, n) { return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n || 200); }
+  /** Esquema de la salida del proveedor para proponer_horario (simulado o backend): descarta lo que no cumple y recalcula lo no colocado.
+      Valido: cargaId conocida y en alcance, dia entero 1-5, franjaId existente de tipo clase, aula texto (<=40), sin duplicados. El motor lo vuelve a validar (conflictos). */
+  function normalizarHorario(p, c) {
+    var cargas = {}, franjas = {}, ok = [], desc = [], vistos = {}, cnt = {}, fijosN = {};
+    (c.cargas || []).forEach(function (x) { cargas[x.id] = x; });
+    (c.franjas || []).forEach(function (f) { franjas[f.id] = f; });
+    (c.fijos || []).forEach(function (e) { if (franjas[e.franjaId] && franjas[e.franjaId].tipo === 'clase') fijosN[e.cargaId] = (fijosN[e.cargaId] || 0) + 1; });
+    function malo(a, motivo) { desc.push({ cargaId: txt(a && a.cargaId, 40), motivo: txt(motivo, 160) }); }
+    var lista = p.asignaciones;
+    lista.forEach(function (a, i) {
+      if (i >= MAX_ASIGNACIONES) { malo(a, 'Excede el máximo de ' + MAX_ASIGNACIONES + ' asignaciones.'); return; }
+      if (!a || typeof a !== 'object' || Array.isArray(a)) { malo(null, 'Entrada que no es un objeto.'); return; }
+      if (typeof a.cargaId !== 'string' || !Object.prototype.hasOwnProperty.call(cargas, a.cargaId)) { malo(a, 'Carga desconocida «' + txt(a.cargaId, 40) + '».'); return; }
+      if (!cargas[a.cargaId].enAlcance) { malo(a, 'Carga fuera del alcance solicitado.'); return; }
+      if (typeof a.dia !== 'number' || !Number.isInteger(a.dia) || a.dia < 1 || a.dia > 5) { malo(a, 'Día no válido (debe ser 1 a 5).'); return; }
+      if (typeof a.franjaId !== 'string' || !Object.prototype.hasOwnProperty.call(franjas, a.franjaId) || franjas[a.franjaId].tipo !== 'clase') { malo(a, 'Franja inexistente o que no es de clase.'); return; }
+      var k = a.cargaId + '|' + a.dia + '|' + a.franjaId; if (vistos[k]) { malo(a, 'Asignación duplicada.'); return; } vistos[k] = 1;
+      ok.push({ cargaId: a.cargaId, dia: a.dia, franjaId: a.franjaId, aula: typeof a.aula === 'string' ? txt(a.aula, 40) : '' }); cnt[a.cargaId] = (cnt[a.cargaId] || 0) + 1;
+    });
+    var sin = [], horasSin = 0;
+    (c.cargas || []).forEach(function (x) { if (!x.enAlcance) return; var r = (+x.horasSemana || 0) - (fijosN[x.id] || 0) - (cnt[x.id] || 0); if (r > 0) { sin.push({ cargaId: x.id, faltan: r }); horasSin += r; } });
+    var notas = (Array.isArray(p.notas) ? p.notas : []).filter(function (n) { return typeof n === 'string'; }).map(function (n) { return txt(n, 300); }).slice(0, 12);
+    return Object.assign({}, p, { asignaciones: ok, descartadas: desc.slice(0, 50), nDescartadas: desc.length, sinColocar: sin, notas: notas, conservar: c.conservar !== false, seccionId: c.seccionId || null,
+      resumen: ok.length + ' bloque(s) propuestos, ' + desc.length + ' descartado(s), ' + horasSin + ' hora(s) sin colocar' });
   }
 
   /* ======================= Datos y configuracion ======================= */
@@ -213,7 +279,36 @@
   }
 
   /* ======================= Contexto minimizado ======================= */
+  /** Contexto de proponer_horario: SOLO ids, horas y restricciones (lista blanca de campos); docentes como alias D01… (el mapa queda local) y texto libre
+      saneado con limpiarTexto (nombres de estudiantes y docentes, correos, telefonos, cedulas), sin control y <= 300 caracteres. */
+  async function contextoHorario(tarea, e, cfg) {
+    var H = EDU.horarios; if (!H || !H.motor) throw new Error('El módulo de Horarios no está cargado.');
+    var d = await datos(H.motor.COLS.concat(['estudiantes']));
+    var o = { seccionId: e.seccionId || null, conservar: e.conservar !== false };
+    if (o.seccionId && !d.secciones.some(function (x) { return x.id === o.seccionId; })) throw new Error('La sección elegida no existe.');
+    var b = e.contextoHorario || H.contextoParaProponedor(H.motor.armar(d), o);
+    if (!b || !Array.isArray(b.franjas) || !Array.isArray(b.cargas)) throw new Error('Contexto de horario inválido.');
+    var alias = {}, mapa = {}, n = 0, inv = anonimizar(d.estudiantes).inverso, docs = d.docentes.slice().sort(function (x, y) { return String(x.id) < String(y.id) ? -1 : 1; });
+    function dAlias(id) { if (!id) return null; if (!alias[id]) { n++; alias[id] = 'D' + (n < 10 ? '0' : '') + n; mapa[alias[id]] = id; } return alias[id]; }
+    docs.forEach(function (x) { dAlias(x.id); });
+    var personas = d.estudiantes.concat(docs.map(function (x) { return { id: x.id, nombres: x.nombres || x.nombre || '', apellidos: x.apellidos || '' }; }));
+    Object.keys(alias).forEach(function (id) { inv[id] = alias[id]; });
+    var limpio = function (t, max) { return limpiarTexto(txt(t, max), personas, inv).slice(0, max); };
+    var texto = limpio(e.texto || '', MAX_RESTRICCION);
+    var topes = {}; Object.keys((b.topes && b.topes.porDocente) || {}).forEach(function (id) { topes[dAlias(id)] = b.topes.porDocente[id]; });
+    var ctx = { tarea: tarea, version: 1, tono: cfg.tono, nivel: cfg.nivel, instrucciones: limpio(cfg.instrucciones || '', 800), seccionId: o.seccionId, conservar: o.conservar,
+      franjas: b.franjas.map(function (f) { return { id: f.id, tanda: f.tanda, inicio: f.inicio, fin: f.fin, tipo: f.tipo }; }),
+      cargas: b.cargas.map(function (c) { return { id: c.id, seccionId: c.seccionId, asignaturaId: c.asignaturaId, docente: dAlias(c.docenteId), horasSemana: +c.horasSemana || 0, tanda: c.tanda, enAlcance: c.enAlcance !== false }; }),
+      fijos: (b.fijos || []).map(function (f) { return { cargaId: f.cargaId, dia: f.dia, franjaId: f.franjaId }; }),
+      noDisponible: (b.noDisponible || []).map(function (x) { return { docente: dAlias(x.docenteId), dia: x.dia, franjaId: x.franjaId }; }),
+      topes: { defecto: b.topes ? b.topes.defecto : null, porDocente: topes }, restriccionTexto: texto };
+    verificarContexto(ctx);
+    var nAlc = ctx.cargas.filter(function (c) { return c.enAlcance; }).length;
+    return { contexto: ctx, mapaLocal: mapa, textoLimpio: texto, carga: null,
+      entradaResumen: ('Proponer horario · alcance: ' + (o.seccionId || 'todas las secciones') + ' · ' + nAlc + ' cargas, ' + ctx.fijos.length + ' bloques fijos, conservar: ' + (o.conservar ? 'sí' : 'no') + (texto ? ' · restricción: ' + texto : '')).slice(0, 400) };
+  }
   async function construirContexto(tarea, e, cfg) {
+    if (tarea === 'proponer_horario') return contextoHorario(tarea, e, cfg);
     var d = await datos(['cargas', 'secciones', 'cursos', 'asignaturas', 'estudiantes', 'matriculas', 'actividades', 'categorias', 'calificaciones', 'periodos', 'escalas']);
     var cg = e.cargaId ? d.cargas.filter(function (x) { return x.id === e.cargaId; })[0] : null;
     var sec = cg && d.secciones.filter(function (x) { return x.id === cg.seccionId; })[0], cur = sec && d.cursos.filter(function (x) { return x.id === sec.cursoId; })[0];
@@ -252,8 +347,9 @@
   async function solicitar(tarea, entrada, opts) {
     opts = opts || {};
     var s = ses();
-    if (!s || !EDU.permisos.puede(s.rol, 'agente', 'ver')) throw new Error('Sin permiso para usar el agente.');
+    if (!s) throw new Error('Sin permiso para usar el agente.');
     if (!TAREAS[tarea]) throw new Error('Tarea desconocida.');
+    if (!puedeTarea(s.rol, tarea)) throw new Error(TAREAS[tarea].roles ? 'Su rol no puede solicitar «' + TAREAS[tarea].titulo + '» (requiere director, secretaría o administración de red con permiso de edición en Horarios).' : 'Sin permiso para usar el agente.');
     var cfg = await configEfectiva();
     if (!cfg.activo) throw new Error('El agente está desactivado para este centro/usuario.');
     if (cfg.tareas.indexOf(tarea) === -1) throw new Error('La tarea «' + TAREAS[tarea].titulo + '» no está habilitada.');
@@ -268,11 +364,14 @@
     }
     var cx = await construirContexto(tarea, entrada, cfg);
     var prop = validarPropuesta(await proveedor.solicitar(tarea, cx.contexto, { proveedor: cfg.proveedor, modelo: cfg.modelo, tono: cfg.tono }));
+    if (tarea === 'proponer_horario') { if (prop.tipo !== 'horario') throw new Error('El proveedor no devolvió una propuesta de horario.'); prop = normalizarHorario(prop, cx.contexto); }
+    else if (prop.tipo === 'horario') throw new Error('El proveedor devolvió un tipo de propuesta que no corresponde a la tarea.');
     prop.requiereAprobacion = true;
     var log = await EDU.repo.guardar('agenteLog', { centroId: EDU.estado.centroActivo(), usuarioId: s.usuarioId, fecha: new Date().toISOString(), tarea: tarea,
-      entrada: (TAREAS[tarea].titulo + (cx.textoLimpio ? ': ' + cx.textoLimpio : '')).slice(0, 400), salida: prop.resumen, aprobadoPor: null,
+      entrada: (cx.entradaResumen || (TAREAS[tarea].titulo + (cx.textoLimpio ? ': ' + cx.textoLimpio : ''))).slice(0, 400), salida: prop.resumen, aprobadoPor: null,
       estado: cfg.autonomia === 'sugiere' ? 'sugerida' : 'pendiente', autonomia: cfg.autonomia, proveedor: prop.proveedor || cfg.proveedor, modelo: prop.modelo || cfg.modelo,
-      simulado: !!prop.simulado, cargaId: entrada.cargaId || null, fechaPlan: entrada.fecha || null, propuesta: prop, contexto: cx.contexto, mapaLocal: cx.mapaLocal, efecto: null });
+      simulado: !!prop.simulado, cargaId: entrada.cargaId || null, fechaPlan: entrada.fecha || null, propuesta: prop, contexto: cx.contexto, mapaLocal: cx.mapaLocal, efecto: null,
+      resumenHorario: tarea === 'proponer_horario' ? { asignaciones: prop.asignaciones.length, descartadas: prop.nDescartadas || 0, sinColocar: prop.sinColocar.reduce(function (t, x) { return t + x.faltan; }, 0) } : undefined });
     // ejecuta_con_registro: aplica solo lo que no toca notas (nunca borrador_notas).
     if (cfg.autonomia === 'ejecuta_con_registro' && !TAREAS[tarea].sensible && !opts.sinAuto && EDU.permisos.puede(s.rol, 'agente', 'aprobar')) {
       log = await aprobar(log.id, { auto: true });
@@ -310,6 +409,18 @@
         n++;
       }
       efecto = { coleccion: 'calificaciones', cantidad: n, descripcion: n + ' nota(s) registradas (solo celdas vacías)' };
+    } else if (p.tipo === 'horario') {
+      if (!puedeTarea(s.rol, 'proponer_horario')) throw new Error('Su rol no puede aprobar propuestas de horario.');
+      if (log.centroId !== EDU.estado.centroActivo()) throw new Error('La propuesta es de otro centro; seleccione ese centro.');
+      if (p.conservar === false) throw new Error('Esta propuesta reemplaza bloques existentes: apruébela desde Horarios (vista previa).');
+      var ev = await evaluarHorario(log);
+      if (ev.conflictos.length) throw new Error('La propuesta tiene ' + ev.conflictos.length + ' conflicto(s) con el horario actual; no se guarda.');
+      if (!ev.nuevas.length) throw new Error('No hay bloques que guardar.');
+      var M = EDU.horarios.motor, regs = ev.nuevas.map(function (a) { var f = ev.ctx.franjaPor[a.franjaId];
+        return { centroId: log.centroId, cargaId: a.cargaId, dia: a.dia, franjaId: a.franjaId, aula: a.aula || '', hora: f.inicio, duracion: M.mins(f.fin) - M.mins(f.inicio) }; });
+      await EDU.repo.guardarMuchos('horarios', regs);
+      efecto = { coleccion: 'horarios', cantidad: regs.length, descripcion: regs.length + ' bloque(s) añadidos al horario (aprobados por una persona)' };
+      await EDU.repo.auditar('proponer_horario_aprobado', { centroId: log.centroId, coleccion: 'horarios', registros: regs.length, motivo: 'agenteLog ' + log.id });
     } else if (p.tipo === 'comunicado' && EDU.permisos.puedeEscribirColeccion(s.rol, 'comunicados')) {
       var cm = await EDU.repo.guardar('comunicados', { centroId: log.centroId, titulo: String(p.asunto || 'Comunicado'), cuerpo: String(p.cuerpo || ''), destinatarios: 'tutores',
         segmento: { tipo: 'centro', id: null }, fecha: fmt.hoy(), estado: 'borrador', autorId: s.usuarioId, lecturas: [], origen: 'agente', agenteLogId: log.id });
@@ -318,13 +429,39 @@
     return efecto;
   }
 
+  /** Re-valida con el motor una propuesta de horario contra los datos ACTUALES (solo anade a lo existente). -> {ctx, nuevas, conflictos[], sobrecarga[], lineas[], invalidas}. */
+  async function evaluarHorario(log) {
+    var H = EDU.horarios, M = H.motor, d = await datos(M.COLS), ctx = M.armar(d), p = log.propuesta || {};
+    var nuevas = (p.asignaciones || []).filter(function (a) { return a && ctx.cargaPor[a.cargaId] && ctx.franjaPor[a.franjaId] && a.dia >= 1 && a.dia <= 5; });
+    var v = M.validar(ctx, ctx.horarios.concat(nuevas.map(function (a, i) { return Object.assign({ _k: 'p' + i }, a); })));
+    return { ctx: ctx, nuevas: nuevas, invalidas: (p.asignaciones || []).length - nuevas.length, conflictos: v.conflictos.map(function (c) { return c.msg; }),
+      sobrecarga: v.avisos.filter(function (a) { return a.tipo === 'sobrecarga'; }).map(function (a) { return a.msg; }),
+      lineas: nuevas.slice(0, 15).map(function (a) { var c = ctx.cargaPor[a.cargaId], f = ctx.franjaPor[a.franjaId]; return H.DIAS[a.dia - 1] + ' ' + f.inicio + '–' + f.fin + ' · ' + M.nombreAsig(ctx, c.asignaturaId) + ' · ' + M.etiquetaSeccion(ctx, c.seccionId); }) };
+  }
+  /** Lo llama la vista Horarios tras guardar la propuesta que una persona aprobo en la vista previa (el agente nunca guarda horarios). */
+  async function confirmarHorario(logId, info) {
+    var s = ses(); if (!s || !puedeTarea(s.rol, 'proponer_horario')) throw new Error('Su rol no puede aprobar propuestas de horario.');
+    var log = await EDU.repo.obtener('agenteLog', logId);
+    if (!log || log.tarea !== 'proponer_horario' || (log.estado !== 'pendiente' && log.estado !== 'sugerida')) throw new Error('La propuesta ya fue resuelta.');
+    if (log.usuarioId !== s.usuarioId) throw new Error('Solo puede aprobar sus propias propuestas.');
+    var n = (info && +info.cambios) || 0;
+    log.estado = 'aprobada'; log.aprobadoPor = s.usuarioId; log.resueltoEn = new Date().toISOString();
+    log.efecto = { coleccion: 'horarios', cantidad: n, descripcion: 'Propuesta aprobada y guardada desde Horarios (' + n + ' cambio(s))' };
+    await EDU.repo.guardar('agenteLog', log);
+    await EDU.repo.auditar('proponer_horario_aprobado', { centroId: log.centroId, coleccion: 'horarios', registros: n, motivo: 'agenteLog ' + log.id });
+    return log;
+  }
+
   /** aprobar(logId, {auto, aplicar:true}) -> log. aplicar:false = solo "uso el texto" (sin efectos en datos; permitido tambien en modo "solo sugiere"). */
   async function aprobar(logId, opts) {
     opts = opts || {};
     var s = ses();
-    if (!s || !EDU.permisos.puede(s.rol, 'agente', 'aprobar')) throw new Error('Su rol no puede aprobar propuestas del agente.');
+    if (!s) throw new Error('Su rol no puede aprobar propuestas del agente.');
     var log = await EDU.repo.obtener('agenteLog', logId);
     if (!log) throw new Error('Propuesta no encontrada.');
+    var esH = !!(log.propuesta && log.propuesta.tipo === 'horario');
+    if (!(esH ? puedeTarea(s.rol, 'proponer_horario') : EDU.permisos.puede(s.rol, 'agente', 'aprobar'))) throw new Error(esH ? 'Su rol no puede aprobar propuestas de horario.' : 'Su rol no puede aprobar propuestas del agente.');
+    if (esH && opts.auto) throw new Error('Las propuestas de horario siempre requieren aprobación humana.');
     if (log.estado !== 'pendiente' && log.estado !== 'sugerida') throw new Error('La propuesta ya fue resuelta.');
     if (s.rol === 'docente' && log.usuarioId !== s.usuarioId) throw new Error('Solo puede aprobar sus propias propuestas.');
     var aplicarCambios = opts.aplicar !== false;
@@ -338,9 +475,10 @@
   }
   async function rechazar(logId, motivo) {
     var s = ses();
-    if (!s || !EDU.permisos.puede(s.rol, 'agente', 'ver')) throw new Error('Sin permiso.');
+    if (!s) throw new Error('Sin permiso.');
     var log = await EDU.repo.obtener('agenteLog', logId);
-    if (!log || (log.estado !== 'pendiente' && log.estado !== 'sugerida')) throw new Error('La propuesta ya fue resuelta.');
+    if (!log || !(log.propuesta && log.propuesta.tipo === 'horario' ? puedeTarea(s.rol, 'proponer_horario') : EDU.permisos.puede(s.rol, 'agente', 'ver'))) throw new Error('Sin permiso.');
+    if ((log.estado !== 'pendiente' && log.estado !== 'sugerida')) throw new Error('La propuesta ya fue resuelta.');
     if (s.rol === 'docente' && log.usuarioId !== s.usuarioId) throw new Error('Solo puede rechazar sus propias propuestas.');
     log.estado = 'rechazada'; log.aprobadoPor = null; log.rechazadoPor = s.usuarioId; log.motivo = motivo || ''; log.resueltoEn = new Date().toISOString();
     return EDU.repo.guardar('agenteLog', log);
@@ -348,17 +486,21 @@
   /** Disponibilidad rapida para otros modulos: {ok, motivo}. */
   async function disponible(tarea) {
     var s = ses();
-    if (!s || !EDU.permisos.puede(s.rol, 'agente', 'aprobar')) return { ok: false, motivo: 'Su rol no puede aprobar propuestas del agente.' };
-    try { var c = await configEfectiva(); if (!c.activo) return { ok: false, motivo: 'El agente está desactivado.' }; if (c.tareas.indexOf(tarea) === -1) return { ok: false, motivo: 'Tarea no habilitada.' }; return { ok: true, config: c }; } catch (e) { return { ok: false, motivo: e.message }; }
+    if (!s) return { ok: false, motivo: 'Sin sesión.' };
+    if (TAREAS[tarea] && TAREAS[tarea].roles) { if (!puedeTarea(s.rol, tarea)) return { ok: false, motivo: 'Su rol no puede usar «' + TAREAS[tarea].titulo + '» (requiere edición en Horarios).' }; }
+    else if (!EDU.permisos.puede(s.rol, 'agente', 'aprobar')) return { ok: false, motivo: 'Su rol no puede aprobar propuestas del agente.' };
+    try { var c = await configEfectiva(); if (!c.activo) return { ok: false, motivo: 'El agente IA está desactivado para este centro/usuario (actívelo en Agente IA › Configuración).' }; if (c.tareas.indexOf(tarea) === -1) return { ok: false, motivo: 'La tarea «' + (TAREAS[tarea] ? TAREAS[tarea].titulo : tarea) + '» no está habilitada en la configuración del agente.' };
+      if (c.proveedor === 'backend' && !c.consentimientoDatos) return { ok: false, motivo: 'El centro no ha dado consentimiento para enviar datos a un proveedor externo.' }; return { ok: true, config: c }; } catch (e) { return { ok: false, motivo: e.message }; }
   }
 
-  EDU.agente = { TAREAS: TAREAS, AUTONOMIAS: AUTONOMIAS, proveedor: proveedor, proveedores: proveedores, registrarProveedor: function (n, impl) { if (!impl || typeof impl.solicitar !== 'function') throw new Error('El proveedor debe implementar solicitar(tarea, contexto).'); proveedores[n] = impl; },
+  EDU.agente = { puedeTarea: puedeTarea, normalizarHorario: normalizarHorario, confirmarHorario: confirmarHorario, TAREAS: TAREAS, AUTONOMIAS: AUTONOMIAS, proveedor: proveedor, proveedores: proveedores, registrarProveedor: function (n, impl) { if (!impl || typeof impl.solicitar !== 'function') throw new Error('El proveedor debe implementar solicitar(tarea, contexto).'); proveedores[n] = impl; },
     crearProveedorHttp: crearProveedorHttp, anonimizar: anonimizar, limpiarTexto: limpiarTexto, configEfectiva: configEfectiva, solicitar: solicitar, aprobar: aprobar, rechazar: rechazar, disponible: disponible };
 
   /* ======================= Vista ======================= */
   function estadoBadge(st) { return ui.badge({ pendiente: 'Pendiente', sugerida: 'Sugerencia', aprobada: 'Aprobada', ejecutada: 'Ejecutada', rechazada: 'Rechazada' }[st] || st, { pendiente: 'warn', sugerida: 'info', aprobada: 'ok', ejecutada: 'ok', rechazada: 'bad' }[st] || 'neu'); }
   function lista(arr) { return '<ul>' + (arr || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; }
 
+  var evalHorario = {};
   function renderPropuesta(log, nombres) {
     var p = log.propuesta, h = '';
     if (p.tipo === 'plan') {
@@ -374,6 +516,14 @@
       h += '<p><strong>' + esc(p.asunto) + '</strong></p><p style="white-space:pre-wrap">' + esc(p.cuerpo) + '</p>';
     } else if (p.tipo === 'resumen') {
       h += '<p>' + esc(p.texto) + '</p><p><strong>Hallazgos</strong></p>' + lista(p.hallazgos) + '<p><strong>Recomendaciones</strong></p>' + lista(p.recomendaciones);
+    } else if (p.tipo === 'horario') {
+      var ev = evalHorario[log.id], desc = p.descartadas || [], sinH = (p.sinColocar || []).reduce(function (t, x) { return t + x.faltan; }, 0);
+      h += '<p>' + esc((p.asignaciones || []).length) + ' bloque(s) propuestos · ' + esc(p.nDescartadas || 0) + ' descartado(s) · ' + esc(sinH) + ' hora(s) sin colocar.</p>';
+      if (ev && ev.lineas.length) h += '<ul>' + ev.lineas.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + ((p.asignaciones || []).length > ev.lineas.length ? '<li>' + esc('…y ' + ((p.asignaciones || []).length - ev.lineas.length) + ' más') + '</li>' : '') + '</ul>';
+      if (ev && ev.conflictos.length) h += '<div class="alert red"><div><strong>Conflictos con el horario actual (no se puede aprobar)</strong><ul>' + ev.conflictos.slice(0, 6).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div></div>';
+      if (ev && ev.sobrecarga.length) h += '<div class="alert"><div><strong>Avisos de sobrecarga</strong><ul>' + ev.sobrecarga.slice(0, 6).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div></div>';
+      if (desc.length) h += '<div class="alert red"><div><strong>Asignaciones descartadas</strong><ul>' + desc.slice(0, 6).map(function (x) { return '<li>' + esc(x.motivo) + '</li>'; }).join('') + '</ul></div></div>';
+      if ((p.notas || []).length) h += '<p><strong>Notas</strong></p>' + lista(p.notas);
     } else if (p.tipo === 'notas') {
       h += '<div class="tw"><table class="t"><caption class="sr-only">Borrador de notas</caption><thead><tr><th scope="col">Estudiante</th><th scope="col" class="r">Nota propuesta (de ' + esc(p.puntosMax) + ')</th></tr></thead><tbody>' +
         (p.items || []).map(function (i) { var id = (log.mapaLocal || {})[i.ref]; return '<tr><td>' + esc((nombres && nombres[id]) || i.ref) + ' <small>(el agente solo vio «' + esc(i.ref) + '»)</small></td><td class="r">' + esc(i.puntos) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
@@ -383,13 +533,14 @@
   }
 
   function tarjeta(log, nombres, puedeAprobar) {
-    var pend = log.estado === 'pendiente', sug = log.estado === 'sugerida', sens = log.propuesta.tipo === 'notas';
+    var pend = log.estado === 'pendiente', sug = log.estado === 'sugerida', sens = log.propuesta.tipo === 'notas', esH = log.propuesta.tipo === 'horario', evH = evalHorario[log.id];
     var h = '<article class="card ag-card" data-log="' + esc(log.id) + '" style="margin-top:14px" aria-labelledby="t-' + esc(log.id) + '"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">' +
       '<h3 id="t-' + esc(log.id) + '" style="font-size:18px">' + esc(TAREAS[log.tarea] ? TAREAS[log.tarea].titulo : log.tarea) + '</h3><span>' + estadoBadge(log.estado) + (log.simulado ? ' ' + ui.badge('Simulado', 'neu') : '') + '</span></div>' +
       '<p class="note" style="margin-top:4px">' + esc(fmt.fechaHora(log.fecha)) + ' · ' + esc(log.salida) + '</p>' + renderPropuesta(log, nombres);
     if (sens) h += '<div class="alert"><div><strong>Cambia notas</strong><small>Requiere su aprobación; solo llena celdas vacías y nunca modifica periodos cerrados.</small></div></div>';
+    if (esH) h += '<div class="alert"><div><strong>Cambia el horario del centro</strong><small>Requiere su aprobación y no se guarda sin ella; solo añade bloques y se re-valida contra el horario actual (también puede revisarla en Horarios).</small></div></div>';
     if (log.efecto && log.efecto.descripcion) h += '<div class="alert ok"><div><strong>Resultado</strong><small>' + esc(log.efecto.descripcion) + '</small></div></div>';
-    if (pend && puedeAprobar) h += '<div class="form-actions"><button type="button" class="btn dng" data-ac="rechazar">Rechazar</button><button type="button" class="btn amb" data-ac="aprobar">Aprobar</button></div>';
+    if (pend && puedeAprobar) h += '<div class="form-actions"><button type="button" class="btn dng" data-ac="rechazar">Rechazar</button><button type="button" class="btn amb" data-ac="aprobar"' + (esH && evH && evH.conflictos.length ? ' disabled' : '') + '>' + (esH ? 'Aprobar y guardar' : 'Aprobar') + '</button></div>';
     else if (sug) h += '<div class="form-actions"><span class="note" style="margin-right:auto">Modo «solo sugiere»: copie lo que le sirva; no se aplican cambios.</span><button type="button" class="btn sec" data-ac="rechazar">Descartar</button></div>';
     else if (pend) h += '<p class="note">Su rol no puede aprobar propuestas.</p>';
     return h + '</article>';
@@ -398,8 +549,9 @@
   async function tabConsola(panel, ctx) {
     var s = ses(), cfg = await configEfectiva(), puedeAprobar = EDU.permisos.puede(s.rol, 'agente', 'aprobar');
     var d = await datos(['cargas', 'secciones', 'cursos', 'asignaturas', 'actividades', 'periodos', 'estudiantes']);
+    var secsOpc = d.secciones.map(function (x) { var cu = d.cursos.filter(function (c) { return c.id === x.cursoId; })[0]; return { id: x.id, texto: ((cu ? cu.nombre : '') + ' ' + x.nombre).trim() }; });
     var cargas = s.rol === 'docente' ? d.cargas.filter(function (c) { return c.docenteId === s.refId; }) : d.cargas;
-    var tareas = Object.keys(TAREAS).filter(function (t) { return cfg.tareas.indexOf(t) !== -1; });
+    var tareas = Object.keys(TAREAS).filter(function (t) { return cfg.tareas.indexOf(t) !== -1 && puedeTarea(s.rol, t); });
     if (!cfg.activo || !tareas.length || !puedeAprobar) {
       panel.innerHTML = '<div class="card">' + ui.vacio({ titulo: !puedeAprobar ? 'Su rol no usa la consola del agente' : 'El agente está desactivado', texto: !puedeAprobar ? 'Puede revisar la configuración y el registro de actividad.' :
         (EDU.permisos.puede(s.rol, 'agente', 'editar') ? 'Actívelo y habilite tareas en la pestaña «Configuración».' : 'Pida a la dirección que lo active.') }) + '</div>';
@@ -409,16 +561,19 @@
     panel.innerHTML = '<div class="card"><h2 id="askT">Pídele al agente</h2><p class="note" style="margin-top:4px">Respuestas ' + (cfg.proveedor === 'backend' ? 'del proveedor configurado' : 'simuladas localmente, sin red') + '. Modo: <strong>' + esc(AUTONOMIAS[cfg.autonomia].titulo) + '</strong>. Los nombres de estudiantes se anonimizan antes de enviar.</p>' +
       '<form id="agForm" aria-labelledby="askT" novalidate><div class="fgrid" style="margin-top:12px">' +
       '<label class="fld">Tarea<select id="agTarea" name="tarea">' + tareas.map(function (t) { return '<option value="' + esc(t) + '">' + esc(TAREAS[t].titulo) + '</option>'; }).join('') + '</select><span class="help" id="agTareaAy"></span></label>' +
-      '<label class="fld">Asignatura y sección<select id="agCarga" name="carga">' + cargas.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(etiquetaCarga(d, c)) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="fld" id="wAlc" hidden>Alcance<select id="agAlc" name="alcance"><option value="">Todas las secciones</option>' + secsOpc.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.texto) + '</option>'; }).join('') + '</select><span class="help">Solo se añaden bloques a las horas faltantes; nada se guarda sin su aprobación.</span></label>' +
+      '<label class="fld" id="wCarga">Asignatura y sección<select id="agCarga" name="carga">' + cargas.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(etiquetaCarga(d, c)) + '</option>'; }).join('') + '</select></label>' +
       '<label class="fld" id="wAct" hidden>Actividad<select id="agAct" name="actividad"></select><span class="help">Solo actividades de periodos abiertos.</span></label>' +
       '<label class="fld" id="wFecha">Fecha del plan<input type="date" id="agFecha" name="fecha" value="' + esc(hoyMas(1)) + '"></label>' +
-      '<label class="fld full" id="wTexto">Tema o instrucción<textarea id="agTexto" name="texto" maxlength="500" placeholder="Ej.: Fracciones equivalentes"></textarea><span class="help">No escriba datos personales; se anonimizan antes de enviar.</span></label></div>' +
+      '<label class="fld full" id="wTexto"><span id="agTextoT">Tema o instrucción</span><textarea id="agTexto" name="texto" maxlength="500" placeholder="Ej.: Fracciones equivalentes"></textarea><span class="help">No escriba datos personales; se anonimizan antes de enviar.</span></label></div>' +
       '<div class="form-error" id="agErr" role="alert" hidden></div><div class="form-actions"><span id="agEstado" class="note" role="status" style="margin-right:auto"></span><button type="submit" class="btn amb" id="agEnviar">Enviar al agente</button></div></form></div>' +
       '<div id="agLista" aria-live="polite" aria-label="Propuestas del agente"></div>';
     var $ = function (id) { return panel.querySelector('#' + id); };
     function ajustar() {
       var t = $('agTarea').value, cid = $('agCarga').value;
-      $('agTareaAy').textContent = TAREAS[t].desc; $('wAct').hidden = t !== 'borrador_notas'; $('wFecha').hidden = t !== 'generar_plan';
+      var esH = t === 'proponer_horario';
+      $('agTareaAy').textContent = TAREAS[t].desc; $('wAct').hidden = t !== 'borrador_notas'; $('wFecha').hidden = t !== 'generar_plan'; $('wCarga').hidden = esH; $('wAlc').hidden = !esH;
+      $('agTextoT').textContent = esH ? 'Restricción opcional (texto libre)' : 'Tema o instrucción'; $('agTexto').maxLength = esH ? MAX_RESTRICCION : 500; $('agTexto').placeholder = esH ? 'Ej.: no poner Matemática a última hora' : 'Ej.: Fracciones equivalentes';
       $('agAct').innerHTML = d.actividades.filter(function (a) { var p = d.periodos.filter(function (x) { return x.id === a.periodoId; })[0]; return a.cargaId === cid && p && !p.cerrado; })
         .map(function (a) { return '<option value="' + esc(a.id) + '">' + esc(a.nombre) + ' (' + esc(a.puntosMax) + ' pts)</option>'; }).join('') || '<option value="">Sin actividades en periodos abiertos</option>';
     }
@@ -426,6 +581,8 @@
     async function pintarLista() {
       var logs = await EDU.repo.listar('agenteLog', { orden: 'fecha', desc: true }), mine = logs.filter(function (l) { return l.usuarioId === s.usuarioId && l.propuesta; });
       var abiertas = mine.filter(function (l) { return l.estado === 'pendiente' || l.estado === 'sugerida'; }), cerradas = mine.filter(function (l) { return l.estado !== 'pendiente' && l.estado !== 'sugerida'; }).slice(0, 3);
+      evalHorario = {};
+      for (var q = 0; q < abiertas.length; q++) if (abiertas[q].propuesta.tipo === 'horario') { try { evalHorario[abiertas[q].id] = await evaluarHorario(abiertas[q]); } catch (e) { /* sin vista previa de conflictos */ } }
       var h = '<h2 style="margin-top:22px;font-size:20px">Propuestas pendientes (' + abiertas.length + ')</h2>' + (abiertas.length ? abiertas.map(function (l) { return tarjeta(l, nombres, puedeAprobar); }).join('') : '<p class="note">No hay propuestas pendientes.</p>');
       if (cerradas.length) h += '<h2 style="margin-top:22px;font-size:20px">Resueltas recientemente</h2>' + cerradas.map(function (l) { return tarjeta(l, nombres, puedeAprobar); }).join('');
       $('agLista').innerHTML = h;
@@ -443,6 +600,12 @@
       e.preventDefault();
       var err = $('agErr'); err.hidden = true;
       var t = $('agTarea').value, texto = $('agTexto').value.trim();
+      if (t === 'proponer_horario') {
+        $('agEnviar').disabled = true; $('agEstado').textContent = 'Consultando al agente…';
+        try { await solicitar(t, { seccionId: $('agAlc').value || null, conservar: true, texto: texto }); $('agEstado').textContent = 'Propuesta lista.'; $('agTexto').value = ''; }
+        catch (er) { err.textContent = er.message; err.hidden = false; $('agEstado').textContent = ''; }
+        $('agEnviar').disabled = false; await pintarLista(); return;
+      }
       if (!$('agCarga').value) { err.textContent = 'No tiene asignaturas asignadas.'; err.hidden = false; return; }
       if (t !== 'borrador_notas' && t !== 'resumir_rendimiento' && !texto) { err.textContent = 'Escriba el tema o la instrucción.'; err.hidden = false; $('agTexto').setAttribute('aria-invalid', 'true'); $('agTexto').focus(); return; }
       $('agTexto').removeAttribute('aria-invalid');
@@ -457,7 +620,8 @@
   }
 
   function formConfig(pref, cfg, techo, esCentro) {
-    var tareasOk = esCentro ? Object.keys(TAREAS) : Object.keys(TAREAS).filter(function (t) { return (techo.tareas || []).indexOf(t) !== -1; });
+    var rolU = ses().rol;
+    var tareasOk = (esCentro ? Object.keys(TAREAS) : Object.keys(TAREAS).filter(function (t) { return (techo.tareas || []).indexOf(t) !== -1; })).filter(function (t) { return !TAREAS[t].roles || puedeTarea(rolU, t); });
     var autOk = esCentro ? ORDEN_AUT : ORDEN_AUT.slice(0, ORDEN_AUT.indexOf(techo.autonomia || 'sugiere') + 1);
     var h = '<form id="' + pref + 'F" novalidate aria-label="' + (esCentro ? 'Configuración del centro' : 'Mi configuración') + '"><div class="fgrid">' +
       '<label class="opt full"><input type="checkbox" id="' + pref + 'activo"' + (cfg.activo ? ' checked' : '') + '> Activar agente</label>' +
@@ -497,7 +661,7 @@
     var esDoc = s.rol === 'docente', editaCentro = !esDoc && EDU.permisos.puede(s.rol, 'agente', 'editar');
     var h = '<div class="alert"><div><strong>La clave de API nunca está en el navegador</strong><small>Se guarda y usa solo en el servidor (proxy backend). Aquí no se almacena ni se envía ninguna clave. Todo lo que hace el agente queda en el registro de actividad.</small></div></div>' +
       '<div class="card" style="margin-top:14px"><h2>Configuración del centro</h2>' + (editaCentro ? formConfig('c', centro, centro, true) : '<p class="note">Estado: ' + (centro.activo ? ui.badge('Activo', 'ok') : ui.badge('Desactivado', 'neu')) + ' · Modo: ' + esc(AUTONOMIAS[centro.autonomia || 'sugiere'].titulo) +
-        ' · Tareas: ' + esc((centro.tareas || []).map(function (t) { return TAREAS[t] ? TAREAS[t].titulo : t; }).join(', ') || '—') + '. Solo la dirección puede modificarla.</p>') + '</div>';
+        ' · Tareas: ' + esc((centro.tareas || []).filter(function (t) { return puedeTarea(s.rol, t); }).map(function (t) { return TAREAS[t] ? TAREAS[t].titulo : t; }).join(', ') || '—') + '. Solo la dirección puede modificarla.</p>') + '</div>';
     if (esDoc) {
       var doc = c.docente || Object.assign(configPorDefecto(c.centroId, s.refId), { activo: true, autonomia: centro.autonomia || 'sugiere', tareas: (centro.tareas || []).slice(), nivel: centro.nivel, tono: centro.tono, proveedor: centro.proveedor, modelo: centro.modelo });
       h += '<div class="card" style="margin-top:14px"><h2>Mi configuración</h2><p class="note">Solo puede restringir lo que el centro permite.</p>' + formConfig('d', doc, centro, false) + '</div>';
@@ -531,7 +695,7 @@
       acciones: [{ texto: 'Detalle', alClic: function (l) {
         ui.modal({ titulo: 'Detalle de la solicitud', tamano: 'lg', contenido: '<p><strong>Proveedor:</strong> ' + esc(l.proveedor || '—') + ' · ' + esc(l.modelo || '') + ' ' + (l.simulado ? '(simulado)' : '') + '</p>' +
           '<p><strong>Contexto enviado (anonimizado):</strong></p><pre style="white-space:pre-wrap;font-size:12px;background:#f5f3ee;padding:10px;border-radius:8px;overflow:auto">' + esc(l.contexto ? JSON.stringify(l.contexto, null, 2) : 'No registrado') + '</pre>' +
-          '<p><strong>Resultado:</strong> ' + esc(l.efecto ? l.efecto.descripcion : 'Sin cambios en datos') + '</p>', botones: [{ texto: 'Cerrar', tipo: 'amb', valor: true }] });
+          (l.resumenHorario ? '<p><strong>Horario:</strong> ' + esc(l.resumenHorario.asignaciones) + ' asignaciones propuestas · ' + esc(l.resumenHorario.descartadas) + ' descartadas · ' + esc(l.resumenHorario.sinColocar) + ' horas sin colocar</p>' : '') + '<p><strong>Resultado:</strong> ' + esc(l.efecto ? l.efecto.descripcion : 'Sin cambios en datos') + '</p>', botones: [{ texto: 'Cerrar', tipo: 'amb', valor: true }] });
       } }], vacio: { titulo: 'Sin actividad', texto: 'Cuando use el agente, cada solicitud quedará registrada aquí.' } });
     panel.innerHTML = '<div class="card"><h2>Registro de actividad</h2><p class="note" style="margin-top:4px">Quién, cuándo, tarea, entrada, salida y quién aprobó.</p></div>';
     panel.firstChild.appendChild(t.el);

@@ -14,9 +14,9 @@ Bloquean guardar: docente en dos secciones a la vez, sección con dos asignatura
 `motor.proponerLocal` (voraz con MRV y retroceso limitado). Se muestra en vista previa; **guardar exige aprobación humana y cero conflictos**.
 
 ## API para otros módulos
-`EDU.horarios.deHoy(sesion, fecha?)` y `deSemana(sesion, fecha?)` devuelven las clases con alcance por rol (los usa Planificación). Punto de extensión: `EDU.horarios.registrarProponedor('agente', {etiqueta, proponer(ctx, opts, contextoMinimo)})`; el contexto mínimo lleva solo ids, horas, franjas, fijos y no disponibilidades (sin nombres) y el resultado se re-valida.
+`EDU.horarios.deHoy(sesion, fecha?)` y `deSemana(sesion, fecha?)` devuelven las clases con alcance por rol (los usa Planificación). Punto de extensión: `EDU.horarios.registrarProponedor(id, {etiqueta, proponer(ctx, opts, contextoMinimo), disponible?, admiteTexto?})`; el contexto mínimo lleva solo ids, horas, franjas, fijos y no disponibilidades (sin nombres) y el resultado se re-valida. Lo usa el proponedor **Agente IA** (`horarios-agente.js`): aparece en el selector del diálogo «Proponer horario» solo si el agente está activo y la tarea habilitada (si no, el diálogo explica por qué), admite una restricción opcional de texto libre (≤ 300 caracteres), muestra la propuesta en la misma vista previa (conflictos, asignaciones descartadas por el esquema, horas sin colocar) y nunca guarda sin aprobación; la resolución queda en el registro del agente.
 
 ## Notas
 - La colección `franjas` guarda además un registro `{tipo:'config'}` (`cfg_<centroId>`); otros módulos deben ignorarlo (ya corregido en Cursos).
 - El choque de horarios de **Cursos y talleres** no se compara con este horario ([Cursos y talleres](Cursos-y-talleres)).
-- **Pendiente:** tarea `proponer_horario` en el [Agente IA](Agente-IA).
+- La tarea `proponer_horario` del [Agente IA](Agente-IA) está conectada como proponedor `agente`.

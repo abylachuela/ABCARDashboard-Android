@@ -401,22 +401,29 @@
     }
 
     /* ---------- propuesta automatica ---------- */
-    function proponerUI() {
+    async function proponerUI() {
+      var todos = await H.proponedoresDisponibles(), pr = todos.filter(function (p) { return p.ok; }), noDisp = todos.filter(function (p) { return !p.ok; });
       var ctxD = Object.assign({}, S.ctx, { horarios: S.draft.filter(function (e) { return S.ctx.franjaPor[e.franjaId] && S.ctx.cargaPor[e.cargaId]; }) });
-      var secs = sujetos('seccion'), pr = H.proponedores(), res = null, alcSel = null;
+      var secs = sujetos('seccion'), res = null, alcSel = null;
       var caja = document.createElement('div');
       caja.innerHTML = '<p style="margin-top:0">Genera una <strong>propuesta</strong> que respeta docentes, secciones, disponibilidad y franjas de clase. No se guarda nada hasta que la apruebes.</p>' +
         '<div class="fgrid"><label class="fld">Alcance<select data-p="alcance"><option value="">Todas las secciones</option>' + secs.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.texto) + '</option>'; }).join('') + '</select></label>' +
         (pr.length > 1 ? '<label class="fld">Proponedor<select data-p="prov">' + pr.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.etiqueta) + '</option>'; }).join('') + '</select></label>' : '') +
-        '<label class="fld full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-p="conservar" checked style="width:auto"> Conservar lo ya asignado (solo completar horas faltantes)</label></div>' +
+        '<label class="fld full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-p="conservar" checked style="width:auto"> Conservar lo ya asignado (solo completar horas faltantes)</label>' +
+        '<label class="fld full" data-p="wtexto" hidden>Restricción opcional (texto libre)<textarea data-p="texto" maxlength="300" rows="2" placeholder="Ej.: no poner Matemática a última hora"></textarea><span class="help">No escriba datos personales: se anonimizan y se limitan a 300 caracteres antes de enviarse al proponedor.</span></label></div>' +
+        noDisp.map(function (p) { return '<div class="alert" data-p="nodisp"><div><strong>' + esc(p.etiqueta) + ' no disponible</strong><small>' + esc(p.motivo || 'No disponible.') + '</small></div></div>'; }).join('') +
         '<p><button type="button" class="btn amb" data-p="gen">Generar propuesta</button></p><div data-p="out" role="region" aria-live="polite" aria-label="Vista previa de la propuesta"></div>';
       var out = caja.querySelector('[data-p=out]'), m;
       function pintarResultado(secId) {
         var v = res.validacion, nuevos = new Set(res.asignaciones.map(function (a, i) { return 'p' + i; }));
         var sin = res.sinColocar.reduce(function (s, x) { return s + x.faltan; }, 0);
-        var h = '<h3 style="margin:14px 0 8px">Vista previa</h3><div class="chips">' + html(ui.badge(res.asignaciones.length + ' bloques propuestos', 'info')) + ' ' + html(ui.badge(v.conflictos.length + ' conflictos', v.conflictos.length ? 'bad' : 'ok')) + ' ' + html(ui.badge(sin + ' horas sin colocar', sin ? 'warn' : 'ok')) + '</div>';
+        var h = '<h3 style="margin:14px 0 8px">Vista previa' + (res.algoritmo && res.algoritmo !== 'local-voraz-retroceso' ? ' · ' + esc(res.algoritmo) : '') + '</h3><div class="chips">' + html(ui.badge(res.asignaciones.length + ' bloques propuestos', 'info')) + ' ' + html(ui.badge(v.conflictos.length + ' conflictos', v.conflictos.length ? 'bad' : 'ok')) + ' ' + html(ui.badge(sin + ' horas sin colocar', sin ? 'warn' : 'ok')) + '</div>';
         if (v.conflictos.length) h += '<div class="alert red"><div><strong>Conflictos en la propuesta (no se puede aprobar)</strong><ul>' + v.conflictos.slice(0, 8).map(function (c) { return '<li>' + esc(c.msg) + '</li>'; }).join('') + '</ul></div></div>';
         if (res.sinColocar.length) h += '<div class="alert"><div><strong>No se pudieron colocar todas las horas</strong><ul>' + res.sinColocar.slice(0, 8).map(function (x) { var c = S.ctx.cargaPor[x.cargaId]; return '<li>' + esc(M.etiquetaCarga(S.ctx, c) + ': faltan ' + x.faltan + ' h') + '</li>'; }).join('') + '</ul></div></div>';
+        var desc = (Array.isArray(res.descartadas) ? res.descartadas : []), inv = res.invalidas || 0;
+        if (desc.length || inv) h += '<div class="alert red"><div><strong>Asignaciones descartadas (no se incluyen en la propuesta)</strong><ul>' + desc.slice(0, 8).map(function (x) { return '<li>' + esc(String(x.motivo || 'No válida').slice(0, 160)) + '</li>'; }).join('') +
+          (!desc.length ? '<li>' + esc(inv + ' asignación(es) con referencias inexistentes.') + '</li>' : (res.nDescartadas > desc.length ? '<li>' + esc('…y ' + (res.nDescartadas - desc.length) + ' más.') + '</li>' : '')) + '</ul></div></div>';
+        if (Array.isArray(res.notas) && res.notas.length) h += '<div class="alert"><div><strong>Notas del proponedor</strong><ul>' + res.notas.slice(0, 8).map(function (x) { return '<li>' + esc(String(x).slice(0, 300)) + '</li>'; }).join('') + '</ul></div></div>';
         var sobre = v.avisos.filter(function (a) { return a.tipo === 'sobrecarga'; });
         if (sobre.length) h += '<div class="alert"><div><strong>Avisos de sobrecarga</strong><ul>' + sobre.map(function (a) { return '<li>' + esc(a.msg) + '</li>'; }).join('') + '</ul></div></div>';
         var ver = secId || (secs[0] && secs[0].id);
@@ -426,19 +433,27 @@
         h += '<div class="toolbar" style="margin-top:14px"><button type="button" class="btn amb" data-p="aprobar"' + (v.conflictos.length ? ' disabled' : '') + '>Aprobar y guardar</button><button type="button" class="btn sec" data-p="editor"' + (v.conflictos.length ? ' disabled' : '') + '>Cargar en el editor sin guardar</button><button type="button" class="btn sec" data-p="descartar">Descartar propuesta</button></div>';
         out.innerHTML = h;
       }
-      caja.addEventListener('change', function (ev) { var s = ev.target.closest('[data-p=ver]'); if (s && res) pintarResultado(s.value); });
+      function mostrarTexto() {
+        var ps = caja.querySelector('[data-p=prov]'), id = ps ? ps.value : (pr[0] && pr[0].id), p = pr.filter(function (x) { return x.id === id; })[0];
+        caja.querySelector('[data-p=wtexto]').hidden = !(p && p.admiteTexto);
+      }
+      async function cerrarLog(estado, info) { if (res && typeof res.alResolver === 'function') { var f = res.alResolver; res.alResolver = null; try { await f(estado, info); } catch (e) { ui.toast(e.message || 'No se pudo registrar la resolución.', 'error'); } } }
+      caja.addEventListener('change', function (ev) { var s = ev.target.closest('[data-p=ver]'); if (s && res) pintarResultado(s.value); if (ev.target.closest('[data-p=prov]')) mostrarTexto(); });
+      mostrarTexto();
       caja.addEventListener('click', async function (ev) {
         var b = ev.target.closest('button[data-p]'); if (!b) return; var a = b.dataset.p;
         if (a === 'gen') {
+          await cerrarLog('descartada', { motivo: 'Se generó otra propuesta' });
           b.disabled = true; out.innerHTML = '<p class="note">Calculando…</p>';
           try {
             var provSel = caja.querySelector('[data-p=prov]');
             alcSel = caja.querySelector('[data-p=alcance]').value || null;
-            res = await H.proponer(ctxD, { seccionId: alcSel, conservar: caja.querySelector('[data-p=conservar]').checked }, provSel ? provSel.value : 'local');
+            var txt = caja.querySelector('[data-p=texto]');
+            res = await H.proponer(ctxD, { seccionId: alcSel, conservar: caja.querySelector('[data-p=conservar]').checked, restriccion: txt && !caja.querySelector('[data-p=wtexto]').hidden ? String(txt.value || '').slice(0, 300) : '' }, provSel ? provSel.value : (pr[0] ? pr[0].id : 'local'));
             pintarResultado(caja.querySelector('[data-p=alcance]').value || null);
           } catch (e) { out.innerHTML = '<div class="alert red"><div><strong>No se pudo generar la propuesta</strong><small>' + esc(e.message) + '</small></div></div>'; }
           b.disabled = false;
-        } else if (a === 'descartar') { res = null; out.innerHTML = ''; }
+        } else if (a === 'descartar') { await cerrarLog('descartada', { motivo: 'Descartada en la vista previa' }); res = null; out.innerHTML = ''; }
         else if ((a === 'aprobar' || a === 'editor') && res && !res.validacion.conflictos.length) {
           var nuevoDraft = res.todo.map(function (e) { return e.id ? copia(e) : { _k: 'n' + (++seq), cargaId: e.cargaId, dia: e.dia, franjaId: e.franjaId, aula: e.aula || '' }; });
           if (a === 'editor') { S.draft = nuevoDraft; cambio('Propuesta cargada en el editor.'); m.cerrar('ok'); ui.toast('Propuesta cargada en el editor. Revisa y guarda.', 'info'); return; }
@@ -446,7 +461,7 @@
           var ok = await ui.confirmar({ titulo: 'Aprobar propuesta de horario', mensaje: 'Se guardarán ' + res.asignaciones.length + ' bloques nuevos en el horario del centro' + (res.fijos.length < S.draft.length ? ' y se reemplazarán los bloques actuales del alcance elegido' : '') + (S.legacy.length ? '; los bloques del horario anterior de esas cargas se descartarán' : '') + '. ¿Aprobar?', textoOk: 'Aprobar y guardar' });
           if (!ok) return;
           var anterior = S.draft; S.draft = nuevoDraft; revalidar();
-          try { var n = await persistir(cargasAlc); ui.toast('Propuesta aprobada y guardada (' + n + ' cambios).', 'ok'); m.cerrar('ok'); }
+          try { var n = await persistir(cargasAlc); await cerrarLog('aprobada', { cambios: n, asignaciones: res.asignaciones.length }); ui.toast('Propuesta aprobada y guardada (' + n + ' cambios).', 'ok'); m.cerrar('ok'); }
           catch (e) { S.draft = anterior; revalidar(); ui.toast(e.message || 'No se pudo guardar.', 'error'); }
           repintarTodo();
         }
