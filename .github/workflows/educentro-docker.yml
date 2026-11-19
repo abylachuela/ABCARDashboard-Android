@@ -71,7 +71,8 @@ jobs:
       - name: Comprobaciones de seguridad del despliegue
         run: |
           # La base de datos no publica ningún puerto.
-          if docker compose port db 5432 2>/dev/null | grep -q .; then echo "::error::db publica un puerto"; exit 1; fi
+          # Sin puerto publicado, `compose port` imprime ':0' y sale con éxito: solo falla si hay un puerto de host real.
+          if docker compose port db 5432 2>/dev/null | grep -Eq ':[1-9][0-9]*$'; then echo "::error::db publica un puerto"; exit 1; fi
           # La API solo escucha en el bucle local del host.
           docker compose ps api --format '{{.Ports}}' | grep -q '127.0.0.1:3000' || { echo "::error::la API no está atada a 127.0.0.1"; exit 1; }
           # Las migraciones se aplicaron y el rol de la API no es propietario.
