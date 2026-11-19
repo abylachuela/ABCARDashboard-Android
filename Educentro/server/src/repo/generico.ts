@@ -267,3 +267,9 @@ export async function borrar(p: Peticion, meta: MetaColeccion, id: string, ifMat
     await registrarAuditoria(p.tx, p.ses, fila.centro_id, { accion: 'borrar', coleccion: meta.nombre, registroId: id, antes, despues: null });
   }
 }
+
+/** Todos los registros vivos de un centro (respaldo). No aplica alcance: solo lo usan admin_red y director. */
+export async function exportarCentro(tx: Tx, meta: MetaColeccion, centroId: string): Promise<Registro[]> {
+  const r = await tx.query<Fila>(`SELECT ${SEL} FROM ${tabla(meta)} WHERE centro_id = $1 AND borrado_en IS NULL ORDER BY id`, [centroId]);
+  return r.rows.map(aPlano);
+}

@@ -38,7 +38,7 @@ export function puedeAdministrarUsuario(ses: SesionApi, antes: Registro | null |
   const rolNuevo = str(nuevo?.rol);
   const rolAntes = str(antes?.rol);
   if (rolNuevo === 'admin_red' || rolAntes === 'admin_red') return no('Sin permiso para administrar usuarios admin_red');
-  if ((rolNuevo && !(rolNuevo in RANGO)) || (rolAntes && !(rolAntes in RANGO))) return no('Rol no válido', 'datos_invalidos', 422);
+  if ((rolNuevo && !Object.hasOwn(RANGO, rolNuevo)) || (rolAntes && !Object.hasOwn(RANGO, rolAntes))) return no('Rol no válido', 'datos_invalidos', 422);
   if ((rolNuevo && RANGO[rolNuevo as Rol] > RANGO[ses.rol]) || (rolAntes && RANGO[rolAntes as Rol] > RANGO[ses.rol])) {
     return no('No puedes asignar ni modificar un rol superior al tuyo');
   }
@@ -113,6 +113,19 @@ async function propiedad(ses: SesionApi, col: string, rec: Registro, antes: Regi
   return OK;
 }
 
+/** Solo el paso 1 (rol → colección): sirve para rechazar pronto, antes de tocar la BD. */
+export function puedeRol(ses: SesionApi, col: string, accion: Accion): Decision {
+  const meta = metaDe(col);
+  if (!meta) return no('Colección desconocida', 'coleccion_desconocida', 404);
+  if (ESCRITURAS.includes(accion)) {
+    if (meta.tipo === 'auditoria') return no('La auditoría es de solo anexado: usa POST /auditoria', 'auditoria_inmutable');
+    if (!puedeEscribirColeccion(ses.rol, col)) return no(`Sin permiso para ${accion} en ${col}`);
+  } else if (!meta.lectura.includes(ses.rol)) {
+    return no(`Sin permiso para leer ${col}`);
+  }
+  return OK;
+}
+
 /**
  * ¿Puede `ses` ejecutar `accion` sobre `col`? `registro` son los valores NUEVOS (crear/editar) o el registro
  * afectado; `opciones.antes` el estado previo. Para listar/obtener solo se evalúa rol y centro: el filtrado por
@@ -124,12 +137,8 @@ export async function puede(ses: SesionApi, col: string, accion: Accion, registr
   if (!meta) return no('Colección desconocida', 'coleccion_desconocida', 404);
 
   // 1) rol → colección
-  if (ESCRITURAS.includes(accion)) {
-    if (meta.tipo === 'auditoria') return no('La auditoría es de solo anexado: usa POST /auditoria', 'auditoria_inmutable');
-    if (!puedeEscribirColeccion(ses.rol, col)) return no(`Sin permiso para ${accion} en ${col}`);
-  } else if (!meta.lectura.includes(ses.rol)) {
-    return no(`Sin permiso para leer ${col}`);
-  }
+  const d1 = puedeRol(ses, col, accion);
+  if (!d1.ok) return d1;
 
   // 2) centro
   if (registro) {
