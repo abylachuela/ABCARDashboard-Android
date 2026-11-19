@@ -3,7 +3,7 @@
 Estado: **Fase 0 implementada** (ver «Estado de la Fase 0» abajo); las Fases 1–6 siguen siendo plan. Sustituye el almacenamiento en `localStorage` por un servidor real con control de acceso en el servidor (el punto crítico de `SEGURIDAD.md`). Repositorio privado de GitHub; una sola VM Linux; datos de menores.
 
 ## Estado de la Fase 0 (implementada en `Educentro/server/`)
-Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `npm audit --omit=dev` sin vulnerabilidades): configuración validada (`src/config.ts`), migraciones SQL con ejecutor transaccional, `centros`/`usuarios`/`sesiones`/`tokens_recuperacion`/`auditoria_accesos` (append-only), autenticación bajo `/api/v1/auth` (login, logout, me, cambiar-clave, recuperar, restablecer), `/api/health`, `/api/v1/ping`, CLI `crear-admin` y `semilla-dev`, Dockerfile, `compose.yml` (api, db, migrar, backup), `deploy.sh` con `WITH_API=1` (probado con nginx real) y CI (`.github/workflows/educentro-server.yml`). Guía de uso: `server/README.md`.
+Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `npm audit --omit=dev` sin vulnerabilidades): configuración validada (`src/config.ts`), migraciones SQL con ejecutor transaccional, `centros`/`usuarios`/`sesiones`/`tokens_recuperacion`/`auditoria_accesos` (append-only), autenticación bajo `/api/v1/auth` (login, logout, me, cambiar-clave, recuperar, restablecer), `/api/health`, `/api/v1/ping`, CLI `crear-admin` y `semilla-dev`, Dockerfile, `compose.yml` (api, db, migrar, backup), `deploy.mjs` con `WITH_API=1` (probado con nginx real) y CI (`.github/workflows/educentro-server.yml`). Guía de uso: `server/README.md`.
 
 **Lo que difiere del plan**
 - **Sin ORM**: SQL plano con `pg` y un ejecutor de migraciones propio (en lugar de Drizzle/Kysely); validación con Zod (no TypeBox).
@@ -26,7 +26,7 @@ Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `n
 - `calculo.js`, `escala.js` y `planilla.js` son IIFE sobre `window.EDU` sin `module.exports`: se reutilizan en Node con un shim, sin reescribirlas. Hoy los tests son HTML.
 - El agente ya define el contrato HTTP: `POST /api/agente/solicitar {version:1, tarea, contexto, modelo, tono}`.
 - CSP actual `connect-src 'self'`: si nginx sirve web y `/api` en el mismo origen **no cambia**. Solo la app Android añade el dominio.
-- `deploy.sh` ya genera la configuración de nginx y hace versiones atómicas. La app móvil usa el origen `https://localhost` (Capacitor).
+- `deploy.mjs` ya genera la configuración de nginx y hace versiones atómicas. La app móvil usa el origen `https://localhost` (Capacitor).
 
 ## 1. Stack recomendado
 **Node.js 22 LTS + Fastify + PostgreSQL 16 + Drizzle ORM (o Kysely), TypeScript**, validación con Zod/TypeBox, migraciones SQL versionadas en el repo.
@@ -40,7 +40,7 @@ cliente → nginx :443 → /          estático (current/)
                      → /api/      proxy_pass http://127.0.0.1:3000 (Fastify) → PostgreSQL (solo local)
                      → /archivos/ descargas autorizadas (X-Accel-Redirect interno)
 ```
-- **Procesos:** Docker Compose con `api`, `db` y `backup` (no se conoce la distro; Docker aísla). Alternativa: systemd + PostgreSQL del paquete. `deploy.sh` gana un `location /api/` (proxy con `X-Forwarded-*`, `client_max_body_size 12m`, `limit_req`) y un `docker compose up -d`.
+- **Procesos:** Docker Compose con `api`, `db` y `backup` (no se conoce la distro; Docker aísla). Alternativa: systemd + PostgreSQL del paquete. `deploy.mjs` gana un `location /api/` (proxy con `X-Forwarded-*`, `client_max_body_size 12m`, `limit_req`) y un `docker compose up -d`.
 - **Estructura (monorepo):** `Educentro/server/{src/{app.ts,config.ts,plugins,routes,domain,db,storage}, test, Dockerfile, compose.yml, .env.example}`.
 - **Permisos como fuente única:** extraer `MATRIZ` y `ESCRIBE` de `permisos.js` a `server/src/domain/permisos.json`, validado en CI contra `permisos.js`.
 - **Secretos:** `.env` o Docker secrets en la VM (`/etc/educentro/`, modo 600, fuera del repo). Variables: `DATABASE_URL`, `SESSION_SECRET`, `ANTHROPIC_API_KEY`, SMTP. El repo solo lleva `.env.example`. Activar secret scanning de GitHub y pre-commit con gitleaks.
@@ -108,7 +108,7 @@ Una tabla por colección; `id text PK` (se conservan los ids actuales), `centro_
 - **Permisos por rol:** batería parametrizada que recorre `MATRIZ × ESCRIBE × alcance` y ejecuta la misma matriz contra la API (6 roles × 37 colecciones × acciones), con intentos entre centros, docente fuera de su carga, tutor fuera de sus hijos y escalada de rol. Falla el build si `permisos.json` diverge de `permisos.js`.
 - Integración: Vitest + Testcontainers con PostgreSQL real y RLS activa. E2E: Playwright contra el backend de pruebas (versionar los smoke por rol, el fuzz XSS y el aislamiento entre centros, hoy fuera del repo).
 - CI en GitHub Actions: lint, tipos, tests, `npm audit`, build de imagen. **Repositorio privado: los minutos de Actions son limitados**; valorar un runner propio en la VM aislado.
-- Despliegue: extender `deploy.sh` (`docker compose pull/up`), migraciones con respaldo automático, health check `/api/health` y rollback (migraciones expandir/contraer para poder volver).
+- Despliegue: extender `deploy.mjs` (`docker compose pull/up`), migraciones con respaldo automático, health check `/api/health` y rollback (migraciones expandir/contraer para poder volver).
 
 ## 10. Fases
 | Fase | Contenido | Criterios de aceptación | Esfuerzo |

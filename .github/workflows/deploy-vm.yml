@@ -1,0 +1,130 @@
+name: Desplegar Educentro en la VM
+
+# Solo manual. Se ejecuta en un runner PROPIO instalado en la VM (la VM no es alcanzable desde internet:
+# el runner conecta hacia GitHub). Guía de instalación y seguridad: Educentro/deploy/RUNNER.md
+on:
+  workflow_dispatch:
+    inputs:
+      ref_permitida:
+        description: 'Rama desde la que se permite desplegar (por defecto main). Cámbiala solo para una primera prueba y vuelve a main.'
+        type: string
+        default: main
+        required: false
+      https_mode:
+        description: 'Modo HTTPS'
+        type: choice
+        options: [selfsigned, letsencrypt, none]
+        default: selfsigned
+      server_name:
+        description: 'SERVER_NAME (dominio o IPv4). Vacío = IP de la VM'
+        type: string
+        default: ''
+        required: false
+      email:
+        description: 'EMAIL (solo con letsencrypt)'
+        type: string
+        default: ''
+        required: false
+      with_api:
+        description: 'Añadir el proxy /api/ (WITH_API=1)'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Simulación: muestra qué haría sin cambiar nada'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Un solo despliegue a la vez y sin cancelar uno que ya está tocando la VM.
+concurrency:
+  group: deploy-vm-educentro
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    name: Desplegar
+    runs-on: [self-hosted, linux, educentro-vm]
+    # Entorno de GitHub con aprobación manual y restricción de ramas (Settings > Environments > produccion).
+    environment: produccion
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Guarda de rama y validación de entradas
+        # Las entradas llegan SOLO por env (nunca interpoladas en el script) y se validan con lista blanca.
+        env:
+          REF: ${{ github.ref }}
+          REF_PERMITIDA: ${{ inputs.ref_permitida }}
+          HTTPS_MODE: ${{ inputs.https_mode }}
+          SERVER_NAME: ${{ inputs.server_name }}
+          EMAIL: ${{ inputs.email }}
+          WITH_API: ${{ inputs.with_api }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          fallo() { echo "::error::$1"; exit 1; }
+          permitida="${REF_PERMITIDA:-main}"
+          [[ "$permitida" =~ ^[A-Za-z0-9._/-]{1,100}$ && "$permitida" != *..* ]] || fallo "ref_permitida inválida."
+          [ "$REF" = "refs/heads/$permitida" ] || fallo "Despliegue abortado: se lanzó desde '$REF' y solo se permite 'refs/heads/$permitida'. Elige esa rama en 'Use workflow from'."
+          case "$HTTPS_MODE" in selfsigned|letsencrypt|none) ;; *) fallo "https_mode inválido.";; esac
+          case "$WITH_API" in true|false) ;; *) fallo "with_api inválido.";; esac
+          case "$DRY_RUN" in true|false) ;; *) fallo "dry_run inválido.";; esac
+          if [ -n "$SERVER_NAME" ]; then
+            [[ "$SERVER_NAME" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$ && "$SERVER_NAME" != *..* ]] || fallo "server_name inválido (solo letras, números, punto y guion)."
+          fi
+          if [ -n "$EMAIL" ]; then
+            [[ "$EMAIL" =~ ^[A-Za-z0-9][A-Za-z0-9._%+-]{0,63}@[A-Za-z0-9.-]{1,200}\.[A-Za-z]{2,}$ ]] || fallo "email inválido."
+          fi
+          if [ "$HTTPS_MODE" = letsencrypt ]; then
+            [ -n "$EMAIL" ] && [ -n "$SERVER_NAME" ] || fallo "letsencrypt necesita server_name y email."
+          fi
+          echo "Rama permitida: refs/heads/$permitida. Entradas válidas."
+
+      - name: Obtener el código
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Desplegar con Node
+        env:
+          HTTPS_MODE: ${{ inputs.https_mode }}
+          SERVER_NAME: ${{ inputs.server_name }}
+          EMAIL: ${{ inputs.email }}
+          WITH_API: ${{ inputs.with_api }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          node --version
+          # sudo vacía el entorno: los valores (ya validados) viajan como argumentos, entre comillas, sin shell de por medio.
+          # Ruta ABSOLUTA: la regla de /etc/sudoers.d/educentro-deploy compara esa cadena exacta (ver RUNNER.md).
+          script="$GITHUB_WORKSPACE/Educentro/deploy/deploy.mjs"
+          [ -f "$script" ] || { echo "::error::No existe $script"; exit 1; }
+          args=("--https-mode=$HTTPS_MODE")
+          [ -z "$SERVER_NAME" ] || args+=("--server-name=$SERVER_NAME")
+          [ -z "$EMAIL" ] || args+=("--email=$EMAIL")
+          [ "$WITH_API" != true ] || args+=("--with-api")
+          [ "$DRY_RUN" != true ] || args+=("--dry-run")
+          sudo -n node "$script" "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+
+      - name: Publicar resumen
+        if: always()
+        env:
+          RESULTADO: ${{ job.status }}
+        run: |
+          {
+            echo "## Despliegue de Educentro: $RESULTADO"
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Rama: \`$GITHUB_REF_NAME\` (lanzado por \`$GITHUB_ACTOR\`)"
+            if [ -f "$RUNNER_TEMP/deploy.log" ]; then
+              echo
+              echo '```'
+              tail -n 60 "$RUNNER_TEMP/deploy.log"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/deploy.log"

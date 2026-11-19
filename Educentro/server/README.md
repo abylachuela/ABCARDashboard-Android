@@ -89,7 +89,7 @@ docker compose run --rm api node dist/cli/crear-admin.js --email admin@tu-domini
 - Los archivos de `secrets/` se montan como Docker secrets; la API los lee con `*_FILE`.
 
 ## Despliegue con nginx
-`sudo WITH_API=1 bash Educentro/deploy/deploy.sh` añade el proxy `/api/` a `127.0.0.1:3000` (ver `../deploy/README.md`). Con nginx en el host y la API en Docker, `TRUST_PROXY` debe incluir la IP desde la que nginx llega a la API (`loopback,uniquelocal` es el valor por defecto de `compose.yml`).
+`sudo WITH_API=1 node Educentro/deploy/deploy.mjs` añade el proxy `/api/` a `127.0.0.1:3000` (ver `../deploy/README.md`). Con nginx en el host y la API en Docker, `TRUST_PROXY` debe incluir la IP desde la que nginx llega a la API (`loopback,uniquelocal` es el valor por defecto de `compose.yml`).
 
 ## Estructura
 ```

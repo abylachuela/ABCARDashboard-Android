@@ -12,7 +12,7 @@ El servidor vive en `Educentro/server/` (Node.js 22, Fastify 5, PostgreSQL 16, T
 - **Auditoría de accesos** (`login_ok`, `login_fallo`, `logout`, `bloqueo`, `cambio_clave`, `recuperacion_solicitada`, `restablecida`) en una tabla de solo anexado, sin contraseñas ni contenido personal.
 - **Roles de base de datos**: la API usa `educentro_app`, distinto del propietario de las tablas (`educentro_owner`), para que la seguridad por filas de la Fase 1 le aplique.
 - **Docker Compose**: `api`, `db` (sin puerto publicado), `migrar` y `backup` (copia diaria cifrada, retención 30 días).
-- **Despliegue**: `deploy.sh` con `WITH_API=1` añade el proxy `/api/` en nginx (modo solo estático intacto).
+- **Despliegue**: `deploy.mjs` con `WITH_API=1` añade el proxy `/api/` en nginx (modo solo estático intacto). Opcional: lanzarlo desde GitHub Actions con un runner propio en la VM (`deploy/RUNNER.md`, workflow `deploy-vm.yml`, manual y con aprobación).
 - **CI**: `educentro-server.yml` (lint, tipos, 86 pruebas contra PostgreSQL real, `npm audit`).
 
 ## Qué falta
