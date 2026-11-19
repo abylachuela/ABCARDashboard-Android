@@ -48,3 +48,17 @@ index.html, css/, js/{app,router,estado,core,data,ui,vistas}, tests/calculo.test
   - Todo lo que hace el agente queda en `AgenteLog` {quién, cuándo, tarea, entrada, salida, aprobado_por}.
   - Datos personales de estudiantes: minimizar y anonimizar en los prompts; requiere consentimiento del centro.
 - Fase: planificación manual en Fase 3; agente simulado en prototipo; integración real (backend + API) en Fase 6.
+
+## Módulo: Currículo MINERD y Secuencias didácticas (añadido)
+
+### Currículo (versionado)
+- Catálogo por nivel (Inicial/Primario/Secundario), ciclo, grado, modalidad, área/asignatura: competencias fundamentales y específicas, contenidos (conceptos, procedimientos, actitudes/valores), indicadores de logro, ejes transversales.
+- `CurriculoVersion` {id, nombre, fuente(url), fechaPublicacion, vigenteDesde, estado: vigente|anterior|borrador, hash}. Importar nueva versión desde JSON, comparar (diff por id) y marcar vigente. Cada dato lleva fuente y estado de verificación (verificado|pendiente).
+- Actualización: el navegador no puede leer el sitio oficial; se importa un archivo y se avisa para revisión periódica (opcional: tarea programada con agente que proponga cambios, aprobación humana siempre).
+- Detalle de lo verificado y las lagunas: docs/CURRICULO-MINERD.md.
+
+### Secuencia didáctica (por unidad/situación de aprendizaje)
+- `SecuenciaDidactica`: cargaId, titulo, curriculoVersionId, area, grado, competenciasFundamentales[], competenciasEspecificas[], contenidos[], indicadoresLogro[], situacionAprendizaje/problematica, fases[{nombre: inicio|desarrollo|cierre, actividades[], estrategias, recursos, tiempo}], sesiones[] (planes de clase vinculados), evaluacion {tecnicas, instrumentos, criterios}, adecuaciones/inclusión, estado.
+- Vínculos: secuencia → planes de clase (`PlanClase.secuenciaId`) → actividades evaluables del libro de notas; cobertura de indicadores por periodo.
+- Editor guiado: elegir grado/área → seleccionar competencias/indicadores del currículo vigente → el agente IA sugiere actividades y evaluación (siempre con aprobación) → exportar/imprimir en formato de centro.
+- Pendiente de verificar con fuente oficial: formato exacto de la secuencia didáctica MINERD (campos y nombres de fases) antes de darlo por definitivo.
