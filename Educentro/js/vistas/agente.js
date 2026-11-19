@@ -135,10 +135,10 @@
       var act = c.actividad || {}, items = [], adv = ['Estimación preliminar basada en el promedio previo del estudiante: el docente debe revisarla antes de aprobar.'];
       (c.estudiantes || []).forEach(function (e) {
         if (e.promedioPct == null) { adv.push(e.ref + ': sin historial, no se propone nota.'); return; }
-        var v = Math.max(0, Math.min(1, e.promedioPct / 100 + ((hash(e.ref + act.nombre) % 11) - 5) / 100));
+        var v = Math.max(0, Math.min(1, e.promedioPct / 100 + ((hash(e.ref + act.titulo) % 11) - 5) / 100));
         items.push({ ref: e.ref, puntos: Math.round(v * act.puntosMax * 2) / 2 });
       });
-      return base(tarea, 'notas', 'Borrador de ' + items.length + ' nota(s) para «' + (act.nombre || 'actividad') + '»', c, opts, { actividadId: act.id, puntosMax: act.puntosMax, items: items, advertencias: adv });
+      return base(tarea, 'notas', 'Borrador de ' + items.length + ' nota(s) para «' + (act.titulo || 'actividad') + '»', c, opts, { actividadId: act.id, puntosMax: act.puntosMax, items: items, advertencias: adv });
     }
     throw new Error('Tarea desconocida: ' + tarea);
   }
@@ -241,7 +241,7 @@
       var con = {}; d.calificaciones.forEach(function (c) { if (c.actividadId === act.id && c.puntos != null) con[c.estudianteId] = 1; });
       var faltan = ests.filter(function (x) { return !con[x.id]; });
       if (!faltan.length) throw new Error('Todos los estudiantes ya tienen nota en esa actividad.');
-      ctx.actividad = { id: act.id, nombre: act.nombre, puntosMax: act.puntosMax };
+      ctx.actividad = { id: act.id, titulo: act.nombre, puntosMax: act.puntosMax };
       ctx.estudiantes = faltan.map(function (x) { return { ref: an.inverso[x.id], promedioPct: pctDe[x.id] == null ? null : Math.round(pctDe[x.id] * 10) / 10 }; });
     }
     verificarContexto(ctx);

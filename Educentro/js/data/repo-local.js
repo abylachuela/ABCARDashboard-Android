@@ -8,7 +8,8 @@
 
   var COLECCIONES = ['centros', 'usuarios', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores',
     'matriculas', 'escalas', 'categorias', 'actividades', 'calificaciones', 'asistencia', 'comunicados', 'planes', 'horarios', 'agenteConfig', 'agenteLog',
-    'auditoria', 'curriculoVersiones', 'curriculoContenidos', 'secuencias'];
+    'auditoria', 'curriculoVersiones', 'curriculoContenidos', 'secuencias',
+    'franjas', 'disponibilidad', 'cursosExtra', 'inscripciones', 'aulaContenidos', 'tareas', 'entregas', 'cuestionarios', 'intentos', 'foros', 'foroMensajes', 'anuncios'];
 
   function clon(x) { return x === undefined ? x : JSON.parse(JSON.stringify(x)); }
   function leer(col) {
