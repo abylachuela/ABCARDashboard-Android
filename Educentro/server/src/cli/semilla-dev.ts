@@ -30,7 +30,7 @@ async function main(): Promise<void> {
       for (const nombre of COLECCIONES) {
         const meta = metaDe(nombre);
         if (!meta || meta.tipo === 'usuarios' || meta.tipo === 'auditoria') continue; // usuarios: ver abajo
-        const op = { modo: 'upsert' as const, conservarFechas: true, sinAuditoria: true };
+        const op = { modo: 'upsert' as const, conservarFechas: true, sinAuditoria: true, sinReglas: true };
         let n = 0;
         for (const r of demo[nombre] ?? []) {
           if (meta.tipo === 'centros') await guardarCentro(p, meta, r, op);

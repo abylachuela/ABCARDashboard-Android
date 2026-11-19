@@ -53,5 +53,17 @@ export const REGISTRO: ReadonlyMap<string, MetaColeccion> = new Map(
 
 export const metaDe = (nombre: string): MetaColeccion | undefined => REGISTRO.get(nombre);
 
-/** Colecciones cuya escritura audita automáticamente el servidor (regla de repo.js `auditar`). */
-export const AUDITADAS: readonly string[] = ['calificaciones', 'notasCompetencia'];
+/** Colecciones cuya escritura audita automáticamente el servidor (repo.js `auditar` + Fase 2: actividades, categorías y periodos). */
+export const AUDITADAS: readonly string[] = ['calificaciones', 'notasCompetencia', 'actividades', 'categorias', 'periodos'];
+
+/**
+ * Columnas «calientes» (generadas desde `datos`, migración 0008): campoApi → columna SQL. Las consultas por estos campos
+ * usan los índices; el registro y la API siguen siendo los mismos.
+ */
+export const COLUMNAS_CALIENTES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  calificaciones: { actividadId: 'actividad_id', estudianteId: 'estudiante_id' },
+  actividades: { cargaId: 'carga_id', categoriaId: 'categoria_id', periodoId: 'periodo_id' },
+  categorias: { cargaId: 'carga_id' },
+  notasCompetencia: { cargaId: 'carga_id', estudianteId: 'estudiante_id' },
+  periodos: { anioId: 'anio_id', orden: 'orden', cerrado: 'cerrado' },
+};

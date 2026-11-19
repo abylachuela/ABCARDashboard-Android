@@ -14,19 +14,24 @@ import { parsearConsulta } from '../repo/consulta.js';
 import {
   borrar, esquemaId, exportarCentro, guardar, listar, MAX_LOTE, obtener, Peticion, validarCuerpo,
 } from '../repo/generico.js';
+import { motivoDeCabecera } from '../repo/reglas-notas.js';
 import { crearAuditoria, listarAuditoria, obtenerAuditoria, registrarAuditoria, ROLES_LEEN_AUDITORIA } from '../repo/auditoria.js';
 import { cambiarUsuario, crearUsuario, desactivarUsuario, listarUsuarios, obtenerUsuario } from '../repo/usuarios.js';
 
-function sesionDe(req: FastifyRequest): SesionApi {
+export function sesionDe(req: FastifyRequest): SesionApi {
   const u = req.sesion?.usuario;
   if (!u || !esRol(u.rol)) throw new ErrorHttp(401, 'no_autenticado', 'Debes iniciar sesión.');
   return { usuarioId: u.id, rol: u.rol, centroId: u.centroId, refId: u.refId };
 }
 
 /** Ejecuta `fn` en una transacción con el contexto de la sesión. Único camino de acceso a datos de la API. */
-function abrir<T>(req: FastifyRequest, fn: (p: Peticion) => Promise<T>): Promise<T> {
+export function abrir<T>(req: FastifyRequest, fn: (p: Peticion) => Promise<T>, opciones: { motivo?: string | null } = {}): Promise<T> {
   const ses = sesionDe(req);
-  return conContexto(req.server.db, { rol: ses.rol, centroId: ses.centroId, usuarioId: ses.usuarioId }, (tx) => fn(new Peticion(tx, ses)));
+  // Motivo de edición (director/admin_red sobre periodos cerrados): cabecera X-EDU-Motivo, codificada con encodeURIComponent.
+  const motivo = opciones.motivo !== undefined ? opciones.motivo : motivoDeCabecera(req.headers['x-edu-motivo']);
+  const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].slice(0, 200) : null;
+  // IP y user-agent los fija el servidor (la auditoría no confía en lo que envíe el cliente).
+  return conContexto(req.server.db, { rol: ses.rol, centroId: ses.centroId, usuarioId: ses.usuarioId, ip: String(req.ip ?? '').slice(0, 45) || null, ua }, (tx) => fn(new Peticion(tx, ses, motivo)));
 }
 
 function coleccion(nombre: string): MetaColeccion {

@@ -35,7 +35,7 @@ export async function limpiarBD(): Promise<void> {
   await owner().query('TRUNCATE usuarios, centros CASCADE'); // sesiones, tokens y colecciones caen en cascada
   // `auditoria` es append-only (ni TRUNCATE): solo el propietario de pruebas desactiva el trigger para limpiarla.
   await owner().query('ALTER TABLE auditoria DISABLE TRIGGER USER');
-  await owner().query('TRUNCATE auditoria');
+  await owner().query('TRUNCATE auditoria, auditoria_cabeza');
   await owner().query('ALTER TABLE auditoria ENABLE TRIGGER USER');
 }
 

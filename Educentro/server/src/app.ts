@@ -10,7 +10,9 @@ import { exigirSesion } from './auth/guardia.js';
 import type { Config } from './config.js';
 import { crearPool, type Pool } from './db/pool.js';
 import { aRespuesta, ErrorHttp } from './errores.js';
+import { calculo } from './domain/calculo-shim.js';
 import { rutasApi } from './routes/api.js';
+import { rutasNotas } from './routes/notas.js';
 import { rutasSalud } from './routes/salud.js';
 
 export interface Dependencias {
@@ -62,6 +64,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
     routerOptions: { maxParamLength: 200 },
   });
 
+  calculo(); // falla cerrado si el cálculo compartido (js/core) no está o cambió de forma
   const pool = deps.pool ?? crearPool(config.databaseUrl);
   const mailer = deps.mailer ?? crearMailer(config);
   app.decorate('config', config);
@@ -140,6 +143,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
     async (v1) => {
       await v1.register(rutasAuth, { prefix: '/auth' });
       await v1.register(rutasApi);
+      await v1.register(rutasNotas);
       v1.get('/ping', { preHandler: exigirSesion() }, async (req) => ({
         pong: true,
         usuario: req.sesion?.usuario.id,

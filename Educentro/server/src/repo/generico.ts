@@ -5,17 +5,20 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ErrorHttp } from '../errores.js';
 import { calcularAlcance, condicionAlcance, type Alcance, type SesionApi } from '../domain/alcance.js';
-import { AUDITADAS, type MetaColeccion } from '../domain/colecciones.js';
+import { AUDITADAS, COLUMNAS_CALIENTES, type MetaColeccion } from '../domain/colecciones.js';
 import { puede, type Registro } from '../domain/autorizacion.js';
 import type { Tx } from '../db/contexto.js';
 import { aplicarFiltros, paginacion, sqlOrden, type Columnas, type Consulta } from './consulta.js';
 import { registrarAuditoria } from './auditoria.js';
+import { aplicarReglas, tieneReglas, type PeriodoFila } from './reglas-notas.js';
+import { calculo, normalizar } from '../domain/calculo-shim.js';
 
 export const MAX_DATOS_BYTES = 256 * 1024;
 export const MAX_LOTE = 500;
 const RESERVADAS = ['id', 'centroId', 'creadoEn', 'actualizadoEn', 'borradoEn'] as const;
 const ID_VALIDO = /^[A-Za-z0-9_.:-]{1,100}$/;
-const COLUMNAS: Columnas = { id: 'id', centroId: 'centro_id', creadoEn: 'creado_en', actualizadoEn: 'actualizado_en' };
+const COLUMNAS_BASE: Columnas = { id: 'id', centroId: 'centro_id', creadoEn: 'creado_en', actualizadoEn: 'actualizado_en' };
+const columnasDe = (col: string): Columnas => ({ ...COLUMNAS_BASE, ...COLUMNAS_CALIENTES[col] });
 const iso = (c: string): string => `to_char(${c} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 const SEL = `id, centro_id, datos, ${iso('creado_en')} AS creado_en, ${iso('actualizado_en')} AS actualizado_en, borrado_en IS NOT NULL AS borrado`;
 
@@ -31,17 +34,101 @@ interface Fila {
 
 export const aPlano = (f: Fila): Registro => ({ ...f.datos, id: f.id, centroId: f.centro_id, creadoEn: f.creado_en, actualizadoEn: f.actualizado_en });
 
-/** Contexto de una petición: sesión + alcance (calculado una sola vez por transacción). */
+export interface ActividadFila {
+  id: string;
+  centroId: string;
+  cargaId: string | null;
+  categoriaId: string | null;
+  periodoId: string | null;
+  puntosMax: number | null;
+}
+export interface CargaFila {
+  id: string;
+  centroId: string;
+  anioId: string | null;
+  seccionId: string | null;
+  docenteId: string | null;
+}
+
+/** Contexto de una petición: sesión + alcance (calculado una sola vez por transacción) + caché de referencias. */
 export class Peticion {
   #alc: Alcance | null | undefined;
-  constructor(readonly tx: Tx, readonly ses: SesionApi) {}
+  #cache = new Map<string, unknown>();
+  constructor(
+    readonly tx: Tx,
+    readonly ses: SesionApi,
+    /** Motivo de una edición sobre un periodo cerrado (cabecera X-EDU-Motivo, ya validado). */
+    readonly motivo: string | null = null,
+  ) {}
   async alcance(): Promise<Alcance | null> {
     if (this.#alc === undefined) this.#alc = await calcularAlcance(this.tx, this.ses);
     return this.#alc;
   }
-  async cargaDeActividad(id: string): Promise<string | null> {
-    const r = await this.tx.query<{ c: string | null }>(`SELECT datos->>'cargaId' AS c FROM actividades WHERE id = $1 AND borrado_en IS NULL`, [id]);
-    return r.rows[0]?.c ?? null;
+  invalidarCache(): void {
+    this.#cache.clear();
+  }
+  async #memo<T>(clave: string, f: () => Promise<T>): Promise<T> {
+    if (!this.#cache.has(clave)) this.#cache.set(clave, await f());
+    return this.#cache.get(clave) as T;
+  }
+  actividad(id: string): Promise<ActividadFila | null> {
+    return this.#memo(`act:${id}`, async () => {
+      const r = await this.tx.query<{ id: string; centro_id: string; carga_id: string | null; categoria_id: string | null; periodo_id: string | null; puntos_max: string | null }>(
+        'SELECT id, centro_id, carga_id, categoria_id, periodo_id, puntos_max::text FROM actividades WHERE id = $1 AND borrado_en IS NULL',
+        [id],
+      );
+      const f = r.rows[0];
+      return f ? { id: f.id, centroId: f.centro_id, cargaId: f.carga_id, categoriaId: f.categoria_id, periodoId: f.periodo_id, puntosMax: f.puntos_max === null ? null : Number(f.puntos_max) } : null;
+    });
+  }
+  carga(id: string): Promise<CargaFila | null> {
+    return this.#memo(`car:${id}`, async () => {
+      const r = await this.tx.query<{ id: string; centro_id: string; anio: string | null; sec: string | null; doc: string | null }>(
+        `SELECT id, centro_id, datos->>'anioId' AS anio, datos->>'seccionId' AS sec, datos->>'docenteId' AS doc FROM cargas WHERE id = $1 AND borrado_en IS NULL`,
+        [id],
+      );
+      const f = r.rows[0];
+      return f ? { id: f.id, centroId: f.centro_id, anioId: f.anio, seccionId: f.sec, docenteId: f.doc } : null;
+    });
+  }
+  categoria(id: string): Promise<{ id: string; cargaId: string | null } | null> {
+    return this.#memo(`cat:${id}`, async () => {
+      const r = await this.tx.query<{ id: string; carga_id: string | null }>('SELECT id, carga_id FROM categorias WHERE id = $1 AND borrado_en IS NULL', [id]);
+      const f = r.rows[0];
+      return f ? { id: f.id, cargaId: f.carga_id } : null;
+    });
+  }
+  periodo(id: string): Promise<PeriodoFila | null> {
+    return this.#memo(`per:${id}`, async () => {
+      const r = await this.tx.query<{ id: string; centro_id: string; nombre: string | null; cerrado: boolean; anio_id: string | null; orden: string | null }>(
+        `SELECT id, centro_id, datos->>'nombre' AS nombre, cerrado, anio_id, orden::text FROM periodos WHERE id = $1 AND borrado_en IS NULL`,
+        [id],
+      );
+      const f = r.rows[0];
+      return f ? { id: f.id, centroId: f.centro_id, nombre: f.nombre ?? f.id, cerrado: f.cerrado, anioId: f.anio_id, orden: f.orden === null ? null : Number(f.orden) } : null;
+    });
+  }
+  /** Periodos de un año escolar ordenados por `orden` (el i-ésimo es el «Pi» de las notas por competencia). */
+  periodosDelAnio(centroId: string, anioId: string): Promise<PeriodoFila[]> {
+    return this.#memo(`pan:${centroId}:${anioId}`, async () => {
+      const r = await this.tx.query<{ id: string; centro_id: string; nombre: string | null; cerrado: boolean; anio_id: string | null; orden: string | null }>(
+        `SELECT id, centro_id, datos->>'nombre' AS nombre, cerrado, anio_id, orden::text FROM periodos
+          WHERE centro_id = $1 AND anio_id = $2 AND borrado_en IS NULL ORDER BY orden NULLS LAST, id`,
+        [centroId, anioId],
+      );
+      return r.rows.map((f) => ({ id: f.id, centroId: f.centro_id, nombre: f.nombre ?? f.id, cerrado: f.cerrado, anioId: f.anio_id, orden: f.orden === null ? null : Number(f.orden) }));
+    });
+  }
+  /** Escala activa del centro (como EDU.consultas.escalaDe del cliente; por defecto 0–100, mínimo 70). */
+  escala(centroId: string): Promise<Record<string, unknown>> {
+    return this.#memo(`esc:${centroId}`, async () => {
+      const r = await this.tx.query<{ id: string; centro_id: string; datos: Registro }>('SELECT id, centro_id, datos FROM escalas WHERE centro_id = $1 AND borrado_en IS NULL ORDER BY id', [centroId]);
+      const lista = r.rows.map((f) => ({ ...f.datos, id: f.id, centroId: f.centro_id }));
+      return normalizar<Record<string, unknown>>(calculo().escalaDe(lista, centroId));
+    });
+  }
+  cargaDeActividad(id: string): Promise<string | null> {
+    return this.actividad(id).then((a) => a?.cargaId ?? null);
   }
 }
 
@@ -70,6 +157,7 @@ export async function listar(p: Peticion, meta: MetaColeccion, c: Consulta): Pro
   } else if (p.ses.rol !== 'admin_red') {
     where.push('FALSE'); // sin centro no se lee (RLS también lo impediría)
   }
+  const COLUMNAS = columnasDe(meta.nombre);
   aplicarFiltros(c, COLUMNAS, params, where);
   const t = tabla(meta);
   const total = (await p.tx.query<{ n: number }>(`SELECT count(*)::int AS n FROM ${t} WHERE ${where.join(' AND ')}`, params)).rows[0]?.n ?? 0;
@@ -124,6 +212,8 @@ export interface OpcionesEscritura {
   conservarFechas?: boolean;
   /** Solo la carga de datos de desarrollo: no genera filas de auditoría. */
   sinAuditoria?: boolean;
+  /** Solo la carga de datos de desarrollo: no aplica las reglas de notas (periodo cerrado, rangos…). */
+  sinReglas?: boolean;
 }
 
 export interface Resultado {
@@ -223,6 +313,17 @@ export async function guardar(p: Peticion, meta: MetaColeccion, cuerpo: Registro
   });
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, etiqueta + dec.mensaje);
 
+  // reglas de negocio del servidor (periodo cerrado, rangos, campos calculados…): después de autorizar, antes de escribir
+  let extraAud: Record<string, unknown> = {};
+  if (tieneReglas(meta.nombre) && !op.sinReglas) {
+    try {
+      extraAud = (await aplicarReglas({ p, meta, accion: actualiza ? 'editar' : 'crear', centro, id, antes, nuevo: bruto })).auditoria ?? {};
+    } catch (e) {
+      if (e instanceof ErrorHttp && etiqueta) throw new ErrorHttp(e.status, e.codigo, etiqueta + e.message, e.campos, e.extra);
+      throw e;
+    }
+  }
+
   const json = JSON.stringify(bruto);
   let guardada: Fila;
   if (actualiza) {
@@ -248,7 +349,7 @@ export async function guardar(p: Peticion, meta: MetaColeccion, cuerpo: Registro
   }
   const registro = aPlano(guardada);
   if (AUDITADAS.includes(meta.nombre) && !op.sinAuditoria) {
-    await registrarAuditoria(tx, ses, centro, { accion: antes ? 'editar' : 'crear', coleccion: meta.nombre, registroId: id, antes, despues: registro });
+    await registrarAuditoria(tx, ses, centro, { accion: antes ? 'editar' : 'crear', coleccion: meta.nombre, registroId: id, antes, despues: registro, extra: extraAud });
   }
   return { registro, antes, creado: !antes };
 }
@@ -266,9 +367,10 @@ export async function borrar(p: Peticion, meta: MetaColeccion, id: string, ifMat
   if (im && im !== fila.actualizado_en) throw new ErrorHttp(409, 'conflicto_version', 'El registro cambió desde que lo leíste. Recarga e inténtalo de nuevo.');
   const dec = await puede(p.ses, meta.nombre, 'borrar', antes, { antes, alcance: await p.alcance(), cargaDeActividad: (a) => p.cargaDeActividad(a) });
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, dec.mensaje);
+  const extraAud = tieneReglas(meta.nombre) ? ((await aplicarReglas({ p, meta, accion: 'borrar', centro: fila.centro_id, id, antes, nuevo: null })).auditoria ?? {}) : {};
   await p.tx.query(`UPDATE ${tabla(meta)} SET borrado_en = now() WHERE id = $1`, [id]);
   if (AUDITADAS.includes(meta.nombre)) {
-    await registrarAuditoria(p.tx, p.ses, fila.centro_id, { accion: 'borrar', coleccion: meta.nombre, registroId: id, antes, despues: null });
+    await registrarAuditoria(p.tx, p.ses, fila.centro_id, { accion: 'borrar', coleccion: meta.nombre, registroId: id, antes, despues: null, extra: extraAud });
   }
 }
 

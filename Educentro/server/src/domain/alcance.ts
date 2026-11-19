@@ -2,6 +2,7 @@
 // tutor → sus hijos; estudiante → él mismo. admin_red, director y secretaría ven todo su centro.
 // Se resuelve con consultas SQL dentro de la transacción con contexto (la RLS ya limita al centro).
 import type { Tx } from '../db/contexto.js';
+import { COLUMNAS_CALIENTES } from './colecciones.js';
 import type { Rol } from './permisos.js';
 
 export interface SesionApi {
@@ -73,6 +74,8 @@ export async function calcularAlcance(tx: Tx, ses: SesionApi): Promise<Alcance |
 // añadir parámetros. Los nombres de campo son constantes de este archivo (nunca del cliente).
 // ---------------------------------------------------------------------------------------------------------------
 export interface CtxRegla {
+  /** Colección que se lee (para elegir la columna caliente de cada campo). */
+  col: string;
   ses: SesionApi;
   alc: Alcance;
   p: (valor: unknown) => string;
@@ -81,7 +84,9 @@ type Regla = (c: CtxRegla) => string;
 type Conjunto = 'cargaIds' | 'seccionIds' | 'estudianteIds' | 'docenteIds';
 type RolRestringido = 'docente' | 'tutor' | 'estudiante';
 
-const dato = (campo: string, conj: Conjunto): Regla => (c) => `datos->>'${campo}' = ANY(${c.p(c.alc[conj])}::text[])`;
+/** Columna SQL de un campo: la generada (indexada) si existe; si no, `datos->>'campo'`. */
+const campoSql = (col: string, campo: string): string => COLUMNAS_CALIENTES[col]?.[campo] ?? `datos->>'${campo}'`;
+const dato = (campo: string, conj: Conjunto): Regla => (c) => `${campoSql(c.col, campo)} = ANY(${c.p(c.alc[conj])}::text[])`;
 const porId = (conj: Conjunto): Regla => (c) => `id = ANY(${c.p(c.alc[conj])}::text[])`;
 const idPropio: Regla = (c) => `id = ${c.p(c.ses.refId)}`;
 const datoPropio = (campo: string, de: 'refId' | 'usuarioId'): Regla => (c) => `datos->>'${campo}' = ${c.p(de === 'refId' ? c.ses.refId : c.ses.usuarioId)}`;
@@ -92,7 +97,7 @@ const hijosDelTutor: Regla = (c) => `datos->'estudianteIds' ?| ${c.p(c.alc.estud
 
 /** Calificaciones de un docente: las de actividades de sus cargas. */
 const calificacionesDeMisCargas: Regla = (c) =>
-  `datos->>'actividadId' IN (SELECT id FROM actividades WHERE borrado_en IS NULL AND datos->>'cargaId' = ANY(${c.p(c.alc.cargaIds)}::text[]))`;
+  `actividad_id IN (SELECT id FROM actividades WHERE borrado_en IS NULL AND carga_id = ANY(${c.p(c.alc.cargaIds)}::text[]))`;
 
 /** Comunicados: solo publicados y dirigidos al rol (o a todos); un segmento de tutor solo lo ve ese tutor. */
 const comunicadosVisibles: Regla = (c) => {
@@ -147,8 +152,8 @@ export function condicionAlcance(col: string, ses: SesionApi, alc: Alcance | nul
     params.push(v);
     return `$${params.length}`;
   };
-  if (col === 'agenteLog' && ses.rol === 'secretaria') return datoPropio('usuarioId', 'usuarioId')({ ses, alc: alc ?? VACIO(), p });
+  if (col === 'agenteLog' && ses.rol === 'secretaria') return datoPropio('usuarioId', 'usuarioId')({ col, ses, alc: alc ?? VACIO(), p });
   if (!alc) return null;
   const regla = REGLAS[col]?.[ses.rol as RolRestringido];
-  return regla ? regla({ ses, alc, p }) : null;
+  return regla ? regla({ col, ses, alc, p }) : null;
 }
