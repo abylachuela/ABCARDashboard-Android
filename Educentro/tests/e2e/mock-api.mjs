@@ -82,7 +82,9 @@ export function iniciarMock({ puerto = 3000, host = '127.0.0.1', log = false } =
   const cookieSid = (req) => /(?:^|;\s*)edu_sid=([^;]+)/.exec(req.headers.cookie || '')?.[1];
   const sesionDe = (req) => { const s = st.sesiones.get(cookieSid(req)); return s && s.expira > Date.now() ? s : null; };
   const exigirSesion = (req) => { const s = sesionDe(req); if (!s) throw new Err(401, 'no_autenticado', 'Sesión no válida o caducada.'); return s; };
-  const publico = (u) => ({ id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, refId: u.refId, centroUsuario: u.centroId, debeCambiarClave: !!u.debeCambiarClave });
+  // forma REAL del servidor (docs/API-REST.md y server/README.md): usuario con centroId; csrfToken y debeCambiarClave al nivel superior
+  const publico = (u) => ({ id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, centroId: u.centroId, refId: u.refId });
+  const cuerpoSesion = (u, csrf) => ({ usuario: publico(u), csrfToken: csrf, debeCambiarClave: !!u.debeCambiarClave });
   const abrirSesion = (res, u) => {
     const id = sid(), csrf = crypto.randomBytes(24).toString('base64url');
     st.sesiones.set(id, { id, usuario: u, csrf, expira: Date.now() + 12 * 3600e3 });
@@ -176,22 +178,22 @@ export function iniciarMock({ puerto = 3000, host = '127.0.0.1', log = false } =
       if (!u || u.clave !== clave) { if (u) u.fallos++; throw new Err(401, 'credenciales', 'Correo o contraseña incorrectos.'); }
       u.fallos = 0;
       const csrf = abrirSesion(res, u);
-      return responder(res, 200, { usuario: publico(u), csrf });
+      return responder(res, 200, cuerpoSesion(u, csrf));
     }
     if (m === 'POST' && r === '/auth/logout') { st.sesiones.delete(cookieSid(req)); return responder(res, 204, undefined, { 'Set-Cookie': `${COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0` }); }
-    if (m === 'GET' && r === '/auth/me') { const s = exigirSesion(req); return responder(res, 200, { usuario: publico(s.usuario), csrf: s.csrf }); }
+    if (m === 'GET' && r === '/auth/me') { const s = exigirSesion(req); return responder(res, 200, cuerpoSesion(s.usuario, s.csrf)); }
     if (m === 'POST' && r === '/auth/cambiar-clave') {
       const u = ses.usuario, { claveActual, claveNueva } = cuerpo || {};
       if (u.clave !== claveActual) throw new Err(401, 'credenciales', 'Contraseña actual incorrecta.');
       if (typeof claveNueva !== 'string' || claveNueva.length < CLAVE_MIN) throw new Err(422, 'clave_debil', `La contraseña debe tener al menos ${CLAVE_MIN} caracteres.`, ['claveNueva']);
       u.clave = claveNueva; u.debeCambiarClave = false;
       for (const [k, v] of st.sesiones) if (v.usuario === u) st.sesiones.delete(k); // rota: se revocan todas y se emite una nueva
-      abrirSesion(res, u);
-      return responder(res, 204);
+      const csrf = abrirSesion(res, u);
+      return responder(res, 200, cuerpoSesion(u, csrf));
     }
     if (m === 'POST' && r === '/auth/recuperar') return responder(res, 202, { ok: true });
     if (m === 'POST' && r === '/auth/restablecer') {
-      const { token, claveNueva } = cuerpo || {};
+      const { token, clave: claveNueva } = cuerpo || {};
       if (token !== TOKEN_RESTABLECER_OK) throw new Err(400, 'token_invalido', 'Enlace no válido o caducado.');
       if (typeof claveNueva !== 'string' || claveNueva.length < CLAVE_MIN) throw new Err(422, 'clave_debil', `La contraseña debe tener al menos ${CLAVE_MIN} caracteres.`, ['claveNueva']);
       return responder(res, 204);
@@ -221,12 +223,15 @@ export function iniciarMock({ puerto = 3000, host = '127.0.0.1', log = false } =
       c.lecturas = Array.isArray(c.lecturas) ? c.lecturas : [];
       if (!c.lecturas.some((l) => l.usuarioId === u.id)) c.lecturas.push({ usuarioId: u.id, fecha: ahora() });
       c.actualizadoEn = ahora();
-      return responder(res, 200, c);
+      return responder(res, 200, { leido: true });
     }
     if (m === 'GET' && r === '/respaldo/exportar') {
       if (!['admin_red', 'director'].includes(u.rol)) throw new Err(403, 'sin_permiso', 'Sin permiso.');
-      const out = {}; for (const c of st.cols) out[c] = st.datos[c].filter((x) => visible(u, c, x) && (c !== 'auditoria' || ['admin_red', 'director'].includes(u.rol)));
-      return responder(res, 200, { datos: out });
+      const cid = url.searchParams.get('centroId') || (u.rol === 'director' ? u.centroId : null);
+      if (!cid) throw new Err(422, 'datos_invalidos', 'centroId es obligatorio (elige un centro).', ['centroId']);
+      if (u.rol !== 'admin_red' && cid !== u.centroId) throw new Err(403, 'centro_no_permitido', 'Centro no permitido.');
+      const out = {}; for (const c of st.cols) out[c] = st.datos[c].filter((x) => (c === 'centros' ? x.id === cid : x.centroId === cid));
+      return responder(res, 200, { formato: 'educentro-respaldo', version: 1, generadoEn: ahora(), centroId: cid, colecciones: out });
     }
     if (m === 'POST' && r === '/respaldo/importar') throw new Err(501, 'no_implementado', 'Disponible en la Fase 5.');
 

@@ -96,6 +96,14 @@ async function probarRol(browser, rol, cred, base, origenes) {
     ok(r.borrado === true && r.trasBorrar === null, et('borrar y comprobar que no existe'));
     for (const p of vig.problemas()) fallos.push(et('CRUD: ' + p));
     vig.limpiar();
+    // Respaldo: exportar funciona (se genera en el servidor) e importar queda desactivado hasta la Fase 5
+    await irA(page, '#/respaldo');
+    ok(await page.isDisabled('button:has-text("Importar respaldo")'), et('importar respaldo desactivado (Fase 5)'));
+    ok(!(await page.$('#rbReset')), et('sin «restablecer datos demo» en modo servidor'));
+    const [descarga] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#rbExp')]);
+    ok(/^educentro-respaldo-/.test(descarga.suggestedFilename()), et('descarga del respaldo'));
+    for (const p of vig.problemas()) fallos.push(et('respaldo: ' + p));
+    vig.limpiar();
     // CSRF: sin cabecera el servidor debe rechazar
     vig.silenciar(1);
     const st = await page.evaluate(async () => (await fetch('/api/v1/c/comunicados', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"titulo":"x"}', credentials: 'same-origin' })).status);

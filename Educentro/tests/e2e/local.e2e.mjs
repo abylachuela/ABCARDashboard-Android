@@ -16,7 +16,7 @@ try {
   for (const t of ['calculo', 'planilla']) {
     const page = await browser.newPage();
     await page.goto(pathToFileURL(path.join(RAIZ, 'tests', `${t}.test.html`)).href);
-    await page.waitForFunction(() => window.__resultado, null, { timeout: 60000 });
+    await page.waitForFunction(() => /^(PASS|FAIL)$/.test(document.title), null, { timeout: 90000 });
     const r = await page.evaluate(() => ({ t: document.title, res: document.getElementById('res').textContent.replace(/\s+/g, ' ').slice(0, 80) }));
     console.log(`tests/${t}.test.html: ${r.t} · ${r.res}`);
     if (r.t !== 'PASS') fallos.push(`${t}.test.html: ${r.t}`);

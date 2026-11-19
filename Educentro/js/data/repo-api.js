@@ -21,6 +21,7 @@
     datos: 'Los datos enviados no son válidos.',
     limite: 'Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.',
     servidor: 'El servidor no pudo completar la operación. Inténtalo más tarde.',
+    duplicado: 'Ya existe un registro con esos datos.',
     grande: 'El registro o el archivo es demasiado grande.',
     inesperada: 'Respuesta inesperada del servidor.',
     fase5: 'Disponible en la Fase 5 (migración de datos); aún no está activo en modo servidor.'
@@ -45,9 +46,9 @@
     if (mensajes && mensajes[estado]) return mensajes[estado];
     var er = cuerpo && typeof cuerpo === 'object' && cuerpo.error && typeof cuerpo.error === 'object' ? cuerpo.error : {};
     if (estado === 401) return MSG.sesion;
-    if (estado === 403) return MSG.permiso;
+    if (estado === 403) return er.codigo === 'cambio_clave_obligatorio' ? 'Debes cambiar tu contraseña antes de continuar.' : MSG.permiso;
     if (estado === 404) return MSG.noHallado;
-    if (estado === 409) return MSG.conflicto;
+    if (estado === 409) return !er.codigo || er.codigo === 'conflicto_version' ? MSG.conflicto : (limpio(er.mensaje, 200) || MSG.duplicado);
     if (estado === 413) return MSG.grande;
     if (estado === 429) return MSG.limite;
     if (estado === 422) {
@@ -96,6 +97,13 @@
     var er = datos && datos.error && typeof datos.error === 'object' ? datos.error : {};
     var err = error(mensajeDe(resp.status, datos, o.mensajes), resp.status, limpio(er.codigo, 60) || null, Array.isArray(er.campos) ? er.campos.map(function (x) { return limpio(String(x), 40); }).slice(0, 20) : null);
     if (resp.status === 401 && !o.sinCierre) caducada();
+    if (resp.status === 403 && err.codigo === 'csrf_invalido' && !o.reintentoCsrf && !o.sinCierre) { // token CSRF desfasado (p. ej. sesion rotada en otra pestana): se renueva y se reintenta una vez
+      var viva = null; try { viva = await api.auth.me(); } catch (e) { viva = null; }
+      if (viva) return peticion(metodo, ruta, Object.assign({}, o, { reintentoCsrf: true }));
+    }
+    if (resp.status === 403 && err.codigo === 'cambio_clave_obligatorio' && EDU.estado && EDU.estado.refrescar) {
+      EDU.estado.refrescar().then(function () { if (EDU.router) EDU.router.ir('cambiar-clave'); }, function () { /* sin accion */ });
+    }
     if (resp.status === 409 && o.col) invalidar(o.col);
     throw err;
   }
@@ -191,11 +199,13 @@
     invalidar(col);
     return true;
   };
-  /** Respaldo del alcance del usuario. {centroId?} solo lo usa admin_red. */
+  /** Respaldo de UN centro (GET /respaldo/exportar; queda auditado en el servidor). {centroId?} solo lo usa admin_red (por defecto, su centro activo). */
   api.exportarTodo = async function (o) {
-    var q = o && o.centroId && esAdmin() ? '?centroId=' + encodeURIComponent(o.centroId) : '';
-    var j = await peticion('GET', '/respaldo/exportar' + q);
-    var d = j && typeof j === 'object' && j.datos && typeof j.datos === 'object' && !Array.isArray(j.datos) ? j.datos : j;
+    var cid = esAdmin() ? ((o && o.centroId) || (EDU.estado.centroActivo && EDU.estado.centroActivo())) : null; // admin_red: el servidor exige centroId
+    if (esAdmin() && !cid) throw error('Elige un centro activo para exportar el respaldo.', 422, 'centro_requerido');
+    var j = await peticion('GET', '/respaldo/exportar' + (cid ? '?centroId=' + encodeURIComponent(cid) : ''));
+    var sub = j && typeof j === 'object' ? (j.colecciones || j.datos) : null;
+    var d = sub && typeof sub === 'object' && !Array.isArray(sub) ? sub : j;
     if (!d || typeof d !== 'object' || Array.isArray(d)) throw error(MSG.inesperada, 200, 'respuesta');
     var out = {}; COLECCIONES.forEach(function (c) { out[c] = Array.isArray(d[c]) ? d[c] : []; });
     return out;
@@ -223,9 +233,13 @@
   };
 
   // ---------------------------------------------------------------- autenticacion (/auth/*)
+  /** Acepta {usuario:{…centroId|centroUsuario}, csrfToken|csrf, debeCambiarClave} y devuelve {usuario:{id,nombre,email,rol,refId,centroUsuario,debeCambiarClave}, csrf}. */
   function datosSesion(j) {
     if (!j || typeof j !== 'object' || !j.usuario || typeof j.usuario !== 'object' || !j.usuario.id || !j.usuario.rol) throw error(MSG.inesperada, 200, 'respuesta');
-    return j;
+    var u = j.usuario;
+    return { usuario: { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, refId: u.refId || null,
+      centroUsuario: (u.centroUsuario !== undefined ? u.centroUsuario : u.centroId) || null,
+      debeCambiarClave: !!(u.debeCambiarClave !== undefined ? u.debeCambiarClave : j.debeCambiarClave) }, csrf: typeof j.csrf === 'string' ? j.csrf : (typeof j.csrfToken === 'string' ? j.csrfToken : null) };
   }
   api.auth = {
     /** -> {usuario, csrf}. Mensaje generico (no enumera usuarios) para 401/403/422. */
@@ -233,12 +247,12 @@
       var gen = 'Correo o contraseña incorrectos.';
       var j = datosSesion(await peticion('POST', '/auth/login', { cuerpo: { email: String(email || '').trim(), clave: String(clave || '') }, sinCierre: true,
         mensajes: { 401: gen, 403: gen, 404: gen, 422: gen, 429: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' } }));
-      csrf = typeof j.csrf === 'string' ? j.csrf : null; limpiarCache();
+      csrf = j.csrf; limpiarCache();
       return j;
     },
     /** -> {usuario, csrf} o null si no hay sesion (401). Los demas fallos (red, 5xx) se lanzan. */
     me: async function () {
-      try { var j = datosSesion(await peticion('GET', '/auth/me', { sinCierre: true })); csrf = typeof j.csrf === 'string' ? j.csrf : csrf; return j; }
+      try { var j = datosSesion(await peticion('GET', '/auth/me', { sinCierre: true })); csrf = j.csrf || csrf; return j; }
       catch (e) { if (e.estado === 401) { csrf = null; return null; } throw e; }
     },
     logout: async function () {
@@ -247,14 +261,16 @@
     },
     /** La sesion se rota en el servidor: se renueva el token CSRF con /auth/me. */
     cambiarClave: async function (claveActual, claveNueva) {
-      await peticion('POST', '/auth/cambiar-clave', { cuerpo: { claveActual: String(claveActual || ''), claveNueva: String(claveNueva || '') }, sinCierre: true,
+      var r = await peticion('POST', '/auth/cambiar-clave', { cuerpo: { claveActual: String(claveActual || ''), claveNueva: String(claveNueva || '') }, sinCierre: true,
         mensajes: { 401: 'No se pudo cambiar la contraseña. Revisa la contraseña actual.' } });
+      limpiarCache();
+      try { var n = datosSesion(r); if (n.csrf) { csrf = n.csrf; return n; } } catch (e) { /* respuesta sin sesion (204): se relee */ }
       return api.auth.me();
     },
     /** 202 siempre: no revela si el correo existe. */
     recuperar: async function (email) { await peticion('POST', '/auth/recuperar', { cuerpo: { email: String(email || '').trim() }, sinCierre: true }); return true; },
     restablecer: async function (token, claveNueva) {
-      await peticion('POST', '/auth/restablecer', { cuerpo: { token: String(token || ''), claveNueva: String(claveNueva || '') }, sinCierre: true,
+      await peticion('POST', '/auth/restablecer', { cuerpo: { token: String(token || ''), clave: String(claveNueva || '') }, sinCierre: true,
         mensajes: { 400: 'El enlace no es válido o ya caducó. Solicita uno nuevo.', 401: 'El enlace no es válido o ya caducó. Solicita uno nuevo.', 403: 'El enlace no es válido o ya caducó. Solicita uno nuevo.', 404: 'El enlace no es válido o ya caducó. Solicita uno nuevo.', 410: 'El enlace no es válido o ya caducó. Solicita uno nuevo.' } });
       return true;
     }

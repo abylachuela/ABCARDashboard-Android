@@ -106,7 +106,7 @@
     titulo: 'Respaldo',
     render: async function (cont) {
       var s = ses(), esAdmin = s.rol === 'admin_red', puedeImp = EDU.permisos.puede(s.rol, 'respaldo', 'importar'), puedeExp = EDU.permisos.puede(s.rol, 'respaldo', 'exportar');
-      var datos = await datosExportables(), st = API ? { filas: [], total: 0 } : almacenamiento(), pct = st.total / CUOTA * 100, ult = API ? ultMem : EDU.almacen.get(KEY_ULT);
+      var datos = API ? {} : await datosExportables(), st = API ? { filas: [], total: 0 } : almacenamiento(), pct = st.total / CUOTA * 100, ult = API ? ultMem : EDU.almacen.get(KEY_ULT);
       var advertencias = [];
       if (!API && EDU.almacen.modo() === 'memoria') advertencias.push(['red', 'Sin almacenamiento persistente', 'El navegador bloquea localStorage: los datos se pierden al cerrar la pestaña. Exporte un respaldo.']);
       if (!API && EDU.repoLocal.advertencia) advertencias.push(['red', 'Escritura incompleta', EDU.repoLocal.advertencia]);
@@ -116,22 +116,22 @@
       if (!ult) advertencias.push(['', 'Sin respaldos recientes', 'Aún no ha exportado un respaldo desde este navegador.']);
       advertencias.push(['', 'Datos personales', 'El archivo contiene datos de estudiantes y tutores. Guárdelo en un lugar seguro y no lo comparta por canales abiertos.']);
 
-      cont.innerHTML = ui.cabecera({ eyebrow: 'Datos', titulo: 'Respaldo', descripcion: esAdmin ? 'Respaldo de toda la red.' : 'Respaldo de los datos de su centro.' }).toString() +
+      cont.innerHTML = ui.cabecera({ eyebrow: 'Datos', titulo: 'Respaldo', descripcion: API ? 'Respaldo del centro (cada descarga queda registrada en la auditoría).' : esAdmin ? 'Respaldo de toda la red.' : 'Respaldo de los datos de su centro.' }).toString() +
         ui.kpis([(API ? { etiqueta: 'Almacenamiento', valor: 'Servidor', detalle: 'no se guarda nada en este navegador', tono: 'ok' } : { etiqueta: 'Almacenamiento usado', valor: kb(st.total * 2), detalle: fmt.pct(pct, 1) + ' de ~5 MB (estimado)', tono: pct > 85 ? 'bad' : 'ok' }),
-          { etiqueta: 'Registros', valor: String(Object.keys(datos).reduce(function (a, c) { return a + datos[c].length; }, 0)), detalle: esAdmin ? 'en toda la red' : 'de su centro', tono: 'neu' },
+          (API ? { etiqueta: 'Alcance del respaldo', valor: esAdmin ? 'Centro activo' : 'Su centro', detalle: 'se genera en el servidor al descargar', tono: 'neu' } : { etiqueta: 'Registros', valor: String(Object.keys(datos).reduce(function (a, c) { return a + datos[c].length; }, 0)), detalle: esAdmin ? 'en toda la red' : 'de su centro', tono: 'neu' }),
           { etiqueta: 'Último respaldo', valor: ult ? fmt.fecha(ult.slice(0, 10)) : 'Nunca', detalle: API ? 'en esta sesión' : 'desde este navegador', tono: ult ? 'ok' : 'bad' },
           (API ? { etiqueta: 'Modo', valor: 'Servidor', tono: 'ok' } : { etiqueta: 'Modo de almacenamiento', valor: EDU.almacen.modo() === 'local' ? 'localStorage' : 'Memoria', tono: EDU.almacen.modo() === 'local' ? 'ok' : 'bad' })]).toString() +
         '<div aria-label="Advertencias">' + advertencias.map(function (a) { return '<div class="alert ' + a[0] + '"><div><strong>' + esc(a[1]) + '</strong><small>' + esc(a[2]) + '</small></div></div>'; }).join('') + '</div>' +
-        '<div class="grid two" style="margin-top:16px"><section class="card" aria-labelledby="rbE"><h2 id="rbE">Exportar</h2><p class="note">Descarga un archivo JSON con ' + (esAdmin ? 'todas las colecciones.' : 'los datos de su centro.') + '</p>' +
-        '<div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn amb" id="rbExp"' + (puedeExp ? '' : ' disabled') + '>Descargar respaldo (.json)</button></div></section>' +
+        '<div class="grid two" style="margin-top:16px"><section class="card" aria-labelledby="rbE"><h2 id="rbE">Exportar</h2><p class="note">Descarga un archivo JSON con ' + (API ? 'las colecciones del centro' : esAdmin ? 'todas las colecciones.' : 'los datos de su centro.') + '</p>' +
+        '<div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn amb" id="rbExp"' + (puedeExp && !(API && esAdmin && !s.centroActivo) ? '' : ' disabled') + '>Descargar respaldo (.json)</button>' + (API && esAdmin && !s.centroActivo ? '<span class="note">Elige un centro activo (arriba) para exportar.</span>' : '')</div></section>' +
         '<section class="card" aria-labelledby="rbI"><h2 id="rbI">Importar</h2><p class="note">Se valida el esquema y se muestra un resumen antes de reemplazar datos. ' + (esAdmin ? '' : 'Solo se aceptan datos de su centro.') + '</p>' +
         (API ? '<p class="note">Disponible en la Fase 5 (migración de datos): importar respaldos aún no está activo en modo servidor.</p><div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn" disabled aria-disabled="true">Importar respaldo (Fase 5)</button></div>' : puedeImp ? '<label class="fld">Archivo de respaldo<input type="file" id="rbFile" accept=".json,application/json"></label><div id="rbRes" aria-live="polite"></div>' : '<p class="note">Su rol no puede importar.</p>') + '</section></div>' +
-        '<section class="card" style="margin-top:16px" aria-labelledby="rbT"><h2 id="rbT">Detalle por colección</h2><div id="rbTab"></div></section>' +
+        (API ? '' : '<section class="card" style="margin-top:16px" aria-labelledby="rbT"><h2 id="rbT">Detalle por colección</h2><div id="rbTab"></div></section>') +
         (esAdmin && !API ? '<section class="card" style="margin-top:16px" aria-labelledby="rbR"><h2 id="rbR">Restablecer datos de ejemplo</h2><p class="note">Borra TODOS los datos y vuelve a la semilla de demostración. Cierra la sesión. Exporte antes un respaldo.</p><div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn dng" id="rbReset">Restablecer semilla</button></div></section>' : '');
       var $ = function (id) { return cont.querySelector('#' + id); };
       var tamano = {}; st.filas.forEach(function (f) { tamano[f.coleccion] = f.n * 2; });
       if (API) Object.keys(datos).forEach(function (c) { tamano[c] = JSON.stringify(datos[c]).length; });
-      $('rbTab').appendChild(ui.tabla({ caption: 'Colecciones respaldables', buscar: false, porPagina: false, ordenInicial: 'coleccion',
+      if (!API) $('rbTab').appendChild(ui.tabla({ caption: 'Colecciones respaldables', buscar: false, porPagina: false, ordenInicial: 'coleccion',
         filas: Object.keys(datos).map(function (c) { return { coleccion: c, registros: datos[c].length, bytes: esAdmin ? tamano[c] || 0 : JSON.stringify(datos[c]).length * 2 }; }),
         columnas: [{ clave: 'coleccion', titulo: 'Colección' }, { clave: 'registros', titulo: 'Registros', align: 'r' }, { clave: 'bytes', titulo: 'Tamaño aprox.', align: 'r', formato: function (v) { return kb(v); } }] }).el);
 
