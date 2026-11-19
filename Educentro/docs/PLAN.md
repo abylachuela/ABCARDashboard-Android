@@ -62,3 +62,16 @@ index.html, css/, js/{app,router,estado,core,data,ui,vistas}, tests/calculo.test
 - Vínculos: secuencia → planes de clase (`PlanClase.secuenciaId`) → actividades evaluables del libro de notas; cobertura de indicadores por periodo.
 - Editor guiado: elegir grado/área → seleccionar competencias/indicadores del currículo vigente → el agente IA sugiere actividades y evaluación (siempre con aprobación) → exportar/imprimir en formato de centro.
 - Pendiente de verificar con fuente oficial: formato exacto de la secuencia didáctica MINERD (campos y nombres de fases) antes de darlo por definitivo.
+
+## Módulo: Horarios docentes (administración) (añadido)
+- Acceso: edición director y secretaría (y admin_red en lectura/edición por centro); el docente ve solo su horario; tutor/estudiante ven el de su sección.
+- Entidades: `Franja` {centroId, tanda: matutina|vespertina|extendida, orden, inicio, fin, tipo: clase|recreo|almuerzo}, `Horario` {cargaId, dia(1-5), franjaId, aula}, `DisponibilidadDocente` {docenteId, dia, franjaId, disponible}, horas semanales por carga.
+- Vistas: horario por sección, por docente y por aula (grilla L–V × franjas), configuración de franjas y tandas, carga horaria por docente (horas asignadas vs. contrato), exportar/imprimir.
+- Validaciones: un docente no puede estar en dos secciones en la misma franja; una sección no puede tener dos asignaturas a la vez; respetar disponibilidad; horas semanales por asignatura completas; avisos de sobrecarga.
+- Ayuda: autogenerar propuesta de horario (algoritmo de asignación simple) y/o sugerencia del agente IA, siempre con revisión y aprobación humana antes de guardar.
+- Integración: el horario alimenta el calendario de Planificación y el Aula virtual (clases del día).
+
+## Módulo: Aula virtual tipo Moodle + app Android (añadido)
+- Cursos virtuales por carga: temas, recursos (texto/enlace/archivo), tareas con entrega y calificación (nota → libro de notas con auditoría), cuestionarios autocalificados, foros/anuncios, calendario de entregas, progreso.
+- Android: proyecto Capacitor independiente en `Educentro/mobile/` (no toca la app ABCAR de la raíz).
+- Límite: sin backend no hay sincronización entre usuarios ni notificaciones push reales.
