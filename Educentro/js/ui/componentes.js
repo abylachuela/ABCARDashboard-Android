@@ -28,7 +28,12 @@
     respaldo: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
     salir: '<path d="M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h4M16 8l4 4-4 4M20 12H9"/>',
     horarios: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
-    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>'
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    aula: '<path d="M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5M22 9v6"/>',
+    tarea: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.5h6V4M8.5 12l2 2 4-4.5M9 18h6"/>',
+    foro: '<path d="M4 5h16v11H9l-5 4zM8 9h8M8 12.5h5"/>',
+    enlace: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+    archivo: '<path d="M6 3h9l4 4v14H6zM15 3v4h4M9 13h7M9 17h5"/>'
   };
 
   var ui = {
