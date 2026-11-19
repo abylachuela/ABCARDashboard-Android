@@ -34,6 +34,9 @@ Hecho y probado con PostgreSQL 16 real (362 pruebas: las 86 de la Fase 0 + parid
 - **Lote**: 500 registros máx., pero el cuerpo sigue limitado a 1 MB. `cuestionarios.correcta` aún viaja al estudiante (rediseño en Fase 4). `respaldo/importar` → 501 (Fase 5).
 - **No probado aquí**: despliegue con Docker, CI real en GitHub (se ejecutó el mismo flujo localmente), rendimiento con volúmenes grandes, y el cliente (`repo-api.js`).
 
+## Estado de la Fase 1, tramo cliente (implementado)
+`js/config.js` (modo `local`/`api`), `js/data/repo-api.js` (adaptador con paginación, CSRF, mapeo de errores, caché en memoria), sesión por `/auth/me`, login con correo y contraseña, cambio obligatorio, recuperar/restablecer, `EDU.repo` delegando `auditar`/`registrarLectura` en el servidor, Respaldo sin «restablecer demo» ni importar (Fase 5), `deploy.mjs --with-api` publica `js/config.js` con modo `api`. Pruebas: 18 unitarias del adaptador, e2e `tests/e2e/api.e2e.mjs` (6 roles) pasando contra el servidor real y contra el mock, regresión local 28/28 y 10/10. Diferencias con el plan: `exportarTodo` pide un centro (admin_red usa el centro activo) y se genera en el servidor (auditado); el lote es upsert por id. Ver `docs/API.md` (Modo API) y `tests/e2e/README.md`.
+
 ## Lo que condiciona el diseño (hallazgos del código actual)
 - `EDU.repo` (`js/data/repo.js`) ya actúa de controlador: centro activo, escritura por colección (`ESCRIBE`), propiedad (docente→sus cargas, estudiante→lo propio), auditoría de calificaciones, `auditar`, `registrarLectura`, `exportarTodo/importarTodo`. Casi todo se traslada 1:1 al servidor.
 - Un adaptador nuevo debe cumplir la interfaz de `repo-local.js`: `listar`, `obtener`, `guardar`, `guardarMuchos`, `borrar`, `exportarTodo`, `importarTodo`. Hay 37 colecciones; filtro/orden/límite se aplican hoy en el cliente.

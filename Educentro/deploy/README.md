@@ -47,6 +47,7 @@ Por defecto el despliegue es **solo estático** y no cambia. Con `WITH_API=1` el
 sudo WITH_API=1 SERVER_NAME=notas.tudominio.edu EMAIL=tu@correo HTTPS_MODE=letsencrypt node Educentro/deploy/deploy.mjs
 ```
 - Crea `location ^~ /api/` y `location ^~ /api/v1/auth/` (proxy a `API_UPSTREAM`, por defecto `127.0.0.1:3000`) con `X-Forwarded-For/Proto/Host` fijados por nginx (el cliente no puede falsear su IP), `client_max_body_size 1m`, `limit_req` con zonas propias (`edu_api` 10 r/s, `edu_auth` 2 r/s con ráfaga) y sin caché. Las cabeceras de seguridad de `/api/` las envía la propia API.
+- Escribe `js/config.js` **en la versión publicada** (no en el repositorio) con `modo: 'api'`; sin `WITH_API` publica `modo: 'local'` (demo en el navegador). Verifícalo con `curl https://<SERVER_NAME>/js/config.js`.
 - Configura la API con `PUBLIC_URL=https://<SERVER_NAME>` y `TRUST_PROXY` con la IP de nginx. Como web y API comparten origen, la CSP (`connect-src 'self'`) **no cambia**.
 - Si la API aún no responde, el script avisa (502) pero termina bien; si nginx no enruta `/api/` (404) falla. Volver a ejecutar sin `WITH_API` elimina el proxy.
 - Probado aquí con nginx real (modo estático y modo API, `nginx -t` en ambos, y con la API detrás: login por HTTPS, cookie `__Host-`, 413 a 1 MB, 429 por `limit_req`); no probado en tu VM.

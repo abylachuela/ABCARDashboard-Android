@@ -86,6 +86,14 @@ Existe ya la base del servidor: login real con sesión en cookie opaca `__Host-e
 ## Backend, Fase 1 (servidor): autorización y aislamiento
 La API `/api/v1/c/:col` aplica en el **servidor** rol → colección, centro, alcance (docente/tutor/estudiante) y propiedad, y el aislamiento entre centros se refuerza con **RLS de PostgreSQL** (rol de BD no propietario, `SET LOCAL app.centro_id/app.rol` por transacción, sin contexto = 0 filas; verificado con SQL directo). Permisos con fuente única (`permisos.json` ↔ `permisos.js`, comprobado en CI), `centroId` impuesto por el servidor, sin escalada de rol, filtros/orden parametrizados, auditoría append-only de calificaciones y respuestas de `usuarios` sin hash. Límites: `usuarios`/sesiones sin RLS (login previo al contexto); `cuestionarios.correcta` sigue llegando al cliente hasta la Fase 4; el frontend aún no usa la API, así que los hallazgos del cliente siguen vigentes hasta el tramo cliente. Detalle en `docs/API-REST.md` y `docs/BACKEND.md`.
 
+## Modo API del cliente (Fase 1)
+- La sesión es la cookie `HttpOnly` del servidor: el JS no la ve. El token CSRF llega en login y `/auth/me`, vive solo en memoria y se envía en `X-EDU-CSRF` en POST/PUT/DELETE; si se desfasa se renueva con `/auth/me` y se reintenta una vez.
+- En modo `api` no se guarda nada en `localStorage`/`sessionStorage`/IndexedDB: ni datos personales, ni sesión, ni contraseñas, ni tokens (el token de `#/restablecer/<token>` va en el fragmento, se guarda solo en memoria y se borra de la URL). Caché solo en memoria, descartada al cerrar sesión.
+- Login con mensaje genérico (no enumera usuarios), `autocomplete` correcto (`username`, `current-password`, `new-password`, `email`), recuperación con respuesta neutra; un 401 en cualquier petición cierra la sesión local.
+- Errores: textos fijos en español; solo se muestra el `mensaje` de validación (422) del servidor, saneado y acotado. Nunca cuerpos crudos, trazas ni errores de red.
+- CSP sin cambios: `connect-src 'self'` (web y API en el mismo origen vía nginx). Una `apiBase` absoluta (Capacitor) exige añadir su origen. Sin `eval` ni scripts inline.
+- Los permisos del cliente son solo comodidad; la autoridad es el servidor (hallazgo del e2e: tutor/estudiante recibían 403 al cargar `secuencias` en el aula; el cliente ya no la pide).
+
 ## Limitaciones conocidas (requieren backend)
 1. Autenticación y autorización reales (hoy el login es un selector de usuarios demo y la sesión es editable en `localStorage`).
 2. Datos en el servidor, no en el navegador: cifrado en reposo, copias, retención, borrado.

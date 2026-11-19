@@ -2,7 +2,10 @@
 
 El servidor vive en `Educentro/server/` (Node.js 22, Fastify 5, PostgreSQL 16, TypeScript, SQL plano sin ORM). Plan completo en `docs/BACKEND.md`; guía de uso en `server/README.md`.
 
-> **Estado: Fase 0 y Fase 1 (tramo servidor) implementadas.** La API REST de las colecciones, la autorización por rol/centro/alcance y la RLS de PostgreSQL ya existen y están probadas (362 pruebas); contrato en `docs/API-REST.md`. El cliente todavía no la usa (siguiente tramo).
+> **Estado: Fase 0 y Fase 1 (tramo servidor) implementadas.** La API REST de las colecciones, la autorización por rol/centro/alcance y la RLS de PostgreSQL ya existen y están probadas (362 pruebas); contrato en `docs/API-REST.md`. **El cliente ya la usa** con `js/config.js` en modo `api` (login real, datos en PostgreSQL, nada personal en el navegador); el modo `local` (demo) sigue igual. Importar respaldos es la Fase 5.
+
+## Cliente (modo API)
+`js/config.js` elige `local`/`api`; `js/data/repo-api.js` implementa la misma interfaz que `repoLocal`. Login con correo y contraseña, cambio obligatorio, `#/recuperar` y `#/restablecer/<token>`. Detalle en `docs/API.md` (Modo API); pruebas en `tests/e2e/README.md`.
 >
 > Estado de la Fase 0: Hay autenticación real, pero el frontend todavía **no** la usa y los datos siguen en `localStorage`: sigue sin ser apto para datos reales de estudiantes hasta la Fase 1.
 

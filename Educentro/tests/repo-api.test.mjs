@@ -242,3 +242,21 @@ test('cambiarClave renueva el CSRF con /auth/me y recuperar acepta 202', async (
   await api.guardar('estudiantes', { nombre: 'A' });
   assert.equal(llamadas[llamadas.length - 1].cabeceras['X-EDU-CSRF'], 'csrf-rotado');
 });
+
+test('forma real del servidor: csrfToken, centroId y debeCambiarClave fuera del usuario; exportar con "colecciones"', async () => {
+  const { api, llamadas } = entorno((r) => {
+    if (r.ruta.endsWith('/login')) return j({ usuario: { id: 'u1', nombre: 'N', email: 'a@b.test', rol: 'director', centroId: 'cen_1', refId: null }, csrfToken: 'tok', debeCambiarClave: true });
+    if (r.ruta.endsWith('/restablecer')) return { status: 204 };
+    if (r.ruta.includes('/respaldo/')) return j({ formato: 'educentro-respaldo', colecciones: { estudiantes: [{ id: 'a' }] } });
+    return j({ id: 'x' }, 201);
+  }, { rol: 'admin_red' });
+  const s = await api.auth.login('a@b.test', 'x');
+  assert.deepEqual(plano(s.usuario), { id: 'u1', nombre: 'N', email: 'a@b.test', rol: 'director', refId: null, centroUsuario: 'cen_1', debeCambiarClave: true });
+  assert.equal(s.csrf, 'tok');
+  await api.guardar('estudiantes', { nombre: 'x' });
+  assert.equal(llamadas[1].cabeceras['X-EDU-CSRF'], 'tok');
+  await api.auth.restablecer('t'.repeat(30), 'Clave-Nueva-2026');
+  assert.deepEqual(Object.keys(llamadas[2].cuerpo), ['token', 'clave']);
+  const t = await api.exportarTodo({ centroId: 'cen_1' });
+  assert.equal(llamadas[3].q.get('centroId'), 'cen_1'); assert.equal(t.estudiantes.length, 1);
+});

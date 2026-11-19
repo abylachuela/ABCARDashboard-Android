@@ -32,5 +32,6 @@ Lo ya hecho está en [Historial](Historial). Pendiente, por prioridad.
 - Confirmar edades, periodos, promoción, completivos y calendario.
 
 ## 6. Calidad
+- Ejecutar en CI los e2e de `tests/e2e/` (ya versionados); falta el panel de altas de usuarios (el servidor devuelve `claveTemporal`).
 - Versionar y ejecutar en CI los scripts de smoke por rol/ancho, fuzz XSS y aislamiento por centro.
 - **Validaciones de producción**: revisión de privacidad con datos reales y consentimiento del centro para el agente.
