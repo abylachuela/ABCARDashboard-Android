@@ -6,7 +6,7 @@
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, calc = EDU.calculo;
   var COLS = ['centros', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'escalas', 'categorias', 'actividades', 'calificaciones', 'asistencia'];
 
-  var CSS = '.bo-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.bo-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}' +
+  var CSS = '.bo-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.bo-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500;flex:1 1 200px;min-width:0;max-width:100%}.bo-bar select{width:100%;min-width:0;max-width:100%}' +
     '.bo-hoja{background:#fff;color:#000;max-width:210mm;margin:16px auto;padding:14mm 12mm;border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);font-size:13px}' +
     '.bo-enc{display:flex;gap:14px;align-items:center;border-bottom:3px double var(--navy);padding-bottom:10px;margin-bottom:12px}' +
     '.bo-logo{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 24px var(--serif);flex:none;border:3px solid var(--amber)}' +

@@ -55,7 +55,7 @@
 .tabs button[aria-selected=true]{color:var(--navy);border-bottom-color:var(--amber)}
 .tabs button:focus-visible{outline:3px solid var(--amber);outline-offset:-2px}
 /* tablas */
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;position:relative}
 table.t{border-collapse:collapse;width:100%;min-width:560px}
 table.t th,table.t td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
 table.t th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--soft)}

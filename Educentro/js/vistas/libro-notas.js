@@ -7,7 +7,7 @@
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, raw = EDU.raw, calc = EDU.calculo;
   var COLS = ['cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'periodos', 'categorias', 'actividades', 'calificaciones', 'matriculas', 'estudiantes', 'escalas', 'tutores'];
 
-  var CSS = '.ln-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.ln-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}' +
+  var CSS = '.ln-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.ln-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500;flex:1 1 220px;min-width:0;max-width:100%}.ln-bar select{width:100%;min-width:0;max-width:100%}.ln-wrap{contain:inline-size;position:relative}' +
     '.ln-acc{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}.ln-wrap{overflow:auto;max-height:70vh}.ln-grid{min-width:0;width:max-content;max-width:none}' +
     '.ln-grid th,.ln-grid td{padding:6px 8px;white-space:nowrap}.ln-grid thead th{position:sticky;top:0;z-index:2}.ln-grid th.ln-est{position:sticky;left:0;z-index:1;background:var(--soft);text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:500;text-align:left}' +
     '.ln-grid thead th.ln-est{z-index:3}.ln-in{width:72px;padding:6px;border:1px solid var(--field-line);border-radius:6px;text-align:center;background:#fff}.ln-in[aria-invalid=true]{border-color:var(--bad);background:var(--bad-bg)}' +
