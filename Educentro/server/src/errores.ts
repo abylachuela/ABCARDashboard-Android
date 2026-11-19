@@ -24,6 +24,14 @@ export function aRespuesta(err: unknown): { status: number; cuerpo: CuerpoError 
     };
   }
   const e = err as Partial<FastifyError> & { codigo?: string; mensaje?: string };
+  // Errores de PostgreSQL (SQLSTATE de 5 caracteres): mensajes propios, sin detalles internos.
+  const pg = typeof e.code === 'string' && /^[0-9A-Z]{5}$/.test(e.code) && !e.code.startsWith('FST') ? e.code : null;
+  if (pg === '23505') return { status: 409, cuerpo: { error: { codigo: 'conflicto', mensaje: 'Ya existe un registro con esos datos.' } } };
+  if (pg === '23503') return { status: 422, cuerpo: { error: { codigo: 'referencia_invalida', mensaje: 'Una referencia (p. ej. el centro) no existe.' } } };
+  if (pg === '42501') return { status: 403, cuerpo: { error: { codigo: 'sin_permiso', mensaje: 'Sin permiso para esta operación.' } } };
+  if (pg && ['22P05', '22021', '22P02', '22007', '22003', '23514', '23502'].includes(pg)) {
+    return { status: 422, cuerpo: { error: { codigo: 'datos_invalidos', mensaje: 'Hay datos inválidos en la solicitud.' } } };
+  }
   const status = typeof e.statusCode === 'number' && e.statusCode >= 400 && e.statusCode < 600 ? e.statusCode : 500;
   // Mensajes propios en español; nunca se devuelve e.message de errores internos.
   if (e.codigo && e.mensaje) return { status, cuerpo: { error: { codigo: e.codigo, mensaje: e.mensaje } } };

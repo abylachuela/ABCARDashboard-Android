@@ -18,15 +18,25 @@ export interface PermisosJson {
   COLECCIONES: string[];
 }
 
+interface EduCliente {
+  permisos: {
+    ROLES: Record<string, string>;
+    NAV: { ruta: string }[];
+    MATRIZ: Record<string, Record<string, string[]>>;
+    puedeEscribirColeccion(rol: string, col: string): boolean;
+  };
+  repoLocal: { COLECCIONES: string[] };
+}
+
 /** Carga un script del cliente (IIFE sobre window.EDU) en un contexto aislado de `vm`, sin tocar el frontend. */
-function cargarEnVm(archivos: string[]): { EDU: Record<string, any> } {
+function cargarEnVm(archivos: string[]): { EDU: EduCliente } {
   const ctx: Record<string, unknown> = { addEventListener: () => undefined };
   ctx.window = ctx;
   vm.createContext(ctx);
   for (const f of archivos) {
     vm.runInContext(readFileSync(path.join(RAIZ_FRONTEND, f), 'utf8'), ctx, { filename: f, timeout: 5_000 });
   }
-  return ctx as { EDU: Record<string, any> };
+  return ctx as { EDU: EduCliente };
 }
 
 const ordenado = (a: string[]): string[] => [...a].sort();
@@ -40,12 +50,12 @@ export function cargarPermisosDelCliente(): PermisosJson {
   const MATRIZ: PermisosJson['MATRIZ'] = {};
   for (const r of ROLES) {
     MATRIZ[r] = {};
-    for (const m of Object.keys(P.MATRIZ[r]).sort()) MATRIZ[r][m] = ordenado(P.MATRIZ[r][m] as string[]);
+    for (const m of Object.keys(P.MATRIZ[r]!).sort()) MATRIZ[r][m] = ordenado(P.MATRIZ[r]![m]!);
   }
   // ESCRIBE es privado en permisos.js: se obtiene sondeando puedeEscribirColeccion para cada rol y colección.
   const ESCRIBE: PermisosJson['ESCRIBE'] = {};
   for (const r of ROLES) ESCRIBE[r] = COLECCIONES.filter((c) => P.puedeEscribirColeccion(r, c)).sort();
-  return { ROLES, NAV: (P.NAV as { ruta: string }[]).map((n) => n.ruta), MATRIZ, ESCRIBE, COLECCIONES };
+  return { ROLES, NAV: P.NAV.map((n) => n.ruta), MATRIZ, ESCRIBE, COLECCIONES };
 }
 
 const norm = (j: PermisosJson): PermisosJson => ({
@@ -88,16 +98,16 @@ function main(): void {
   const cliente = cargarPermisosDelCliente();
   if (process.argv.includes('--generar')) {
     writeFileSync(RUTA_JSON, JSON.stringify(norm(cliente), null, 2) + '\n');
-    console.log(`permisos.json regenerado desde js/core/permisos.js`);
+    process.stdout.write(`permisos.json regenerado desde js/core/permisos.js` + '\n');
     return;
   }
   const dif = compararPermisos(cliente, leerJsonServidor());
   if (dif.length) {
-    console.error('PARIDAD ROTA entre js/core/permisos.js y server/src/domain/permisos.json:\n - ' + dif.join('\n - '));
-    console.error('\nSi el cambio en permisos.js es correcto: npm run paridad -- --generar y revisa el diff.');
+    process.stderr.write('PARIDAD ROTA entre js/core/permisos.js y server/src/domain/permisos.json:\n - ' + dif.join('\n - ') + '\n');
+    process.stderr.write('\nSi el cambio en permisos.js es correcto: npm run paridad -- --generar y revisa el diff.' + '\n');
     process.exit(1);
   }
-  console.log('Paridad OK: MATRIZ, ESCRIBE, ROLES, NAV y COLECCIONES coinciden con js/core/permisos.js');
+  process.stdout.write('Paridad OK: MATRIZ, ESCRIBE, ROLES, NAV y COLECCIONES coinciden con js/core/permisos.js' + '\n');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
