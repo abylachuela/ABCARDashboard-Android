@@ -8,7 +8,7 @@
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, calc = EDU.calculo, PL = function () { return EDU.planilla; };
   var COLS = ['centros', 'cursos', 'secciones', 'asignaturas', 'cargas', 'periodos', 'matriculas', 'estudiantes', 'escalas', 'notasCompetencia', 'docentes'];
   var CSS = '.ip-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.ip-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500;flex:1 1 240px;min-width:0;max-width:100%}.ip-bar select,.ip-bar input{width:100%;min-width:0;max-width:100%}' +
-    '.ip-map td select{width:100%;min-width:180px;max-width:100%}.ip-lista{margin:6px 0 0;padding-left:20px;font-size:13px;max-height:150px;overflow:auto}.ip-chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0}.ip-chk input{margin-top:3px}';
+    '.ip-map td select{width:100%;min-width:180px;max-width:100%}.ip-lista{margin:6px 0 0;padding-left:20px;font-size:13px;max-height:150px;overflow:auto}.ip-chk{display:flex;gap:8px;align-items:center;margin:6px 0;min-height:44px}.ip-chk input{width:22px;height:22px;flex:none;margin:0}.ip-chk label{padding:8px 0;cursor:pointer;flex:1}';
   function estilo() { if (document.getElementById('ip-css')) return; var s = document.createElement('style'); s.id = 'ip-css'; s.textContent = CSS; document.head.appendChild(s); }
   function cmp(a, b) { return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }); }
   function ahora() { return new Date().toISOString(); }
@@ -62,13 +62,14 @@
       }
       function pintarImp(p) {
         var h = '<div class="card"><div class="ip-bar"><label>Archivo Excel (.xlsx, máx. 10 MB)<input type="file" id="ip-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label></div>' +
+          '<div class="alert" role="note"><div><strong>Usa solo archivos propios y de confianza</strong><small>El lector de Excel incluido (SheetJS 0.18.5) tiene vulnerabilidades conocidas (CVE-2023-30533, CVE-2024-22363) corregidas en versiones posteriores que no se pudieron incorporar. Mitigaciones activas: solo .xlsx de hasta 10 MB, límites de filas/columnas/hojas, sin macros ni vínculos externos, sin formato de texto de celdas, y se aborta si el archivo altera objetos internos. No abras planillas recibidas de terceros desconocidos.</small></div></div>' +
           '<p class="note">Se detectan las hojas de calificaciones (columnas P1–P4/RP por competencia), Meritorios y Completivo. Los nombres se emparejan sin distinguir tildes ni mayúsculas. Nada se guarda hasta que confirmes.</p><div id="ip-err" role="alert"></div></div><div id="ip-res"></div>';
         p.innerHTML = h;
         p.querySelector('#ip-file').addEventListener('change', async function (e) {
           var f = e.target.files && e.target.files[0], er = p.querySelector('#ip-err'); er.innerHTML = ''; S.analisis = null; S.plan = null; S.informe = null; S.importado = false; p.querySelector('#ip-res').innerHTML = '';
           if (!f) return;
           try {
-            var buf = await f.arrayBuffer(), v = PL().validarArchivo(f.name, f.size, buf);
+            var buf = await f.arrayBuffer(), v = await PL().prevalidarAsync(f.name, buf);
             if (!v.ok) throw new Error(v.errores.join(' '));
             S.analisis = PL().analizarLibro(buf, f.name); S.nombreArchivo = f.name; S.mapa = {};
             S.analisis.hojas.forEach(function (hj, i) { if (hj.tipo === 'calificaciones') S.mapa[i] = adivinarCarga(hj.nombre); });
@@ -229,7 +230,7 @@
             }
           }
           if (regs.length) await EDU.repo.guardarMuchos('notasCompetencia', regs);
-          await EDU.repo.adaptador().guardar('auditoria', { centroId: centroId, usuarioId: ses.usuarioId, accion: 'importar_planilla', coleccion: 'notasCompetencia', archivo: String(S.nombreArchivo).slice(0, 120), hojas: P.hojas.length, registros: regs.length, valores: P.cambios, estudiantesCreados: creados, matriculasCreadas: matric, discrepancias: P.informe.length, fecha: ahora() });
+          await EDU.repo.auditar('importar_planilla', { centroId: centroId, coleccion: 'notasCompetencia', archivo: String(S.nombreArchivo).slice(0, 120), hojas: P.hojas.length, registros: regs.length, valores: P.cambios, estudiantesCreados: creados, matriculasCreadas: matric, discrepancias: P.informe.length });
           d = await EDU.consultas.cargar(COLS, { centroId: centroId });
           S.importado = true; ui.toast(regs.length + ' registro(s) importado(s)' + (creados ? ', ' + creados + ' estudiante(s) creado(s)' : ''), 'ok');
           pintarPlan(el);

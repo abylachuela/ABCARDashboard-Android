@@ -75,7 +75,7 @@
       function pClosed(i) { var p = periodosDe(S.carga)[i]; return !p || !!p.cerrado; }
       function celdaEditable(campo, i) {
         if (!S.carga) return false;
-        if (esDir) return puedeCerrar && S.modoEd;
+        if (esDir) return puedeEd && S.modoEd;
         if (!esDoc || !puedeEd) return false;
         if (campo === 'p' || campo === 'rp') return !pClosed(i);
         return true; // instancias posteriores (completiva/extraordinaria/especial): no ligadas al cierre de un periodo; quedan auditadas
@@ -96,10 +96,10 @@
       function pintarNotas() {
         var sel = pintarSelNotas(); if (sel === false) return;
         var ests = estudiantes(S.carga.seccionId), ed = false, cf = cfg(), N = cf.competencias, P = cf.periodos, esc_ = escala(), pers = periodosDe(S.carga), mapa = mapaNc();
-        var puedeAlgo = esDir ? (puedeCerrar && S.modoEd) : (esDoc && puedeEd);
+        var puedeAlgo = esDir ? (puedeEd && S.modoEd) : (esDoc && puedeEd);
         var h = sel + '<div id="lc-msg"></div><div class="card" style="margin-top:12px"><div class="lc-acc">';
         if (esDoc && puedeEd) h += '<button type="button" class="btn" id="lc-guardar" disabled>Guardar cambios</button>';
-        if (esDir && puedeCerrar) {
+        if (esDir && puedeEd) {
           h += S.modoEd ? '<button type="button" class="btn" id="lc-guardar" disabled>Guardar cambios</button><button type="button" class="btn sec" id="lc-fin">Terminar edición</button>' : '<button type="button" class="btn sec" id="lc-editar">Editar con auditoría</button>';
         }
         h += '<span class="note" id="lc-estado" role="status" style="margin:0"></span></div>';
@@ -196,7 +196,7 @@
           else if (b.id === 'lc-editar') {
             var v = await ui.formularioModal({ titulo: 'Editar con auditoría', tamano: 'sm', textoEnviar: 'Continuar', campos: [{ nombre: 'motivo', label: 'Motivo (queda registrado en la auditoría)', tipo: 'textarea', requerido: true, minLen: 5, maxLen: 300 }] });
             if (!v) return;
-            await EDU.repo.adaptador().guardar('auditoria', { centroId: S.carga.centroId, usuarioId: ses.usuarioId, accion: 'edicion_notas_competencia', coleccion: 'notasCompetencia', registroId: S.carga.id, motivo: v.motivo, fecha: ahora() });
+            await EDU.repo.auditar('edicion_notas_competencia', { centroId: S.carga.centroId, coleccion: 'notasCompetencia', registroId: S.carga.id, motivo: v.motivo });
             S.modoEd = true; pintarNotas();
           } else if (b.id === 'lc-fin') { if (hayCambios() && !(await ui.confirmar({ titulo: 'Cambios sin guardar', mensaje: '¿Descartar los cambios sin guardar?', textoOk: 'Descartar', peligro: true }))) return; S.dirty = {}; S.invalidos = {}; S.modoEd = false; pintarNotas(); }
         } catch (err) { console.error(err); ui.toast(err.message || 'Error', 'error'); }

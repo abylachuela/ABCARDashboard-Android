@@ -4,7 +4,9 @@
 (function () {
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
-  var LIM = { bytes: 10 * 1024 * 1024, descomprimido: 120 * 1024 * 1024, hojas: 40, filas: 1500, columnas: 120, avisos: 400 };
+  var LIM = { bytes: 10 * 1024 * 1024, descomprimido: 60 * 1024 * 1024, componentes: 300, hojas: 40, filas: 1500, columnas: 120, avisos: 400, estilosBytes: 2 * 1024 * 1024, formatos: 400, formatoLong: 250 };
+  // Componentes del paquete que un libro de notas jamas necesita (macros, objetos incrustados, enlaces externos, controles ActiveX)
+  var PROHIBIDOS = /(^|\/)(vbaProject\.bin|vbaData\.xml)$|(^|\/)(externalLinks|embeddings|activeX|ctrlProps|macrosheets|dialogsheets)\//i;
   var calc = function () { return EDU.calculo; };
 
   /* ---------- utilidades ---------- */
@@ -24,7 +26,7 @@
     var x = ws[ref(r, c)];
     if (!x) return { v: null, texto: null, error: null, f: null };
     var o = { v: null, texto: null, error: null, f: typeof x.f === 'string' ? x.f : null };
-    if (x.t === 'e') { o.error = String(x.w || '#ERROR'); return o; }
+    if (x.t === 'e') { o.error = '#ERROR'; return o; } // sin formatear (cellText:false evita SSF.format, vector del ReDoS de SheetJS < 0.20.2)
     if (x.t === 'n' && isFinite(x.v)) { o.v = x.v; return o; }
     if (x.t === 'b') { o.texto = x.v ? 'VERDADERO' : 'FALSO'; return o; }
     if (x.v === undefined || x.v === null) return o;
@@ -49,9 +51,13 @@
         for (var i = u.length - 22; i >= 0 && i > u.length - 70000; i--) {
           if (dv.getUint32(i, true) === 0x06054b50) {
             var cnt = dv.getUint16(i + 10, true), off = dv.getUint32(i + 16, true);
-            if (cnt > 5000) { er.push('El libro contiene demasiados componentes.'); break; }
+            if (cnt > LIM.componentes) { er.push('El libro contiene demasiados componentes.'); break; }
             for (var k = 0; k < cnt && off + 46 <= u.length && dv.getUint32(off, true) === 0x02014b50; k++) {
-              total += dv.getUint32(off + 24, true); off += 46 + dv.getUint16(off + 28, true) + dv.getUint16(off + 30, true) + dv.getUint16(off + 32, true); n++;
+              total += dv.getUint32(off + 24, true);
+              var nl = dv.getUint16(off + 28, true), nom = '';
+              for (var q = 0; q < nl && off + 46 + q < u.length; q++) nom += String.fromCharCode(u[off + 46 + q]);
+              if (PROHIBIDOS.test(nom) || /(^|\/)\.\.(\/|$)|^\//.test(nom)) { er.push('El libro contiene componentes no permitidos (macros, objetos incrustados o enlaces externos).'); break; }
+              off += 46 + dv.getUint16(off + 28, true) + dv.getUint16(off + 30, true) + dv.getUint16(off + 32, true); n++;
             }
             break;
           }
@@ -199,14 +205,67 @@
     return { tipo: 'completivo', nombre: nombre, titulo: titulo, grupos: grupos, avisos: [], valida: true };
   }
 
+  /* ---------- mitigaciones del parser (SheetJS 0.18.5 vendorizado: CVE-2023-30533 y ReDoS CVE-2024-22363) ---------- */
+  var PROTOS = function () { return [['Object', Object.prototype], ['Array', Array.prototype], ['Function', Function.prototype], ['String', String.prototype], ['Number', Number.prototype]]; };
+  function instantaneaPrototipos() {
+    return PROTOS().map(function (p) { return { n: p[0], o: p[1], k: Object.getOwnPropertyNames(p[1]).concat(Object.getOwnPropertySymbols(p[1]).map(String)).sort().join('|'), ks: Object.getOwnPropertyNames(p[1]) }; });
+  }
+  /** Compara con la instantanea; si hay propiedades nuevas las elimina y devuelve la lista (texto) o ''. */
+  function restaurarPrototipos(snap) {
+    var malo = [];
+    snap.forEach(function (s) {
+      Object.getOwnPropertyNames(s.o).forEach(function (k) { if (s.ks.indexOf(k) === -1) { malo.push(s.n + '.' + k); try { delete s.o[k]; } catch (e) { /* noop */ } } });
+    });
+    return malo.slice(0, 5).join(', ');
+  }
+  function leerBytesZip(u, dv, off, max) { // -> Promise<string|null>: texto de una entrada del ZIP (store o deflate), con tope de bytes
+    var metodo = dv.getUint16(off + 10, true), csz = dv.getUint32(off + 20, true), lho = dv.getUint32(off + 42, true);
+    if (dv.getUint32(lho, true) !== 0x04034b50) return Promise.resolve(null);
+    var ini = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true), datos = u.subarray(ini, ini + csz);
+    if (metodo === 0) return Promise.resolve(datos.length > max ? null : new TextDecoder().decode(datos));
+    if (metodo !== 8 || typeof DecompressionStream !== 'function') return Promise.resolve(null);
+    var rs = new Response(new Blob([datos]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).body.getReader(), dec = new TextDecoder(), txt = '', n = 0;
+    return (function paso() {
+      return rs.read().then(function (r) {
+        if (r.done) return txt + dec.decode();
+        n += r.value.length; if (n > max) { rs.cancel(); return null; }
+        txt += dec.decode(r.value, { stream: true }); return paso();
+      });
+    })();
+  }
+  /** Prevalidacion asincrona (opcional pero recomendada): inspecciona xl/styles.xml y rechaza formatos de numero abusivos (vector del ReDoS de SSF).
+      -> Promise<{ok, errores[]}>. Si el navegador no puede descomprimir, no bloquea (el parseo ya no formatea texto: cellText:false). */
+  function prevalidarAsync(nombre, buffer) {
+    var v = validarArchivo(nombre, buffer.byteLength, buffer);
+    if (!v.ok) return Promise.resolve(v);
+    var u = new Uint8Array(buffer), dv = new DataView(buffer), off = -1;
+    for (var i = u.length - 22; i >= 0 && i > u.length - 70000; i--) if (dv.getUint32(i, true) === 0x06054b50) { off = dv.getUint32(i + 16, true); var cnt = dv.getUint16(i + 10, true); break; }
+    var estilos = -1;
+    for (var k = 0; off >= 0 && k < cnt && off + 46 <= u.length && dv.getUint32(off, true) === 0x02014b50; k++) {
+      var nl = dv.getUint16(off + 28, true), nom = ''; for (var q = 0; q < nl; q++) nom += String.fromCharCode(u[off + 46 + q]);
+      if (nom === 'xl/styles.xml') { estilos = off; break; }
+      off += 46 + nl + dv.getUint16(off + 30, true) + dv.getUint16(off + 32, true);
+    }
+    if (estilos < 0) return Promise.resolve({ ok: true, errores: [] });
+    return leerBytesZip(u, dv, estilos, LIM.estilosBytes).then(function (txt) {
+      if (txt === null) return { ok: true, errores: [] };
+      var fm = txt.match(/formatCode="[^"]*"/g) || [];
+      if (fm.length > LIM.formatos || fm.some(function (f) { return f.length > LIM.formatoLong + 14; })) return { ok: false, errores: ['El libro tiene formatos de número anómalos (posible archivo malicioso).'] };
+      return { ok: true, errores: [] };
+    }).catch(function () { return { ok: true, errores: [] }; });
+  }
+
   /** Lee y analiza un .xlsx. buffer: ArrayBuffer. -> {hojas:[...], ignoradas:[nombres]} (lanza Error si el archivo no es valido). */
   function analizarLibro(buffer, nombreArchivo) {
     exigirXlsx();
     var v = validarArchivo(nombreArchivo, buffer.byteLength, buffer);
     if (!v.ok) throw new Error(v.errores.join(' '));
-    var wb;
-    try { wb = window.XLSX.read(new Uint8Array(buffer), { type: 'array', cellFormula: true, cellStyles: false, cellNF: false, cellHTML: false, cellDates: false, bookVBA: false, sheetRows: LIM.filas + 25 }); }
-    catch (e) { throw new Error('No se pudo leer el libro: ' + (e && e.message ? e.message : 'formato no válido')); }
+    var wb, snap = instantaneaPrototipos();
+    try { wb = window.XLSX.read(new Uint8Array(buffer), { type: 'array', cellFormula: true, cellStyles: false, cellNF: false, cellText: false, cellHTML: false, cellDates: false, bookVBA: false, bookProps: false, sheetRows: LIM.filas + 25 }); }
+    catch (e) { restaurarPrototipos(snap); throw new Error('No se pudo leer el libro: ' + (e && e.message ? e.message : 'formato no válido')); }
+    // Mitigacion de CVE-2023-30533 (contaminacion de prototipos en SheetJS < 0.19.3): si el parseo altero algun prototipo, se revierte y se aborta.
+    var alterado = restaurarPrototipos(snap);
+    if (alterado) throw new Error('Archivo rechazado: intentó modificar objetos internos del navegador (' + alterado + '). No lo uses.');
     if (wb.SheetNames.length > LIM.hojas) throw new Error('El libro tiene demasiadas hojas (máximo ' + LIM.hojas + ').');
     var hojas = [], ignoradas = [];
     wb.SheetNames.forEach(function (n) {
@@ -379,6 +438,6 @@
   }
   function libroABytes(wb) { exigirXlsx(); return window.XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true }); }
 
-  EDU.planilla = { LIM: LIM, norm: norm, claveNombre: claveNombre, neutralizar: neutralizar, validarArchivo: validarArchivo, analizarLibro: analizarLibro, emparejar: emparejar, partirNombre: partirNombre,
+  EDU.planilla = { LIM: LIM, norm: norm, claveNombre: claveNombre, neutralizar: neutralizar, validarArchivo: validarArchivo, prevalidarAsync: prevalidarAsync, analizarLibro: analizarLibro, emparejar: emparejar, partirNombre: partirNombre,
     aplicarFila: aplicarFila, calcDeRec: calcDeRec, revisarFila: revisarFila, construirLibro: construirLibro, libroABytes: libroABytes, ordenCols: ordenCols, nuevoRec: nuevoRec };
 })();

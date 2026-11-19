@@ -39,6 +39,21 @@
     X.utils.book_append_sheet(b, w, 'T1'); var u = X.write(b, { bookType: 'xlsx', type: 'array' }), r = PL.analizarLibro(u instanceof ArrayBuffer ? u : new Uint8Array(u).buffer, 'x.xlsx').hojas[0];
     eq(r.filas[0].c[0].p[0], null); eq(r.filas[0].c[0].p[1], null); eq(r.filas[0].c[0].p[3], 90); eq(r.filas[0].avisos.length >= 2, true);
   });
+  t('seguridad: si el parseo contamina prototipos se aborta y se revierte (CVE-2023-30533)', function () {
+    var X = window.XLSX, orig = X.read, abort = false;
+    X.read = function () { Object.prototype.__pwn = 1; Array.prototype.__pwn2 = 1; return orig.apply(this, arguments); };
+    try { PL.analizarLibro(buf, 'x.xlsx'); } catch (e) { abort = /rechazado/.test(e.message); } finally { X.read = orig; }
+    eq(abort, true); eq(({}).__pwn, undefined); eq([].__pwn2, undefined);
+  });
+  t('seguridad: rechaza libros con macros/enlaces externos y exceso de componentes', function () {
+    function zip(nombres) { var n = nombres.length, partes = [], dir = [], off = 0; nombres.forEach(function (nm) { var b = new TextEncoder().encode(nm), h = new Uint8Array(46 + b.length), dv = new DataView(h.buffer); dv.setUint32(0, 0x02014b50, true); dv.setUint16(28, b.length, true); h.set(b, 46); dir.push(h); });
+      var tam = dir.reduce(function (a, x) { return a + x.length; }, 0), out = new Uint8Array(4 + tam + 22), dv2 = new DataView(out.buffer); out.set([0x50, 0x4b, 3, 4], 0); var p = 4; dir.forEach(function (x) { out.set(x, p); p += x.length; });
+      dv2.setUint32(p, 0x06054b50, true); dv2.setUint16(p + 10, n, true); dv2.setUint32(p + 16, 4, true); return out.buffer; }
+    eq(PL.validarArchivo('a.xlsx', 100, zip(['xl/workbook.xml', 'xl/vbaProject.bin'])).ok, false);
+    eq(PL.validarArchivo('a.xlsx', 100, zip(['xl/externalLinks/externalLink1.xml'])).ok, false);
+    eq(PL.validarArchivo('a.xlsx', 100, zip(['xl/workbook.xml', 'xl/worksheets/sheet1.xml'])).ok, true);
+    var muchos = []; for (var i = 0; i < 301; i++) muchos.push('xl/f' + i + '.xml'); eq(PL.validarArchivo('a.xlsx', 100, zip(muchos)).ok, false);
+  });
   var ul = document.getElementById('lista');
   pruebas.forEach(function (p) { var li = document.createElement('li'); try { p[1](); pas++; li.className = 'ok'; li.textContent = 'PASA · ' + p[0]; } catch (e) { fal++; li.className = 'fail'; li.textContent = 'FALLA · ' + p[0] + ' — ' + e.message; } ul.appendChild(li); });
   var r = document.getElementById('res'); r.textContent = (fal ? 'FALLAN ' + fal : 'TODAS PASAN') + ' (' + pas + '/' + pruebas.length + ')'; r.className = fal ? 'fail' : 'ok'; document.title = fal ? 'FAIL' : 'PASS';

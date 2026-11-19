@@ -12,7 +12,7 @@
     '.ln-grid th,.ln-grid td{padding:6px 8px;white-space:nowrap}.ln-grid thead th{position:sticky;top:0;z-index:2}.ln-grid th.ln-est{position:sticky;left:0;z-index:1;background:var(--soft);text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:500;text-align:left}' +
     '.ln-grid thead th.ln-est{z-index:3}.ln-in{width:72px;padding:6px;border:1px solid var(--field-line);border-radius:6px;text-align:center;background:#fff}.ln-in[aria-invalid=true]{border-color:var(--bad);background:var(--bad-bg)}' +
     '.ln-in.sucio{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft)}.ln-ah{all:unset;cursor:pointer;display:block;font-weight:600;color:var(--navy);text-transform:none;letter-spacing:0;font-size:13px;text-align:center}' +
-    '.ln-grid th .ln-ah:hover{text-decoration:underline}.ln-ah:focus-visible{outline:3px solid var(--amber)}.ln-sub{display:block;font-weight:400;color:var(--muted);font-size:11.5px;text-transform:none;letter-spacing:0}' +
+    '.ln-grid th .ln-ah:hover{text-decoration:underline}.ln-ah:focus-visible{outline:3px solid var(--focus)}.ln-sub{display:block;font-weight:400;color:var(--muted);font-size:11.5px;text-transform:none;letter-spacing:0}' +
     '.ln-pes{display:flex;gap:8px;align-items:center;margin-bottom:8px}.ln-pes input{width:90px}.ln-tot{font-weight:700}.ln-tot.bad{color:var(--bad)}.ln-tot.ok{color:var(--ok)}';
 
   function estilo() {
@@ -29,7 +29,7 @@
       estilo();
       var ses = EDU.estado.sesion(), rol = ses.rol;
       var esDir = rol === 'director', esDoc = rol === 'docente';
-      var puedeCerrar = EDU.permisos.puede(rol, 'libro-notas', 'cerrar');
+      var puedeCerrar = EDU.permisos.puede(rol, 'libro-notas', 'cerrar'), puedeEd = EDU.permisos.puede(rol, 'libro-notas', 'editar');
       var d = await EDU.consultas.cargar(COLS);
       if (EDU.libroCompetencias && calc.modelo(EDU.consultas.escalaDe(d.escalas, EDU.estado.centroActivo() || ses.centroUsuario)) === 'competencias') return EDU.libroCompetencias.render(cont, params); // centros con modelo por competencias
       var S = { carga: null, periodoId: null, dirty: {}, invalidos: {}, modoEd: false, motivoEd: null };
@@ -68,7 +68,7 @@
       function editable() {
         var p = periodo(); if (!p) return false;
         if (esDoc) return EDU.permisos.puede(rol, 'libro-notas', 'editar') && !p.cerrado;
-        if (esDir) return S.modoEd;
+        if (esDir) return puedeEd && S.modoEd;
         return false;
       }
       function hayCambios() { return Object.keys(S.dirty).length > 0; }
@@ -124,7 +124,7 @@
 
       /* ---------- auditoria de acciones de periodo ---------- */
       function auditar(accion, extra) {
-        return EDU.repo.adaptador().guardar('auditoria', Object.assign({ centroId: S.carga.centroId, usuarioId: ses.usuarioId, accion: accion, coleccion: 'periodos', fecha: ahora() }, extra));
+        return EDU.repo.auditar(accion, Object.assign({ centroId: S.carga.centroId, coleccion: 'periodos' }, extra));
       }
       async function pedirMotivo(titulo, texto) {
         var v = await ui.formularioModal({ titulo: titulo, tamano: 'sm', textoEnviar: 'Continuar',
@@ -141,12 +141,14 @@
         if (p.cerrado) h += '<div class="alert" role="status"><div><strong>' + esc(p.nombre) + ' está cerrado</strong><small>' + (esDoc ? 'No puedes modificar calificaciones de un periodo cerrado. Solicita al director que lo reabra.' : esDir ? (S.modoEd ? 'Edición habilitada con auditoría: cada cambio queda registrado.' : 'Puedes reabrir el periodo o editar con auditoría.') : 'Solo lectura.') + '</small></div></div>';
         if (!ok) h += '<div class="alert red" role="alert"><div><strong>' + (cs.length ? 'Los pesos de las categorías no suman 100 %' : 'Esta asignatura no tiene categorías') + '</strong><small>' + (cs.length ? 'Suman ' + calc.validarPesos(cs, 100).suma + ' %. ' : '') + 'Mientras tanto no se puede guardar ni crear actividades.' + (ed || esDoc ? ' Corrige los pesos en «Categorías».' : '') + '</small></div></div>';
         h += '<div class="card" style="margin-top:12px"><div class="ln-acc" style="margin-top:0">';
-        var puedeAct = (esDoc && !p.cerrado) || (esDir && S.modoEd);
+        var puedeAct = (esDoc && !p.cerrado) || (esDir && puedeEd && S.modoEd);
         if (puedeAct) h += '<button type="button" class="btn amb" id="ln-nueva"' + (ok ? '' : ' disabled') + '>Nueva actividad</button><button type="button" class="btn sec" id="ln-cats">Categorías y pesos</button>';
         if (ed) h += '<button type="button" class="btn" id="ln-guardar" disabled>Guardar cambios</button><span class="note" id="ln-estado" role="status" style="margin:0;align-self:center"></span>';
-        if (esDir && puedeCerrar) {
+        if (esDir && puedeEd) {
           if (!S.modoEd) h += '<button type="button" class="btn sec" id="ln-editar">' + (p.cerrado ? 'Editar con auditoría' : 'Editar notas') + '</button>';
           else h += '<button type="button" class="btn sec" id="ln-fin-ed">Terminar edición</button>';
+        }
+        if (esDir && puedeCerrar) {
           h += p.cerrado ? '<button type="button" class="btn sec" id="ln-reabrir">Reabrir periodo</button>' : '<button type="button" class="btn dng" id="ln-cerrar">Cerrar periodo…</button>';
         }
         h += '</div></div><div id="ln-kpis" style="margin-top:12px"></div>';

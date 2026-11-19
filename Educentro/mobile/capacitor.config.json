@@ -6,7 +6,8 @@
     "androidScheme": "https"
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
   },
   "plugins": {
     "SplashScreen": {
@@ -20,5 +21,6 @@
       "backgroundColor": "#1e3a8a",
       "overlaysWebView": false
     }
-  }
+  },
+  "loggingBehavior": "none"
 }

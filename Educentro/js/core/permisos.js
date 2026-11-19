@@ -34,7 +34,7 @@
   var MATRIZ = {
     admin_red: { dashboard: V, cursos: V, horarios: CRUD, aula: V, centros: CRUD, config: V, curriculo: CRUD, personas: CRUD, boletin: ['ver', 'imprimir'], reportes: ['ver', 'exportar'],
       agente: ['ver', 'editar'], comunicados: CRUD, respaldo: ['ver', 'exportar', 'importar'], 'importar-planilla': ['ver', 'exportar', 'importar'] },
-    director: { dashboard: V, cursos: CRUD, horarios: CRUD, aula: V, config: CRUD.concat(['cerrar']), curriculo: CRUD, personas: CRUD, matricula: CRUD, 'libro-notas': ['ver', 'cerrar'], planificacion: ['ver', 'editar'], secuencias: ['ver', 'editar'],
+    director: { dashboard: V, cursos: CRUD, horarios: CRUD, aula: V, config: CRUD.concat(['cerrar']), curriculo: CRUD, personas: CRUD, matricula: CRUD, 'libro-notas': ['ver', 'editar', 'cerrar'], planificacion: ['ver', 'editar'], secuencias: ['ver', 'editar'],
       agente: ['ver', 'editar', 'aprobar'], asistencia: V, boletin: ['ver', 'imprimir'], comunicados: CRUD, reportes: ['ver', 'exportar'], respaldo: ['ver', 'exportar', 'importar'], 'importar-planilla': ['ver', 'exportar', 'importar'] },
     docente: { dashboard: V, cursos: ['ver', 'editar'], horarios: V, aula: CRUD, curriculo: V, personas: V, matricula: V, 'libro-notas': ['ver', 'crear', 'editar'], planificacion: CRUD, secuencias: CRUD, agente: ['ver', 'editar', 'aprobar'],
       asistencia: ['ver', 'crear', 'editar'], comunicados: V },

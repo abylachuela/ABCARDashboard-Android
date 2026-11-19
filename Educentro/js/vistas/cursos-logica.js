@@ -30,7 +30,7 @@
     var desde = f.desde || f.inicio || f.horaInicio || '', hasta = f.hasta || f.fin || f.horaFin || '';
     return { id: f.id, nombre: f.nombre || f.etiqueta || ((desde || hasta) ? desde + '–' + hasta : f.id), desde: desde, hasta: hasta, orden: f.orden || 0 };
   }
-  function franjasDe(d) { return (d.franjas || []).map(franjaInfo).sort(function (a, b) { return (a.orden - b.orden) || String(a.desde).localeCompare(String(b.desde)); }); }
+  function franjasDe(d) { return (d.franjas || []).filter(function (f) { return f.tipo !== 'config'; }).map(franjaInfo).sort(function (a, b) { return (a.orden - b.orden) || String(a.desde).localeCompare(String(b.desde)); }); }
   function itemHorarioTxt(h) {
     var dia = etiqueta(DIAS, +h.dia), t = h.desde || h.hasta ? (h.desde || '?') + '–' + (h.hasta || '?') : '';
     return dia + (t ? ' ' + t : '') + (h.texto ? ' (' + h.texto + ')' : '');

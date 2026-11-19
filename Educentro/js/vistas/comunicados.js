@@ -103,15 +103,8 @@
   }
 
   /* ---------------- Lectura ---------------- */
-  /** Confirmacion de lectura: tutor/estudiante/docente no tienen permiso de escritura en `comunicados` (matriz de permisos),
-      asi que se escribe solo el campo `lecturas` via el adaptador. Un backend real debe exponer un endpoint dedicado. */
-  async function confirmarLectura(c, u) {
-    var ad = EDU.repo.adaptador(), act = await ad.obtener('comunicados', c.id);
-    if (!act || act.centroId !== u.centroUsuario) throw new Error('Comunicado no disponible.');
-    act.lecturas = act.lecturas || [];
-    if (!act.lecturas.some(function (l) { return l.usuarioId === u.usuarioId; })) act.lecturas.push({ usuarioId: u.usuarioId, fecha: new Date().toISOString() });
-    await ad.guardar('comunicados', act);
-  }
+  /** Confirmacion de lectura: ruta controlada del repo (valida sesion, centro y que el comunicado sea visible; solo anade al propio usuario). */
+  async function confirmarLectura(c) { await EDU.repo.registrarLectura(c.id); }
   function verCuerpo(d, c, extra, botones) {
     return ui.modal({ titulo: c.titulo, tamano: 'lg', contenido: '<p class="note">' + esc(fmt.fecha(c.fecha, true)) + ' · ' + esc(etiquetaSeg(d, c)) + (c.origen === 'agente' ? ' · redactado con ayuda del agente, aprobado por una persona' : '') + '</p><p style="white-space:pre-wrap">' + esc(c.cuerpo) + '</p>' + (extra || ''),
       botones: botones || [{ texto: 'Cerrar', tipo: 'amb', valor: true }] });

@@ -61,6 +61,36 @@
       registroId: id, antes: antes || null, despues: despues || null, fecha: new Date().toISOString() });
   }
 
+  var ROL_AUD = { docente: 'docentes', tutor: 'tutores', estudiante: 'estudiantes' };
+  var ROLES_AUDITAN = ['admin_red', 'director', 'docente', 'secretaria'];
+  var CAMPOS_AUDIT = ['accion', 'coleccion', 'registroId', 'motivo', 'archivo', 'hojas', 'registros', 'valores', 'estudiantesCreados', 'matriculasCreadas', 'discrepancias', 'antes', 'despues'];
+  var STR = function (v, n) { return String(v == null ? '' : v).slice(0, n || 300); };
+
+  /** Reglas de propiedad (defensa en profundidad; el control real debe estar en el backend):
+      - usuarios: solo admin_red puede crear/promover admin_red ni cambiar el propio rol/centro/refId.
+      - docente: solo escribe notas/actividades/categorias de SUS cargas.
+      - estudiante: solo escribe entregas/intentos propios y mensajes de foro firmados por su usuario. */
+  async function propiedad(s, col, rec, antes) {
+    var a = A();
+    if (col === 'usuarios' && s.rol !== 'admin_red') {
+      if (rec.rol === 'admin_red' || (antes && antes.rol === 'admin_red')) throw new Error('Sin permiso para administrar usuarios admin_red');
+      if (antes && antes.id === s.usuarioId && (rec.rol !== antes.rol || (rec.refId || null) !== (antes.refId || null) || (rec.centroId || null) !== (antes.centroId || null))) throw new Error('No puedes cambiar tu propio rol o centro');
+    }
+    if (s.rol === 'docente') {
+      var cargaId = null;
+      if (col === 'calificaciones') { var ac = await a.obtener('actividades', rec.actividadId || (antes && antes.actividadId)); cargaId = ac && ac.cargaId; if (!ac) throw new Error('Actividad no encontrada'); }
+      else if (['notasCompetencia', 'actividades', 'categorias'].indexOf(col) !== -1) cargaId = rec.cargaId || (antes && antes.cargaId);
+      if (cargaId !== null) {
+        var ca = await a.obtener('cargas', cargaId);
+        if (!ca || ca.docenteId !== s.refId) throw new Error('Sin permiso: la carga docente no es tuya');
+      }
+    }
+    if (s.rol === 'estudiante') {
+      if ((col === 'entregas' || col === 'intentos') && (rec.estudianteId !== s.refId || (antes && antes.estudianteId !== s.refId))) throw new Error('Sin permiso: solo tus propios registros');
+      if (col === 'foroMensajes' && (rec.autorId !== s.usuarioId || (antes && antes.autorId !== s.usuarioId))) throw new Error('Sin permiso: solo tus propios mensajes');
+    }
+  }
+
   async function listar(col, o) {
     o = o || {};
     var cid = centroLectura(col, o);
@@ -101,6 +131,7 @@
       }
       var antes = rec.id ? await A().obtener(col, rec.id) : null;
       if (antes && antes.centroId && rec.centroId !== antes.centroId) throw new Error('No se puede cambiar el centro de un registro');
+      await propiedad(s, col, rec, antes);
       var g = await A().guardar(col, rec);
       if (SIN_AUDITAR.indexOf(col) === -1) await auditar(s, antes ? 'editar' : 'crear', col, g.id, antes, g);
       return g;
@@ -115,12 +146,70 @@
       var antes = await A().obtener(col, id);
       if (!antes) return false;
       if (antes.centroId && !EDU.permisos.centroPermitido(s, antes.centroId)) throw new Error('Centro no permitido');
+      await propiedad(s, col, antes, antes);
       var ok = await A().borrar(col, id);
       if (ok) await auditar(s, 'borrar', col, id, antes, null);
       return ok;
     },
-    /** Respaldo completo (solo admin_red/director). */
-    exportarTodo: function () { var s = esc(); if (!s || !EDU.permisos.puede(s.rol, 'respaldo', 'exportar')) throw new Error('Sin permiso'); return A().exportarTodo(); },
-    importarTodo: function (o) { var s = esc(); if (!s || !EDU.permisos.puede(s.rol, 'respaldo', 'importar')) throw new Error('Sin permiso'); return A().importarTodo(o); }
+    /** Ruta controlada para escribir en `auditoria` (ninguna vista usa el adaptador directo). usuarioId y fecha los fija el repo;
+        el centro debe ser el del usuario (o cualquiera si admin_red); solo roles que operan datos; tutor/estudiante no auditan. */
+    auditar: async function (accion, datos) {
+      var s = esc();
+      if (!s) throw new Error('Sin sesion');
+      if (ROLES_AUDITAN.indexOf(s.rol) === -1) throw new Error('Sin permiso para auditar');
+      datos = datos || {};
+      var cid = datos.centroId || s.centroActivo || s.centroUsuario;
+      if (!cid || !EDU.permisos.centroPermitido(s, cid)) throw new Error('Centro no permitido');
+      var reg = { centroId: cid, usuarioId: s.usuarioId, rol: s.rol, accion: STR(accion, 60), fecha: new Date().toISOString() };
+      CAMPOS_AUDIT.forEach(function (k) { if (datos[k] !== undefined && k !== 'accion') reg[k] = typeof datos[k] === 'string' ? STR(datos[k], 600) : datos[k]; });
+      return A().guardar('auditoria', reg);
+    },
+    /** Confirmacion de lectura de un comunicado por el propio usuario (tutor/estudiante/docente no escriben `comunicados`).
+        Solo anade {usuarioId, fecha} propio a `lecturas`; valida centro, estado publicado y audiencia por rol. */
+    registrarLectura: async function (comunicadoId) {
+      var s = esc();
+      if (!s || !EDU.permisos.puede(s.rol, 'comunicados', 'ver')) throw new Error('Sin permiso');
+      var c = await A().obtener('comunicados', comunicadoId);
+      if (!c || c.centroId !== s.centroUsuario || c.estado !== 'publicado') throw new Error('Comunicado no disponible.');
+      var aud = c.destinatarios || 'todos';
+      if (aud !== 'todos' && ROL_AUD[s.rol] !== aud) throw new Error('Comunicado no disponible.');
+      if (c.segmento && c.segmento.tipo === 'tutor' && (s.rol !== 'tutor' || c.segmento.id !== s.refId)) throw new Error('Comunicado no disponible.');
+      c.lecturas = Array.isArray(c.lecturas) ? c.lecturas : [];
+      if (!c.lecturas.some(function (l) { return l.usuarioId === s.usuarioId; })) c.lecturas.push({ usuarioId: s.usuarioId, fecha: new Date().toISOString() });
+      return A().guardar('comunicados', c);
+    },
+    /** Respaldo completo (solo admin_red/director). Para roles no admin_red solo exporta el centro del usuario (y la tabla `centros` filtrada). */
+    exportarTodo: async function () {
+      var s = esc(); if (!s || !EDU.permisos.puede(s.rol, 'respaldo', 'exportar')) throw new Error('Sin permiso');
+      var todo = await A().exportarTodo();
+      if (s.rol === 'admin_red') return todo;
+      var out = {};
+      Object.keys(todo).forEach(function (col) {
+        out[col] = (todo[col] || []).filter(function (r) { return col === 'centros' ? r.id === s.centroUsuario : r.centroId === s.centroUsuario; });
+      });
+      return out;
+    },
+    /** Importa un respaldo. admin_red reemplaza las colecciones presentes; los demas roles solo pueden aportar registros de SU centro
+        (cualquier registro ajeno, o un usuario admin_red, aborta) y el repo conserva los registros de otros centros. */
+    importarTodo: async function (o) {
+      var s = esc(); if (!s || !EDU.permisos.puede(s.rol, 'respaldo', 'importar')) throw new Error('Sin permiso');
+      if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Respaldo invalido');
+      var actual = await A().exportarTodo(), full = {}, admin = s.rol === 'admin_red';
+      EDU.repoLocal.COLECCIONES.forEach(function (c) {
+        var nuevo = o[c];
+        if (nuevo === undefined) { full[c] = actual[c] || []; return; }
+        if (!Array.isArray(nuevo)) throw new Error('Coleccion invalida: ' + c);
+        if (c === 'auditoria' && !admin) { full[c] = actual[c] || []; return; } // la auditoria no se reescribe por importacion
+        if (admin) { full[c] = nuevo; return; }
+        nuevo.forEach(function (r) {
+          var cid = c === 'centros' ? r && r.id : r && r.centroId;
+          if (cid !== s.centroUsuario) throw new Error('El respaldo contiene datos de otro centro (' + c + '); importacion abortada');
+          if (c === 'usuarios' && r.rol === 'admin_red') throw new Error('No se permite importar usuarios admin_red');
+        });
+        var ajenos = (actual[c] || []).filter(function (r) { return (c === 'centros' ? r.id : r.centroId) !== s.centroUsuario; });
+        full[c] = ajenos.concat(nuevo);
+      });
+      return A().importarTodo(full);
+    }
   };
 })();

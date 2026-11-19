@@ -2,6 +2,10 @@
 <html lang="es-DO">
 <head>
 <meta charset="utf-8">
+<!-- CSP (meta: file:// y Capacitor). Sin 'unsafe-eval' ni scripts inline. 'unsafe-inline' solo en style-src: hay estilos inline (atributo style y <style> inyectados por los modulos); ver docs/SEGURIDAD.md.
+     Fuentes de Google (css+woff2) permitidas por diseno; hay fuentes de respaldo del sistema, quitar estas dos entradas y el <link> no rompe nada. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EduCentro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +35,8 @@
   </header>
   <main class="wrap" id="main" tabindex="-1"><div id="view" aria-live="off"></div></main>
 </div>
+
+<div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
 
 <!-- Orden de carga: NO usar ES modules (debe funcionar por file://). Todo cuelga de window.EDU. Ver docs/API.md -->
 <script src="js/core/almacen.js"></script>

@@ -45,10 +45,8 @@ const head = `
 html = html.replace(/<meta[^>]*name=["']viewport["'][^>]*>/i, '');
 html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, head + '</head>') : head + html;
 
-// Botón atrás de Android + StatusBar (solo si corre dentro de Capacitor)
-const script = `
-<script>
-(function () {
+// Botón atrás de Android + StatusBar (solo si corre dentro de Capacitor). Va en un archivo externo: la CSP prohíbe scripts inline.
+const script = `(function () {
   var C = window.Capacitor;
   if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
   var P = C.Plugins || {};
@@ -61,9 +59,10 @@ const script = `
     });
   }
 })();
-</script>
 `;
-html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, script + '</body>') : html + script;
+fs.writeFileSync(path.join(DEST, 'native.js'), script);
+const tag = '\n<script src="native.js"></script>\n';
+html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, tag + '</body>') : html + tag;
 fs.writeFileSync(path.join(DEST, 'index.html'), html);
 
 fs.writeFileSync(path.join(DEST, 'manifest.webmanifest'), JSON.stringify({

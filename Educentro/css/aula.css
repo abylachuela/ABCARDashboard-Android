@@ -74,7 +74,7 @@ a.aula-fila-a:hover{background:var(--soft);border-radius:12px}
 .aula-opciones{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .aula-opc{display:flex;gap:8px;align-items:center}
 .aula-opc input[type=text]{flex:1 1 auto;width:auto}
-.aula-radio{width:24px;height:24px;flex:none;accent-color:var(--navy);margin:0 10px}
+.aula-radio{width:24px;height:24px;flex:none;accent-color:var(--navy);margin:0}.aula-radio-l{justify-content:center;min-width:44px;min-height:44px}
 .aula-x{min-width:44px;padding:0 10px}
 .aula-resp .aula-opt{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#fff}
 .aula-timer{position:sticky;top:64px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;flex-wrap:wrap}

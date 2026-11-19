@@ -53,7 +53,7 @@
 .tabs button{all:unset;box-sizing:border-box;cursor:pointer;padding:10px 18px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0}
 .tabs button:hover{color:var(--navy);background:#efece4}
 .tabs button[aria-selected=true]{color:var(--navy);border-bottom-color:var(--amber)}
-.tabs button:focus-visible{outline:3px solid var(--amber);outline-offset:-2px}
+.tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
 /* tablas */
 .tw{overflow-x:auto;position:relative}
 table.t{border-collapse:collapse;width:100%;min-width:560px}
@@ -61,7 +61,7 @@ table.t th,table.t td{padding:10px 12px;text-align:left;border-bottom:1px solid 
 table.t th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--soft)}
 table.t .c{text-align:center}.t .r{text-align:right}
 table.t th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center;text-transform:inherit;letter-spacing:inherit}
-table.t th button:focus-visible{outline:3px solid var(--amber)}
+table.t th button:focus-visible{outline:3px solid var(--focus)}
 table.t th[aria-sort=ascending] button::after{content:"\25B2";font-size:9px}
 table.t th[aria-sort=descending] button::after{content:"\25BC";font-size:9px}
 table.t tbody tr:hover{background:#fcfaf5}
@@ -83,8 +83,8 @@ table.t caption{text-align:left;caption-side:bottom;font-size:13px;color:var(--m
 .fld [aria-invalid=true]{border-color:var(--bad);background:var(--bad-bg)}
 .fld .help{font-size:12px;color:var(--muted);font-weight:400}
 .err{color:var(--bad);font-size:12.5px;min-height:1em}
-.opt{display:flex;gap:10px;align-items:center;cursor:pointer;color:var(--ink);font-weight:500}
-.opt input{width:18px;height:18px;accent-color:var(--navy)}
+.opt{display:flex;gap:10px;align-items:center;cursor:pointer;color:var(--ink);font-weight:500;min-height:44px;padding:0 4px} /* area tactil >= 44 px (WCAG 2.5.5 / Material) */
+.opt input{width:22px;height:22px;flex:none;accent-color:var(--navy);margin:0}
 .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 .form-error{background:var(--bad-bg);border-left:4px solid var(--bad);color:#5a2020;padding:10px 12px;border-radius:8px;font-size:13.5px;margin-bottom:12px}
 @media(max-width:560px){.fgrid{grid-template-columns:1fr}.row{grid-template-columns:100px 1fr 48px}}
@@ -97,7 +97,7 @@ dialog.modal::backdrop{background:rgba(10,20,40,.55)}
 .modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px 8px}
 .modal-head h2{font-size:22px}
 .modal-x{all:unset;cursor:pointer;font-size:24px;line-height:1;padding:4px 10px;border-radius:8px;color:var(--muted)}
-.modal-x:hover{background:#efece4}.modal-x:focus-visible{outline:3px solid var(--amber)}
+.modal-x:hover{background:#efece4}.modal-x:focus-visible{outline:3px solid var(--focus)}
 .modal-body{padding:8px 22px 8px;overflow:auto}
 .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px 20px}
 /* toasts */
@@ -114,6 +114,6 @@ dialog.modal::backdrop{background:rgba(10,20,40,.55)}
 .demo-users{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .demo-user{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:12px;align-items:center;background:#fff;border:1px solid #efece4;border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);transition:transform .15s}
 .demo-user:hover{transform:translateY(-2px)}
-.demo-user:focus-visible{outline:3px solid var(--amber)}
+.demo-user:focus-visible{outline:3px solid var(--focus)}
 .demo-user small{display:block;color:var(--muted)}
 .ficha-pic{width:64px;height:64px;border-radius:50%;background:var(--navy);color:#fff;font:700 24px var(--serif);display:grid;place-items:center;border:3px solid var(--amber)}

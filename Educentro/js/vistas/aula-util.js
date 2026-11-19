@@ -67,7 +67,11 @@
   A.urlSegura = function (u) {
     try { var x = new URL(String(u || '').trim()); return x.protocol === 'http:' || x.protocol === 'https:' ? x.href : null; } catch (e) { return null; }
   };
-  A.dataUrlSegura = function (s) { return typeof s === 'string' && /^data:[a-zA-Z0-9.+\-]+\/[a-zA-Z0-9.+\-]+(;[a-zA-Z0-9=.\-]+)*;base64,[A-Za-z0-9+\/=]+$/.test(s); };
+  A.dataUrlSegura = function (s) {
+    // solo base64 y tipos MIME pasivos: nunca html/svg/xml/javascript (documentos activos)
+    return typeof s === 'string' && /^data:[a-zA-Z0-9.+\-]+\/[a-zA-Z0-9.+\-]+(;[a-zA-Z0-9=.\-]+)*;base64,[A-Za-z0-9+\/=]+$/.test(s) &&
+      !/^data:(text\/(html|xml|javascript|ecmascript)|application\/(xhtml|xml|javascript|ecmascript|x-javascript)|image\/svg|[^;,]*\+xml)/i.test(s);
+  };
   A.tamano = function (b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; };
   A.usoAlmacen = function () {
     var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { return null; }

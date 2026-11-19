@@ -39,3 +39,8 @@ android/app/google-services.json
 Educentro/datos-privados/
 Educentro/**/*.xlsx
 Educentro/**/*.xls
+
+# Respaldos/planillas con datos reales exportados desde la app
+Educentro/**/*.xlsm
+Educentro/**/educentro-respaldo-*.json
+Educentro/**/planilla-*.csv

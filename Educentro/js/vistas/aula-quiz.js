@@ -46,7 +46,7 @@
             return '<label class="opt aula-opt"><input type="radio" name="cor' + i + '" data-f="cor" data-i="' + i + '" value="' + o[0] + '"' + (p.correcta === o[0] ? ' checked' : '') + '><span>' + o[1] + (p.correcta === o[0] ? ' (correcta)' : '') + '</span></label>'; }).join('') + '</div>';
         } else {
           h += '<div role="radiogroup" aria-label="Opciones de la pregunta ' + (i + 1) + '; marca la correcta" class="aula-opciones">' + p.opciones.map(function (o, k) {
-            return '<div class="aula-opc"><input type="radio" class="aula-radio" name="cor' + i + '" data-f="cor" data-i="' + i + '" value="' + esc(o.id) + '"' + (p.correcta === o.id ? ' checked' : '') + ' aria-label="Marcar la opción ' + (k + 1) + ' como correcta">' +
+            return '<div class="aula-opc"><label class="aula-radio-l"><input type="radio" class="aula-radio" name="cor' + i + '" data-f="cor" data-i="' + i + '" value="' + esc(o.id) + '"' + (p.correcta === o.id ? ' checked' : '') + ' aria-label="Marcar la opción ' + (k + 1) + ' como correcta"></label>' +
               '<input type="text" data-f="otxt" data-i="' + i + '" data-k="' + k + '" value="' + esc(o.texto) + '" maxlength="200" aria-label="Texto de la opción ' + (k + 1) + '" placeholder="Opción ' + (k + 1) + '">' +
               '<button type="button" class="btn sec sm aula-x" data-act="opc-del" data-i="' + i + '" data-k="' + k + '" aria-label="Quitar la opción ' + (k + 1) + '"' + (p.opciones.length <= 2 ? ' disabled' : '') + '>&times;</button></div>'; }).join('') +
             (p.opciones.length < 6 ? '<button type="button" class="btn sec sm" data-act="opc-add" data-i="' + i + '">Añadir opción</button>' : '') + '</div>';

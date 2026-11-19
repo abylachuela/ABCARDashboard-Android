@@ -35,7 +35,9 @@
     var s = EDU.estado.sesion();
     if (s) {
       var u = await EDU.repo.obtener('usuarios', s.usuarioId).catch(function () { return null; });
-      if (!u) EDU.estado.cerrarSesion();
+      // La sesion persistida es editable por el usuario: se contrasta con el registro de usuario (rol, centro, refId) y se descarta si no coincide.
+      if (!u || u.rol !== s.rol || (u.centroId || null) !== (s.centroUsuario || null) || (u.refId || null) !== (s.refId || null) ||
+        (s.rol !== 'admin_red' && s.centroActivo !== s.centroUsuario)) EDU.estado.cerrarSesion();
     }
     $('centerSel').addEventListener('change', function (e) { try { EDU.estado.cambiarCentro(e.target.value || null); } catch (err) { EDU.ui.toast(err.message, 'error'); } });
     $('logout').addEventListener('click', function () { EDU.estado.cerrarSesion(); });
