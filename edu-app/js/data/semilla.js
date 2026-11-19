@@ -103,7 +103,7 @@
           var nac = (2026 - (curso.nivel === 'Primario' ? 5 + curso.grado : 11 + curso.grado)) + '-' + p2(1 + Math.floor(R() * 12)) + '-' + p2(1 + Math.floor(R() * 28));
           var est = add('estudiantes', { id: eid, centroId: cid, nombres: nom, apellidos: ap1 + ' ' + ap2, matricula: 'MAT-' + n + '-' + (2000 + estIdx), fechaNacimiento: nac,
             genero: fem ? 'F' : 'M', direccion: 'Calle ' + (1 + Math.floor(R() * 30)) + ', ' + cf.centro.ciudad, habilidad: 0 });
-          est.habilidad = Math.max(38, Math.min(98, 76 + gauss() * 11));
+          est.habilidad = Math.max(38, Math.min(98, 83 + gauss() * 10));
           var tnom = pick(R() < 0.7 ? NOM_F : NOM_M);
           add('tutores', { id: 'tut_' + n + '_' + p2(si * 8 + e + 1), centroId: cid, nombres: tnom, apellidos: ap1 + ' ' + pick(APELL), parentesco: pick(['Madre', 'Padre', 'Tutor/a legal', 'Abuela']),
             telefono: '829-555-' + (2000 + estIdx), email: slug(tnom.split(' ')[0]) + '.' + slug(ap1) + estIdx + '@correo.demo', estudianteIds: [eid] });
@@ -169,7 +169,7 @@
       // usuarios
       add('usuarios', { id: 'usr_dir_' + n, centroId: cid, nombre: cf.centro.director, email: 'direccion' + n + '@educentro.demo', rol: 'director', refId: null });
       add('usuarios', { id: 'usr_sec_' + n, centroId: cid, nombre: n === 1 ? 'Carmen Rosario' : 'Ramona Báez', email: 'secretaria' + n + '@educentro.demo', rol: 'secretaria', refId: null });
-      docs.forEach(function (dc) { add('usuarios', { id: 'usr_' + dc.id.slice(4), centroId: cid, nombre: dc.nombres + ' ' + dc.apellidos, email: dc.email, rol: 'docente', refId: dc.id }); });
+      docs.forEach(function (dc) { add('usuarios', { id: 'usr_doc_' + dc.id.slice(4), centroId: cid, nombre: dc.nombres + ' ' + dc.apellidos, email: dc.email, rol: 'docente', refId: dc.id }); });
       var e1 = D.estudiantes.filter(function (x) { return x.centroId === cid; })[0], t1 = D.tutores.filter(function (x) { return x.centroId === cid; })[0];
       add('usuarios', { id: 'usr_tut_' + n, centroId: cid, nombre: t1.nombres + ' ' + t1.apellidos, email: t1.email, rol: 'tutor', refId: t1.id });
       add('usuarios', { id: 'usr_est_' + n, centroId: cid, nombre: e1.nombres + ' ' + e1.apellidos, email: 'est' + n + '@educentro.demo', rol: 'estudiante', refId: e1.id });
