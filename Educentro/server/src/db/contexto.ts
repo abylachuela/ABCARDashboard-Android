@@ -12,6 +12,9 @@ export interface ContextoSeguridad {
   /** null solo para admin_red. */
   centroId: string | null;
   usuarioId: string;
+  /** IP y user-agent de la petición (ya truncados). Solo para la auditoría: los fija el servidor, nunca el cliente. */
+  ip?: string | null;
+  ua?: string | null;
 }
 
 export class ErrorContexto extends Error {
@@ -48,6 +51,23 @@ export class Tx {
     }
     const r = await this.#c.query<R>(texto, valores);
     return { rows: r.rows, rowCount: r.rowCount ?? 0 };
+  }
+  #n = 0;
+  /**
+   * Ejecuta `fn` dentro de un SAVEPOINT: si lanza, se deshacen solo sus escrituras y la transacción sigue viva
+   * (lotes con resultado por fila). Es el único punto que emite SAVEPOINT; `query` los sigue rechazando.
+   */
+  async parcial<T>(fn: () => Promise<T>): Promise<T> {
+    const nombre = `edu_sp_${++this.#n}`;
+    await this.#c.query(`SAVEPOINT ${nombre}`);
+    try {
+      const r = await fn();
+      await this.#c.query(`RELEASE SAVEPOINT ${nombre}`);
+      return r;
+    } catch (e) {
+      await this.#c.query(`ROLLBACK TO SAVEPOINT ${nombre}`);
+      throw e;
+    }
   }
 }
 

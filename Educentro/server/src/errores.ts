@@ -6,6 +6,8 @@ export class ErrorHttp extends Error {
     public readonly codigo: string,
     mensaje: string,
     public readonly campos?: string[],
+    /** Datos adicionales y no sensibles que se devuelven dentro de `error` (p. ej. filas rechazadas de un lote). */
+    public readonly extra?: Record<string, unknown>,
   ) {
     super(mensaje);
     this.name = 'ErrorHttp';
@@ -13,14 +15,14 @@ export class ErrorHttp extends Error {
 }
 
 export interface CuerpoError {
-  error: { codigo: string; mensaje: string; campos?: string[] };
+  error: { codigo: string; mensaje: string; campos?: string[]; [k: string]: unknown };
 }
 
 export function aRespuesta(err: unknown): { status: number; cuerpo: CuerpoError } {
   if (err instanceof ErrorHttp) {
     return {
       status: err.status,
-      cuerpo: { error: { codigo: err.codigo, mensaje: err.message, ...(err.campos ? { campos: err.campos } : {}) } },
+      cuerpo: { error: { codigo: err.codigo, mensaje: err.message, ...(err.campos ? { campos: err.campos } : {}), ...(err.extra ?? {}) } },
     };
   }
   const e = err as Partial<FastifyError> & { codigo?: string; mensaje?: string };

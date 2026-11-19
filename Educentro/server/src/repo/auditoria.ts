@@ -1,4 +1,5 @@
 // Auditoría de datos (tabla append-only `auditoria`). usuarioId, rol y fecha los fija SIEMPRE el servidor.
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { ErrorHttp } from '../errores.js';
 import type { SesionApi } from '../domain/alcance.js';
@@ -20,8 +21,9 @@ export interface EntradaAuditoria {
 
 export async function registrarAuditoria(tx: Tx, ses: SesionApi, centroId: string, e: EntradaAuditoria): Promise<string> {
   const r = await tx.query<{ id: string }>(
-    `INSERT INTO auditoria (centro_id, usuario_id, rol, accion, coleccion, registro_id, antes, despues, extra)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb) RETURNING id`,
+    // seq, prev_hash, hash y fecha los fija el trigger de la cadena (migración 0009); usuario, rol, IP y UA, el servidor.
+    `INSERT INTO auditoria (centro_id, usuario_id, rol, accion, coleccion, registro_id, antes, despues, extra, ip, user_agent)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11) RETURNING id`,
     [
       centroId,
       ses.usuarioId,
@@ -32,6 +34,8 @@ export async function registrarAuditoria(tx: Tx, ses: SesionApi, centroId: strin
       e.antes === undefined || e.antes === null ? null : JSON.stringify(e.antes),
       e.despues === undefined || e.despues === null ? null : JSON.stringify(e.despues),
       JSON.stringify(e.extra ?? {}),
+      tx.contexto.ip ? tx.contexto.ip.slice(0, 45) : null,
+      tx.contexto.ua ? tx.contexto.ua.slice(0, 200) : null,
     ],
   );
   return (r.rows[0] as { id: string }).id;
@@ -49,9 +53,14 @@ interface FilaAud {
   despues: unknown;
   extra: Json;
   fecha: string;
+  seq: string;
+  hash: string;
+  prev_hash: string;
+  ip: string | null;
+  user_agent: string | null;
   [k: string]: unknown;
 }
-const SEL = `id, centro_id, usuario_id, rol, accion, coleccion, registro_id, antes, despues, extra, ${iso('fecha')} AS fecha`;
+const SEL = `id, centro_id, usuario_id, rol, accion, coleccion, registro_id, antes, despues, extra, ${iso('fecha')} AS fecha, seq, hash, prev_hash, ip, user_agent`;
 const plano = (f: FilaAud): Json => ({
   ...f.extra,
   id: f.id,
@@ -64,6 +73,11 @@ const plano = (f: FilaAud): Json => ({
   antes: f.antes,
   despues: f.despues,
   fecha: f.fecha,
+  seq: Number(f.seq),
+  hash: f.hash,
+  prevHash: f.prev_hash,
+  ip: f.ip,
+  userAgent: f.user_agent,
 });
 
 const COLUMNAS: Columnas = { id: 'id', centroId: 'centro_id', usuarioId: 'usuario_id', rol: 'rol', accion: 'accion', coleccion: 'coleccion', registroId: 'registro_id', fecha: 'fecha' };
@@ -108,7 +122,7 @@ export async function listarAuditoria(tx: Tx, ses: SesionApi, query: unknown): P
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = (await tx.query<{ n: number }>(`SELECT count(*)::int AS n FROM auditoria ${w}`, params)).rows[0]?.n ?? 0;
   params.push(c.limite, c.offset);
-  const r = await tx.query<FilaAud>(`SELECT ${SEL} FROM auditoria ${w} ORDER BY fecha DESC, id LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
+  const r = await tx.query<FilaAud>(`SELECT ${SEL} FROM auditoria ${w} ORDER BY fecha DESC, seq DESC, id LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
   const datos = r.rows.map(plano);
   return { datos, ...paginacion(c, total, datos.length) };
 }
@@ -163,4 +177,86 @@ export async function crearAuditoria(tx: Tx, ses: SesionApi, cuerpo: unknown): P
   const id = await registrarAuditoria(tx, ses, centro, { accion: d.accion, coleccion: d.coleccion, registroId: d.registroId, antes: d.antes, despues: d.despues, extra });
   const r = await tx.query<FilaAud>(`SELECT ${SEL} FROM auditoria WHERE id = $1`, [id]);
   return plano(r.rows[0] as FilaAud);
+}
+
+// ------------------------------------------------------------------------------------------------ verificación
+/** Expresión SQL del contenido canónico: IDÉNTICA a `auditoria_canon` de la migración 0009 (una prueba lo vigila). */
+const CANON_SQL = `jsonb_build_array(seq, id, centro_id, usuario_id, rol, accion, coleccion, registro_id, antes, despues, extra,
+  to_char(fecha AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ip, user_agent, prev_hash)::text`;
+const GENESIS = '0'.repeat(64);
+const MAX_ERRORES = 50;
+
+export interface ErrorCadena {
+  seq: number | null;
+  id: string | null;
+  tipo: 'hash_alterado' | 'enlace_roto' | 'seq_discontinuo' | 'cabeza_distinta' | 'cabeza_ausente';
+  mensaje: string;
+}
+export interface InformeCadena {
+  centroId: string;
+  ok: boolean;
+  registros: number;
+  ultimoSeq: number;
+  ultimoHash: string;
+  verificadoEn: string;
+  errores: ErrorCadena[];
+  /** true si había más errores que los listados. */
+  truncado: boolean;
+}
+
+/**
+ * Recorre la cadena de un centro y recalcula cada hash EN ESTE PROCESO (SHA-256 de Node sobre el texto canónico que
+ * entrega PostgreSQL con funciones nativas, no con funciones de la BD que un propietario pudiera sustituir).
+ * Detecta: contenido alterado, filas borradas o insertadas (hueco de `seq`/enlace roto), reordenamiento y
+ * truncado de la cola (la cabeza guardada no coincide con la última fila). NO detecta que quien controla toda la
+ * BD reescriba cadena y cabeza completas: para eso se ancla el hash final fuera de la VM (`anclar-auditoria`).
+ */
+export async function verificarCadena(tx: Tx, centroId: string): Promise<InformeCadena> {
+  const errores: ErrorCadena[] = [];
+  let truncado = false;
+  const err = (e: ErrorCadena): void => {
+    if (errores.length < MAX_ERRORES) errores.push(e);
+    else truncado = true;
+  };
+  let esperadoSeq = 1;
+  let hashPrevio = GENESIS;
+  let registros = 0;
+  let ultimoSeq = 0;
+  let ultimoHash = GENESIS;
+  const LOTE = 2000;
+  for (let desdeSeq = Number.MIN_SAFE_INTEGER; ; ) {
+    const r = await tx.query<{ seq: string; id: string; prev_hash: string; hash: string; canon: string }>(
+      `SELECT seq, id, prev_hash, hash, ${CANON_SQL} AS canon FROM auditoria WHERE centro_id = $1 AND seq > $2 ORDER BY seq LIMIT ${LOTE}`,
+      [centroId, desdeSeq],
+    );
+    for (const f of r.rows) {
+      const seq = Number(f.seq);
+      registros++;
+      if (seq !== esperadoSeq) {
+        err({ seq, id: f.id, tipo: 'seq_discontinuo', mensaje: `Se esperaba la entrada ${esperadoSeq} y se encontró la ${seq}: faltan o sobran registros.` });
+        esperadoSeq = seq;
+      }
+      if (f.prev_hash !== hashPrevio) {
+        err({ seq, id: f.id, tipo: 'enlace_roto', mensaje: 'El enlace con la entrada anterior no coincide (registro borrado, insertado o reordenado).' });
+      }
+      const calculado = createHash('sha256').update(f.canon, 'utf8').digest('hex');
+      if (calculado !== f.hash) {
+        err({ seq, id: f.id, tipo: 'hash_alterado', mensaje: 'El contenido de la entrada no coincide con su hash (alterada).' });
+      }
+      hashPrevio = f.hash;
+      esperadoSeq = seq + 1;
+      ultimoSeq = seq;
+      ultimoHash = f.hash;
+    }
+    if (r.rows.length < LOTE) break;
+    desdeSeq = Number((r.rows[r.rows.length - 1] as { seq: string }).seq);
+  }
+  const cab = await tx.query<{ seq: string; hash: string }>('SELECT seq, hash FROM auditoria_cabeza WHERE centro_id = $1', [centroId]);
+  const c = cab.rows[0];
+  if (!c) {
+    if (registros > 0) err({ seq: null, id: null, tipo: 'cabeza_ausente', mensaje: 'Falta la cabeza de la cadena del centro.' });
+  } else if (Number(c.seq) !== ultimoSeq || c.hash !== ultimoHash) {
+    err({ seq: Number(c.seq), id: null, tipo: 'cabeza_distinta', mensaje: 'La última entrada no coincide con la cabeza registrada (cola truncada o alterada).' });
+  }
+  return { centroId, ok: errores.length === 0, registros, ultimoSeq, ultimoHash, verificadoEn: new Date().toISOString(), errores, truncado };
 }
