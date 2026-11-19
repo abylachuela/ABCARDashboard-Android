@@ -178,6 +178,7 @@
     D.agenteLog.push({ id: 'agl_1', centroId: 'cen_1', usuarioId: 'usr_doc_1_01', fecha: '2026-11-10T14:00:00.000Z', tarea: 'generar_plan', entrada: 'Plan de clase sobre fracciones', salida: 'Borrador de plan (simulado)', aprobadoPor: 'usr_doc_1_01' });
     D.estudiantes.forEach(function (e) { delete e.habilidad; });
     if (EDU.curriculoSemilla) EDU.curriculoSemilla.sembrar(D); // catalogo curricular MINERD (js/data/curriculo-semilla.js)
+    if (EDU.cursosSemilla) EDU.cursosSemilla.sembrar(D); // cursos/talleres de ejemplo (js/data/cursos-semilla.js)
     return D;
   }
 
