@@ -27,7 +27,7 @@
     fase5: 'Disponible en la Fase 5 (migración de datos); aún no está activo en modo servidor.'
   };
 
-  var csrf = null;
+  var csrf = null, motivoActual = null;
   var cacheL = {}, cacheO = {};
   var api = {};
 
@@ -82,6 +82,7 @@
     if (o.cuerpo !== undefined) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(o.cuerpo); }
     if (!SEGUROS[metodo] && csrf) init.headers['X-EDU-CSRF'] = csrf;
     if (o.ifMatch) init.headers['If-Match'] = o.ifMatch;
+    if (!SEGUROS[metodo] && motivoActual) init.headers['X-EDU-Motivo'] = encodeURIComponent(motivoActual); // edicion del director sobre un periodo cerrado (queda auditada con el motivo)
     var resp;
     for (var intento = 0; ; intento++) {
       try { resp = await F()(BASE + ruta, init); } catch (e) { throw error(MSG.red, 0, 'red'); }
@@ -198,6 +199,18 @@
     try { await peticion('DELETE', ruta(col, id), { col: col }); } catch (e) { if (e.estado === 404) { invalidar(col); return false; } throw e; }
     invalidar(col);
     return true;
+  };
+  /** conMotivo(motivo, fn): ejecuta fn con la cabecera X-EDU-Motivo en TODAS las escrituras que haga (el servidor la exige al director sobre periodos cerrados). */
+  api.conMotivo = async function (motivo, fn) {
+    var previo = motivoActual; motivoActual = String(motivo || '').trim() || null;
+    try { return await fn(); } finally { motivoActual = previo; }
+  };
+  /** Periodos: informe de pendientes, cierre y reapertura en el servidor (director/admin_red). */
+  api.periodos = {
+    informe: function (id) { return peticion('GET', '/periodos/' + encodeURIComponent(id) + '/informe-cierre'); },
+    /** -> {periodo, informe}. Sin confirmar y con pendientes el servidor responde 409 confirmacion_requerida (err.codigo). */
+    cerrar: async function (id, confirmar) { var j = await peticion('POST', '/periodos/' + encodeURIComponent(id) + '/cerrar', { cuerpo: confirmar ? { confirmar: true } : {}, col: 'periodos' }); invalidar('periodos'); return j; },
+    reabrir: async function (id, motivo) { var j = await peticion('POST', '/periodos/' + encodeURIComponent(id) + '/reabrir', { cuerpo: { motivo: motivo }, col: 'periodos' }); invalidar('periodos'); return j; }
   };
   /** Respaldo de UN centro (GET /respaldo/exportar; queda auditado en el servidor). {centroId?} solo lo usa admin_red (por defecto, su centro activo). */
   api.exportarTodo = async function (o) {

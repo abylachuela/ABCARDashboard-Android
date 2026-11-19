@@ -1,0 +1,11 @@
+# Lista blanca del contexto (Educentro/): solo lo que necesita la imagen de la API.
+*
+!server/package.json
+!server/package-lock.json
+!server/tsconfig.json
+!server/tsconfig.build.json
+!server/src/**
+!server/migrations/**
+!js/core/escala.js
+!js/core/calculo.js
+!js/data/consultas.js

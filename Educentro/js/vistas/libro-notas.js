@@ -122,8 +122,12 @@
         var f = elSel.querySelector('#' + id); if (f) f.focus();
       });
 
+      /* ---------- modo API: cierre/reapertura/auditoria las hace el servidor ---------- */
+      function api() { var a = EDU.repo.adaptador(); return a && a.esServidor && a.periodos ? a : null; }
+      function conMotivo(fn) { return S.motivoEd ? EDU.repo.conMotivo(S.motivoEd, fn) : fn(); }
       /* ---------- auditoria de acciones de periodo ---------- */
       function auditar(accion, extra) {
+        if (api()) return Promise.resolve(); // el servidor audita
         return EDU.repo.auditar(accion, Object.assign({ centroId: S.carga.centroId, coleccion: 'periodos' }, extra));
       }
       async function pedirMotivo(titulo, texto) {
@@ -238,7 +242,7 @@
         });
         if (!regs.length) return;
         var btn = elPanel.querySelector('#ln-guardar'); if (btn) btn.disabled = true;
-        try { await EDU.repo.guardarMuchos('calificaciones', regs); ui.toast(regs.length + ' calificación(es) guardada(s)', 'ok'); await recargar(); }
+        try { await conMotivo(function () { return EDU.repo.guardarMuchos('calificaciones', regs); }); ui.toast(regs.length + ' calificación(es) guardada(s)', 'ok'); await recargar(); }
         catch (err) { ui.toast(err.message || 'No se pudo guardar', 'error'); if (btn) btn.disabled = false; }
       }
 
@@ -253,7 +257,7 @@
           valores: act ? { nombre: act.nombre, categoriaId: act.categoriaId, puntosMax: act.puntosMax, fecha: act.fecha } : { fecha: hoy >= p.inicio && hoy <= p.fin ? hoy : p.inicio },
           alEnviar: async function (v) {
             var rec = Object.assign({}, act || { centroId: S.carga.centroId, cargaId: S.carga.id, periodoId: S.periodoId }, { nombre: v.nombre.trim(), categoriaId: v.categoriaId, puntosMax: calc.aNumero(v.puntosMax), fecha: v.fecha });
-            await EDU.repo.guardar('actividades', rec); m.cerrar(true);
+            await conMotivo(function () { return EDU.repo.guardar('actividades', rec); }); m.cerrar(true);
           } });
         var botones = [{ texto: 'Cancelar', tipo: 'sec', valor: null }];
         if (act) botones.push({ texto: 'Eliminar', tipo: 'dng', alClic: async function () {
@@ -305,8 +309,9 @@
             var v = calc.validarPesos(cs.map(function (c) { return { peso: calc.aNumero(c.peso) }; }), 100);
             if (!v.ok) { er.textContent = 'Los pesos suman ' + v.suma + ' %; deben sumar 100 %.'; return; }
             try {
+              await conMotivo(async function () {
               for (var i = 0; i < borrar.length; i++) await EDU.repo.borrar('categorias', borrar[i]);
-              for (var j = 0; j < cs.length; j++) await EDU.repo.guardar('categorias', Object.assign({}, cs[j], { centroId: S.carga.centroId, cargaId: S.carga.id, nombre: String(cs[j].nombre).trim(), peso: calc.aNumero(cs[j].peso) }, cs[j].id ? {} : { id: undefined }));
+              for (var j = 0; j < cs.length; j++) await EDU.repo.guardar('categorias', Object.assign({}, cs[j], { centroId: S.carga.centroId, cargaId: S.carga.id, nombre: String(cs[j].nombre).trim(), peso: calc.aNumero(cs[j].peso) }, cs[j].id ? {} : { id: undefined })); });
               cerrar(true);
             } catch (err) { er.textContent = err.message; }
           } }] });
@@ -329,7 +334,12 @@
         return { filas: filas, total: total, malos: malos };
       }
       async function cerrarPeriodo() {
-        var p = periodo(), r = revision(p), box = document.createElement('div');
+        var p = periodo(), r = revision(p), box = document.createElement('div'), inf = null;
+        if (api()) { // informe de pendientes y pesos calculado por el servidor
+          try { inf = await api().periodos.informe(p.id); } catch (e) { ui.toast(e.message, 'error'); return; }
+          r = { filas: inf.cargas.filter(function (c) { return c.pendientes || c.sinActividades || !c.pesosCategorias.ok; }).map(function (c) { return { carga: { seccionId: c.seccionId, asignaturaId: c.asignaturaId, docenteId: c.docenteId }, pend: c.pendientes, pesos: c.pesosCategorias.ok || inf.modelo === 'competencias', sinAct: c.sinActividades }; }),
+            total: inf.pendientes, malos: inf.bloqueos.length };
+        }
         var dc = function (id) { var x = d.docentes.filter(function (y) { return y.id === id; })[0]; return x ? fmt.nombreCompleto(x) : '—'; };
         box.innerHTML = '<p style="margin:0 0 8px">Al cerrar <strong>' + esc(p.nombre) + '</strong> los docentes ya no podrán modificar sus calificaciones. Revisión de pendientes:</p>' +
           (r.filas.length ? '<div class="tw"><table class="t"><caption class="sr-only">Pendientes por asignatura</caption><thead><tr><th scope="col">Sección</th><th scope="col">Asignatura</th><th scope="col">Docente</th><th scope="col" class="r">Notas pendientes</th><th scope="col">Observación</th></tr></thead><tbody>' +
@@ -342,7 +352,8 @@
             if (r.malos) return;
             var ck = box.querySelector('#cp-ok'); if (ck && !ck.checked) { box.querySelector('#cp-err').textContent = 'Marca la casilla para confirmar el cierre con pendientes.'; return; }
             try {
-              await EDU.repo.guardar('periodos', Object.assign({}, p, { cerrado: true, cerradoEn: ahora(), cerradoPor: ses.usuarioId }));
+              if (api()) await api().periodos.cerrar(p.id, inf.requiereConfirmacion);
+              else await EDU.repo.guardar('periodos', Object.assign({}, p, { cerrado: true, cerradoEn: ahora(), cerradoPor: ses.usuarioId }));
               await auditar('cerrar_periodo', { registroId: p.id, antes: { cerrado: false }, despues: { cerrado: true }, pendientes: r.total });
               cerrar(true);
             } catch (e) { box.querySelector('#cp-err').textContent = e.message; }
@@ -353,7 +364,8 @@
         var p = periodo(), mot = await pedirMotivo('Reabrir ' + p.nombre, 'Los docentes podrán volver a editar las calificaciones.');
         if (!mot) return;
         try {
-          await EDU.repo.guardar('periodos', Object.assign({}, p, { cerrado: false, reabiertoEn: ahora(), reabiertoPor: ses.usuarioId }));
+          if (api()) await api().periodos.reabrir(p.id, mot);
+          else await EDU.repo.guardar('periodos', Object.assign({}, p, { cerrado: false, reabiertoEn: ahora(), reabiertoPor: ses.usuarioId }));
           await auditar('reabrir_periodo', { registroId: p.id, antes: { cerrado: true }, despues: { cerrado: false }, motivo: mot });
           ui.toast(p.nombre + ' reabierto', 'ok'); await recargar();
         } catch (e) { ui.toast(e.message, 'error'); }
@@ -364,6 +376,7 @@
           var mot = await pedirMotivo('Editar periodo cerrado', 'Cada cambio de nota quedará en la auditoría junto con este motivo.');
           if (!mot) return;
           try { await auditar('edicion_periodo_cerrado', { registroId: p.id, motivo: mot }); } catch (e) { ui.toast(e.message, 'error'); return; }
+          S.motivoEd = mot; // modo API: se envia como X-EDU-Motivo en cada escritura
         }
         S.modoEd = true; pintar();
         var b = elPanel.querySelector('#ln-fin-ed'); if (b) b.focus();
@@ -379,7 +392,7 @@
           else if (b.id === 'ln-cerrar') { if (hayCambios()) ui.toast('Guarda o descarta los cambios antes de cerrar el periodo.', 'warn'); else await cerrarPeriodo(); }
           else if (b.id === 'ln-reabrir') await reabrirPeriodo();
           else if (b.id === 'ln-editar') await habilitarEdicion();
-          else if (b.id === 'ln-fin-ed') { if (hayCambios() && !(await ui.confirmar({ titulo: 'Cambios sin guardar', mensaje: '¿Descartar los cambios sin guardar?', textoOk: 'Descartar', peligro: true }))) return; S.dirty = {}; S.invalidos = {}; S.modoEd = false; pintar(); }
+          else if (b.id === 'ln-fin-ed') { if (hayCambios() && !(await ui.confirmar({ titulo: 'Cambios sin guardar', mensaje: '¿Descartar los cambios sin guardar?', textoOk: 'Descartar', peligro: true }))) return; S.dirty = {}; S.invalidos = {}; S.modoEd = false; S.motivoEd = null; pintar(); }
         } catch (err) { console.error(err); ui.toast(err.message || 'Error', 'error'); }
       });
 

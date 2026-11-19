@@ -178,7 +178,7 @@
         });
         if (!regs.length) return;
         var b = panelNotas.querySelector('#lc-guardar'); if (b) b.disabled = true;
-        try { await EDU.repo.guardarMuchos('notasCompetencia', regs); ui.toast(regs.length + ' estudiante(s) guardado(s)', 'ok'); d = await EDU.consultas.cargar(COLS); S.dirty = {}; S.invalidos = {}; pintarNotas(); }
+        try { await (S.motivoEd ? EDU.repo.conMotivo(S.motivoEd, function () { return EDU.repo.guardarMuchos('notasCompetencia', regs); }) : EDU.repo.guardarMuchos('notasCompetencia', regs)); ui.toast(regs.length + ' estudiante(s) guardado(s)', 'ok'); d = await EDU.consultas.cargar(COLS); S.dirty = {}; S.invalidos = {}; pintarNotas(); }
         catch (err) { ui.toast(err.message || 'No se pudo guardar', 'error'); if (b) b.disabled = false; }
       }
       panelNotas.addEventListener('change', async function (e) {
@@ -196,9 +196,10 @@
           else if (b.id === 'lc-editar') {
             var v = await ui.formularioModal({ titulo: 'Editar con auditoría', tamano: 'sm', textoEnviar: 'Continuar', campos: [{ nombre: 'motivo', label: 'Motivo (queda registrado en la auditoría)', tipo: 'textarea', requerido: true, minLen: 5, maxLen: 300 }] });
             if (!v) return;
+            S.motivoEd = v.motivo; // modo API: X-EDU-Motivo en cada escritura
             await EDU.repo.auditar('edicion_notas_competencia', { centroId: S.carga.centroId, coleccion: 'notasCompetencia', registroId: S.carga.id, motivo: v.motivo });
             S.modoEd = true; pintarNotas();
-          } else if (b.id === 'lc-fin') { if (hayCambios() && !(await ui.confirmar({ titulo: 'Cambios sin guardar', mensaje: '¿Descartar los cambios sin guardar?', textoOk: 'Descartar', peligro: true }))) return; S.dirty = {}; S.invalidos = {}; S.modoEd = false; pintarNotas(); }
+          } else if (b.id === 'lc-fin') { if (hayCambios() && !(await ui.confirmar({ titulo: 'Cambios sin guardar', mensaje: '¿Descartar los cambios sin guardar?', textoOk: 'Descartar', peligro: true }))) return; S.dirty = {}; S.invalidos = {}; S.modoEd = false; S.motivoEd = null; pintarNotas(); }
         } catch (err) { console.error(err); ui.toast(err.message || 'Error', 'error'); }
       });
 

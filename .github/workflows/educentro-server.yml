@@ -6,6 +6,10 @@ on:
     paths:
       - 'Educentro/server/**'
       - 'Educentro/js/core/permisos.js'   # fuente de permisos.json (paridad)
+      - 'Educentro/js/core/calculo.js'    # cálculo compartido (calculo-shim, pruebas de paridad)
+      - 'Educentro/js/core/escala.js'
+      - 'Educentro/js/core/formato.js'
+      - 'Educentro/js/data/consultas.js'
       - 'Educentro/js/data/repo-local.js' # lista de colecciones
       - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'
@@ -13,6 +17,10 @@ on:
     paths:
       - 'Educentro/server/**'
       - 'Educentro/js/core/permisos.js'
+      - 'Educentro/js/core/calculo.js'
+      - 'Educentro/js/core/escala.js'
+      - 'Educentro/js/core/formato.js'
+      - 'Educentro/js/data/consultas.js'
       - 'Educentro/js/data/repo-local.js'
       - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'

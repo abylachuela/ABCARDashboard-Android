@@ -197,6 +197,76 @@ async function probarCuenta(browser, base, origenes, cred) {
   }
 }
 
+/** Flujo de notas contra el backend REAL (periodo cerrado, motivo, cierre con confirmación, auditoría encadenada, paridad con el servidor). */
+async function probarNotas(browser, base, origenes, cred) {
+  const abrir = async (rol) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage(), vig = vigilar(page, origenes);
+    vig.silenciar(1); await page.goto(base + '/'); await page.waitForSelector('#lgForm', { timeout: 20000 });
+    await entrar(page, vig, cred[rol]);
+    return { ctx, page, vig };
+  };
+  const doc = await abrir('docente'), dir = await abrir('director');
+  doc.vig.silenciar(6); dir.vig.silenciar(6); // 4xx esperados del flujo (periodo cerrado, rango, confirmación, motivo)
+  try {
+    // datos de la semilla: una carga del docente con actividad en el periodo abierto (per_1_3) y otra en uno cerrado (per_1_1)
+    const info = await doc.page.evaluate(async () => {
+      const s = EDU.estado.sesion(), d = await EDU.consultas.cargar(['cargas', 'actividades', 'matriculas']);
+      const car = d.cargas.find((c) => c.docenteId === s.refId);
+      const act = (p) => d.actividades.find((a) => a.cargaId === car.id && a.periodoId === p);
+      const est = d.matriculas.find((m) => m.seccionId === car.seccionId && m.estado === 'activa').estudianteId;
+      return { est, abierta: act('per_1_3'), cerrada: act('per_1_1') };
+    });
+    const guardar = (pg, act, est, pts, motivo) => pg.evaluate(async ([a, e, p, m]) => {
+      const f = () => EDU.repo.guardarMuchos('calificaciones', [{ id: 'cal_' + a + '_' + e, centroId: 'cen_1', actividadId: a, estudianteId: e, puntos: p }]);
+      try { await (m ? EDU.repo.conMotivo(m, f) : f()); return { ok: true }; } catch (x) { return { ok: false, codigo: x.codigo, estado: x.estado, mensaje: x.message }; }
+    }, [act, est, pts, motivo || null]);
+    // 1) el docente guarda notas en el periodo abierto; en el cerrado es rechazado con un mensaje claro
+    ok((await guardar(doc.page, info.abierta.id, info.est, 13.37)).ok, 'notas: el docente guarda en periodo abierto');
+    const rc = await guardar(doc.page, info.cerrada.id, info.est, 5);
+    ok(!rc.ok && rc.codigo === 'periodo_cerrado' && /cerrado/.test(rc.mensaje), 'notas: el docente es rechazado en periodo cerrado (' + rc.codigo + ')');
+    const rr = await guardar(doc.page, info.abierta.id, info.est, 101);
+    ok(!rr.ok && rr.estado === 422, 'notas: puntos fuera de rango rechazados (422)');
+    // 2) el director cierra el periodo: con pendientes exige confirmación
+    const cierre = (confirmar) => dir.page.evaluate(async ([c]) => {
+      try { const j = await EDU.repoApi.periodos.cerrar('per_1_3', c); return { ok: true, cerrado: j.periodo.cerrado }; } catch (x) { return { ok: false, codigo: x.codigo, estado: x.estado }; }
+    }, [confirmar]);
+    const inf = await dir.page.evaluate(() => EDU.repoApi.periodos.informe('per_1_3'));
+    ok(typeof inf.pendientes === 'number' && inf.bloqueos.length === 0, 'cierre: informe de pendientes sin bloqueos (' + inf.pendientes + ' pendientes)');
+    if (inf.requiereConfirmacion) { const c1 = await cierre(false); ok(!c1.ok && c1.codigo === 'confirmacion_requerida', 'cierre: con pendientes pide confirmación'); }
+    const c2 = await cierre(true);
+    ok(c2.ok && c2.cerrado, 'cierre: el director cierra con confirmación');
+    const r3 = await guardar(doc.page, info.abierta.id, info.est, 14);
+    ok(!r3.ok && r3.codigo === 'periodo_cerrado', 'cierre: el docente ya no puede escribir');
+    // 3) el director edita con motivo (sin motivo, no)
+    const sm = await guardar(dir.page, info.abierta.id, info.est, 15);
+    ok(!sm.ok && sm.codigo === 'motivo_requerido', 'edición: el director sin motivo es rechazado');
+    ok((await guardar(dir.page, info.abierta.id, info.est, 15, 'Corrección autorizada por dirección')).ok, 'edición: el director edita con motivo');
+    // 4) reabre con motivo; el docente vuelve a escribir
+    const ra = await dir.page.evaluate(async () => { try { const j = await EDU.repoApi.periodos.reabrir('per_1_3', 'Se debe registrar una nota faltante'); return { ok: true, cerrado: j.periodo.cerrado }; } catch (x) { return { ok: false, codigo: x.codigo }; } });
+    ok(ra.ok && ra.cerrado === false, 'reapertura: con motivo');
+    ok((await guardar(doc.page, info.abierta.id, info.est, 13.37)).ok, 'reapertura: el docente vuelve a escribir');
+    // 5) auditoría: cadena verificable y con las acciones (motivo incluido)
+    const aud = await dir.page.evaluate(async () => {
+      const cid = EDU.estado.sesion().centroUsuario;
+      const v = await (await fetch('/api/v1/auditoria/verificar?centroId=' + cid, { credentials: 'same-origin' })).json();
+      const l = await (await fetch('/api/v1/auditoria?limite=200', { credentials: 'same-origin' })).json();
+      return { v, acciones: l.datos.map((x) => x.accion), motivos: l.datos.filter((x) => x.motivo).map((x) => x.motivo) };
+    });
+    ok(aud.v.ok === true && aud.v.registros > 0, 'auditoría: la cadena de hashes verifica (' + aud.v.registros + ' entradas)');
+    ok(aud.acciones.includes('cerrar_periodo') && aud.acciones.includes('reabrir_periodo'), 'auditoría: cierre y reapertura registrados');
+    ok(aud.motivos.includes('Corrección autorizada por dirección'), 'auditoría: la edición del director guarda el motivo');
+    // 6) boletín / panel == servidor: el resumen del cliente coincide con GET /notas/resumen
+    const par = await dir.page.evaluate(async () => {
+      const d = await EDU.consultas.cargar(['matriculas', 'cargas', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'periodos', 'escalas']);
+      const cli = EDU.consultas.resumenNotas(d), srv = (await (await fetch('/api/v1/notas/resumen', { credentials: 'same-origin' })).json()).datos;
+      return { n: cli.length, m: srv.length, igual: JSON.stringify(cli) === JSON.stringify(srv) };
+    });
+    ok(par.n > 0 && par.n === par.m && par.igual, 'resumen: el cliente (boletín/panel) y /notas/resumen coinciden (' + par.n + ' filas)');
+    for (const p of doc.vig.problemas().concat(dir.vig.problemas())) fallos.push('[notas] ' + p);
+  } finally { await doc.ctx.close(); await dir.ctx.close(); }
+}
+
 async function main() {
   let mock = null, dev = null;
   if (usarMock) {
@@ -210,6 +280,7 @@ async function main() {
   const origenes = [base];
   try {
     for (const rol of ROLES) { try { await probarRol(browser, rol, cred[rol], base, origenes); } catch (e) { fallos.push(`[${rol}] excepción del test: ${e.message.split('\n')[0]}`); } }
+    if (!usarMock) { try { await probarNotas(browser, base, origenes, cred); } catch (e) { fallos.push(`[notas] excepción del test: ${e.message.split('\n')[0]}`); } }
     try { await probarCuenta(browser, base, origenes, cred); } catch (e) { fallos.push(`[cuenta] excepción del test: ${e.message.split('\n')[0]}`); }
   } finally { await browser.close(); if (mock) await mock.cerrar(); if (dev) await dev.cerrar(); }
   console.log(`roles probados: ${resumen.roles}/${ROLES.length} · rutas recorridas: ${resumen.rutas} · comprobaciones: ${resumen.comprobaciones} · fallos: ${fallos.length}`);

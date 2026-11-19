@@ -115,6 +115,8 @@
   EDU.repo = {
     COLECCIONES: EDU.repoLocal.COLECCIONES,
     GLOBALES: GLOBALES,
+    /** conMotivo(motivo, fn): solo modo API (cabecera X-EDU-Motivo); en modo local solo ejecuta fn. */
+    conMotivo: function (motivo, fn) { var a = A(); return typeof a.conMotivo === 'function' ? a.conMotivo(motivo, fn) : fn(); },
     /** Cambia el adaptador (p. ej. API HTTP) manteniendo la misma interfaz. */
     usar: function (ad) { adaptador = ad; },
     adaptador: function () { return A(); },
