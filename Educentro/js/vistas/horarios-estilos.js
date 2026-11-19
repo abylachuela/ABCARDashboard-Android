@@ -54,7 +54,7 @@
     '  .hz-root .hz-ctrl .fld{min-width:0;flex:1 1 100%}',
     '}',
     '@media print{',
-    '  .hz-root>.head,.hz-root .no-print{display:none!important}',
+    '  .hz-root>.head,.hz-root .no-print,.hz-root .tabs{display:none!important}',
     '  .hz-print{display:block}',
     '  .hz-print h2{font-size:16pt;margin:0 0 4pt}.hz-print p{margin:0 0 8pt;font-size:10pt}',
     '  .hz-lote-on .hz-pantalla{display:none!important}',
