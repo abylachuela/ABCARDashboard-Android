@@ -16,6 +16,7 @@
     { ruta: 'matricula', titulo: 'Matrícula', icono: 'matricula' },
     { ruta: 'libro-notas', titulo: 'Calificaciones', icono: 'notas' },
     { ruta: 'planificacion', titulo: 'Planificación', icono: 'planificacion' },
+    { ruta: 'secuencias', titulo: 'Secuencias didácticas', icono: 'curriculo' },
     { ruta: 'agente', titulo: 'Agente IA', icono: 'agente' },
     { ruta: 'asistencia', titulo: 'Asistencia', icono: 'asistencia' },
     { ruta: 'boletin', titulo: 'Boletín', icono: 'boletin' },
@@ -29,23 +30,23 @@
   var MATRIZ = {
     admin_red: { dashboard: V, centros: CRUD, config: V, curriculo: CRUD, personas: CRUD, boletin: ['ver', 'imprimir'], reportes: ['ver', 'exportar'],
       agente: ['ver', 'editar'], comunicados: CRUD, respaldo: ['ver', 'exportar', 'importar'] },
-    director: { dashboard: V, config: CRUD.concat(['cerrar']), curriculo: CRUD, personas: CRUD, matricula: CRUD, 'libro-notas': ['ver', 'cerrar'], planificacion: ['ver', 'editar'],
+    director: { dashboard: V, config: CRUD.concat(['cerrar']), curriculo: CRUD, personas: CRUD, matricula: CRUD, 'libro-notas': ['ver', 'cerrar'], planificacion: ['ver', 'editar'], secuencias: ['ver', 'editar'],
       agente: ['ver', 'editar', 'aprobar'], asistencia: V, boletin: ['ver', 'imprimir'], comunicados: CRUD, reportes: ['ver', 'exportar'], respaldo: ['ver', 'exportar', 'importar'] },
-    docente: { dashboard: V, curriculo: V, 'libro-notas': ['ver', 'crear', 'editar'], planificacion: CRUD, agente: ['ver', 'editar', 'aprobar'],
+    docente: { dashboard: V, curriculo: V, personas: V, matricula: V, 'libro-notas': ['ver', 'crear', 'editar'], planificacion: CRUD, secuencias: CRUD, agente: ['ver', 'editar', 'aprobar'],
       asistencia: ['ver', 'crear', 'editar'], comunicados: V },
-    secretaria: { dashboard: V, curriculo: V, personas: ['ver', 'crear', 'editar'], matricula: CRUD, 'libro-notas': V, planificacion: V, asistencia: ['ver', 'crear', 'editar'],
+    secretaria: { dashboard: V, curriculo: V, personas: ['ver', 'crear', 'editar'], matricula: CRUD, 'libro-notas': V, planificacion: V, secuencias: V, asistencia: ['ver', 'crear', 'editar'],
       boletin: ['ver', 'imprimir'], comunicados: ['ver', 'crear', 'editar'] },
-    tutor: { dashboard: V, curriculo: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V },
-    estudiante: { dashboard: V, curriculo: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V }
+    tutor: { dashboard: V, curriculo: V, personas: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V },
+    estudiante: { dashboard: V, curriculo: V, personas: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V }
   };
 
   /** Escritura por coleccion (guardia del repositorio). */
   var TODAS = ['usuarios', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'escalas', 'categorias',
-    'actividades', 'calificaciones', 'asistencia', 'comunicados', 'planes', 'horarios', 'agenteConfig', 'agenteLog', 'curriculoVersiones', 'curriculoContenidos'];
+    'actividades', 'calificaciones', 'asistencia', 'comunicados', 'planes', 'horarios', 'agenteConfig', 'agenteLog', 'curriculoVersiones', 'curriculoContenidos', 'secuencias'];
   var ESCRIBE = {
     admin_red: TODAS.concat(['centros']),
     director: TODAS.filter(function (c) { return c !== 'calificaciones'; }).concat(['calificaciones']),
-    docente: ['calificaciones', 'actividades', 'categorias', 'asistencia', 'planes', 'horarios', 'agenteConfig', 'agenteLog'],
+    docente: ['calificaciones', 'actividades', 'categorias', 'asistencia', 'planes', 'horarios', 'secuencias', 'agenteConfig', 'agenteLog'],
     secretaria: ['estudiantes', 'tutores', 'matriculas', 'comunicados', 'asistencia'],
     tutor: [], estudiante: []
   };

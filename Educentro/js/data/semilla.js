@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
-  var VERSION = 2, KEY_META = 'edu:v1:meta';
+  var VERSION = 3, KEY_META = 'edu:v1:meta';
 
   function rng(seed) {
     return function () {
@@ -177,6 +177,7 @@
     add('usuarios', { id: 'usr_admin', centroId: null, nombre: 'Marta Beltré', email: 'admin@educentro.demo', rol: 'admin_red', refId: null });
     D.agenteLog.push({ id: 'agl_1', centroId: 'cen_1', usuarioId: 'usr_doc_1_01', fecha: '2026-11-10T14:00:00.000Z', tarea: 'generar_plan', entrada: 'Plan de clase sobre fracciones', salida: 'Borrador de plan (simulado)', aprobadoPor: 'usr_doc_1_01' });
     D.estudiantes.forEach(function (e) { delete e.habilidad; });
+    if (EDU.curriculoSemilla) EDU.curriculoSemilla.sembrar(D); // catalogo curricular MINERD (js/data/curriculo-semilla.js)
     return D;
   }
 
