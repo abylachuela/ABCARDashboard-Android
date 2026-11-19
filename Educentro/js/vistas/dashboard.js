@@ -3,7 +3,7 @@
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, raw = EDU.raw;
-  var COLS = ['centros', 'anios', 'periodos', 'escalas', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'categorias', 'actividades', 'calificaciones', 'asistencia'];
+  var COLS = ['centros', 'anios', 'periodos', 'escalas', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'asistencia'];
 
   function media(a) { var v = a.filter(function (x) { return x != null; }); return v.length ? v.reduce(function (s, x) { return s + x; }, 0) / v.length : null; }
   function por(lista, k) { return EDU.consultas.agrupar(lista, k); }

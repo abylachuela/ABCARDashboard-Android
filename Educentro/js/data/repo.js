@@ -56,7 +56,7 @@
     return s;
   }
   function auditar(s, accion, col, id, antes, despues) {
-    if (col !== 'calificaciones') return Promise.resolve();
+    if (col !== 'calificaciones' && col !== 'notasCompetencia') return Promise.resolve();
     return A().guardar('auditoria', { centroId: (despues || antes || {}).centroId || s.centroActivo, usuarioId: s.usuarioId, accion: accion, coleccion: col,
       registroId: id, antes: antes || null, despues: despues || null, fecha: new Date().toISOString() });
   }

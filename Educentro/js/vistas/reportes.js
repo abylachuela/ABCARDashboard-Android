@@ -4,7 +4,7 @@
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, calc = EDU.calculo;
-  var COLS = ['centros', 'cursos', 'secciones', 'asignaturas', 'estudiantes', 'matriculas', 'escalas', 'cargas', 'categorias', 'actividades', 'calificaciones', 'periodos'];
+  var COLS = ['centros', 'cursos', 'secciones', 'asignaturas', 'estudiantes', 'matriculas', 'escalas', 'cargas', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'periodos'];
   var MARGEN = 5; // puntos porcentuales por encima del minimo para marcar "al limite"
 
   function cmp(a, b) { return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }); }

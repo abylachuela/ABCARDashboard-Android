@@ -4,7 +4,7 @@
   var EDU = (window.EDU = window.EDU || {});
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, raw = EDU.raw;
   var NIVELES = ['Inicial', 'Primario', 'Secundario', 'Primario y Secundario'];
-  var DATOS = ['anios', 'periodos', 'escalas', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'categorias', 'actividades', 'calificaciones', 'asistencia'];
+  var DATOS = ['anios', 'periodos', 'escalas', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'asistencia'];
 
   function h(x) { return x instanceof EDU.Safe ? x.s : String(x == null ? '' : x); }
   function puede(a) { return EDU.permisos.puede(EDU.estado.rol(), 'centros', a); }

@@ -25,6 +25,7 @@
     { ruta: 'boletin', titulo: 'Boletín', icono: 'boletin' },
     { ruta: 'comunicados', titulo: 'Comunicados', icono: 'comunicados' },
     { ruta: 'reportes', titulo: 'Reportes', icono: 'reportes' },
+    { ruta: 'importar-planilla', titulo: 'Importar planilla', icono: 'respaldo' },
     { ruta: 'respaldo', titulo: 'Respaldo', icono: 'respaldo' }
   ];
 
@@ -32,26 +33,26 @@
   /** MATRIZ[rol][modulo] = acciones. Acciones: ver crear editar borrar exportar importar imprimir cerrar aprobar */
   var MATRIZ = {
     admin_red: { dashboard: V, cursos: V, horarios: CRUD, aula: V, centros: CRUD, config: V, curriculo: CRUD, personas: CRUD, boletin: ['ver', 'imprimir'], reportes: ['ver', 'exportar'],
-      agente: ['ver', 'editar'], comunicados: CRUD, respaldo: ['ver', 'exportar', 'importar'] },
+      agente: ['ver', 'editar'], comunicados: CRUD, respaldo: ['ver', 'exportar', 'importar'], 'importar-planilla': ['ver', 'exportar', 'importar'] },
     director: { dashboard: V, cursos: CRUD, horarios: CRUD, aula: V, config: CRUD.concat(['cerrar']), curriculo: CRUD, personas: CRUD, matricula: CRUD, 'libro-notas': ['ver', 'cerrar'], planificacion: ['ver', 'editar'], secuencias: ['ver', 'editar'],
-      agente: ['ver', 'editar', 'aprobar'], asistencia: V, boletin: ['ver', 'imprimir'], comunicados: CRUD, reportes: ['ver', 'exportar'], respaldo: ['ver', 'exportar', 'importar'] },
+      agente: ['ver', 'editar', 'aprobar'], asistencia: V, boletin: ['ver', 'imprimir'], comunicados: CRUD, reportes: ['ver', 'exportar'], respaldo: ['ver', 'exportar', 'importar'], 'importar-planilla': ['ver', 'exportar', 'importar'] },
     docente: { dashboard: V, cursos: ['ver', 'editar'], horarios: V, aula: CRUD, curriculo: V, personas: V, matricula: V, 'libro-notas': ['ver', 'crear', 'editar'], planificacion: CRUD, secuencias: CRUD, agente: ['ver', 'editar', 'aprobar'],
       asistencia: ['ver', 'crear', 'editar'], comunicados: V },
     secretaria: { dashboard: V, cursos: CRUD, horarios: CRUD, aula: V, curriculo: V, personas: ['ver', 'crear', 'editar'], matricula: CRUD, 'libro-notas': V, planificacion: V, secuencias: V, asistencia: ['ver', 'crear', 'editar'],
-      boletin: ['ver', 'imprimir'], comunicados: ['ver', 'crear', 'editar'] },
+      boletin: ['ver', 'imprimir'], comunicados: ['ver', 'crear', 'editar'], 'importar-planilla': ['ver', 'exportar', 'importar'] },
     tutor: { dashboard: V, cursos: V, horarios: V, aula: V, curriculo: V, personas: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V },
     estudiante: { dashboard: V, cursos: V, horarios: V, aula: ['ver', 'crear'], curriculo: V, personas: V, asistencia: V, boletin: ['ver', 'imprimir'], comunicados: V }
   };
 
   /** Escritura por coleccion (guardia del repositorio). */
   var TODAS = ['usuarios', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'escalas', 'categorias',
-    'actividades', 'calificaciones', 'asistencia', 'comunicados', 'planes', 'horarios', 'agenteConfig', 'agenteLog', 'curriculoVersiones', 'curriculoContenidos', 'secuencias',
+    'actividades', 'calificaciones', 'notasCompetencia', 'asistencia', 'comunicados', 'planes', 'horarios', 'agenteConfig', 'agenteLog', 'curriculoVersiones', 'curriculoContenidos', 'secuencias',
     'franjas', 'disponibilidad', 'cursosExtra', 'inscripciones', 'aulaContenidos', 'tareas', 'entregas', 'cuestionarios', 'intentos', 'foros', 'foroMensajes', 'anuncios'];
   var ESCRIBE = {
     admin_red: TODAS.concat(['centros']),
     director: TODAS.filter(function (c) { return c !== 'calificaciones'; }).concat(['calificaciones']),
-    docente: ['aulaContenidos', 'tareas', 'entregas', 'cuestionarios', 'intentos', 'foros', 'foroMensajes', 'anuncios', 'inscripciones', 'calificaciones', 'actividades', 'categorias', 'asistencia', 'planes', 'horarios', 'secuencias', 'agenteConfig', 'agenteLog'],
-    secretaria: ['franjas', 'horarios', 'disponibilidad', 'cursosExtra', 'inscripciones', 'estudiantes', 'tutores', 'matriculas', 'comunicados', 'asistencia'],
+    docente: ['aulaContenidos', 'tareas', 'entregas', 'cuestionarios', 'intentos', 'foros', 'foroMensajes', 'anuncios', 'inscripciones', 'calificaciones', 'notasCompetencia', 'actividades', 'categorias', 'asistencia', 'planes', 'horarios', 'secuencias', 'agenteConfig', 'agenteLog'],
+    secretaria: ['notasCompetencia', 'franjas', 'horarios', 'disponibilidad', 'cursosExtra', 'inscripciones', 'estudiantes', 'tutores', 'matriculas', 'comunicados', 'asistencia'],
     tutor: [], estudiante: ['entregas', 'intentos', 'foroMensajes']
   };
 

@@ -4,7 +4,7 @@
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
   var esc = EDU.esc, fmt = EDU.fmt, ui = EDU.ui, calc = EDU.calculo;
-  var COLS = ['centros', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'escalas', 'categorias', 'actividades', 'calificaciones', 'asistencia'];
+  var COLS = ['centros', 'anios', 'periodos', 'cursos', 'secciones', 'asignaturas', 'cargas', 'docentes', 'estudiantes', 'tutores', 'matriculas', 'escalas', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'asistencia'];
 
   var CSS = '.bo-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.bo-bar label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500;flex:1 1 200px;min-width:0;max-width:100%}.bo-bar select{width:100%;min-width:0;max-width:100%}' +
     '.bo-hoja{background:#fff;color:#000;max-width:210mm;margin:16px auto;padding:14mm 12mm;border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);font-size:13px}' +
@@ -85,19 +85,20 @@
         var anual = S.periodoId === 'anual', pSel = pers.filter(function (p) { return p.id === S.periodoId; })[0], colsP = anual ? pers : (pSel ? [pSel] : pers);
         var filas = (porEst[est.id] || []).filter(function (f) { return f.seccionId === S.seccionId; }).sort(function (a, b) { return cmp(asigNombre(a.asignaturaId), asigNombre(b.asignaturaId)); });
         var abiertos = pers.some(function (p) { return !p.cerrado; });
-        var finales = [], hayRep = false, hayPend = !filas.length;
+        var finales = [], hayRep = false, hayPend = !filas.length, hayComp = false;
         var body = filas.map(function (f) {
           var porP = {}; f.periodos.forEach(function (p) { porP[p.periodoId] = p.nota; });
           var nota = anual ? f.final : (pSel ? porP[pSel.id] : f.final);
-          var ap = nota == null ? null : calc.aprobado(nota, esc_);
-          if (nota == null) hayPend = true; else { finales.push(nota); if (!ap) hayRep = true; }
+          var ap = nota == null ? null : calc.aprobado(nota, esc_), est_ = f.modelo === 'competencias' ? f.estado : null;
+          if (est_) { ap = (anual || !pSel) ? f.aprobado : ap; if (est_ === 'Completiva' || est_ === 'Extraordinaria') hayComp = true; }
+          if (nota == null) hayPend = true; else { finales.push(nota); if (ap === false && !(est_ === 'Completiva' || est_ === 'Extraordinaria')) hayRep = true; if (est_ === 'Pendiente') hayPend = true; }
           return '<tr><th scope="row" style="text-align:left;font-weight:500">' + esc(asigNombre(f.asignaturaId)) + '</th>' +
             '<td>' + esc(docNombre(f.docenteId)) + '</td>' +
             colsP.map(function (p) { return '<td class="c">' + esc(fmt.nota(porP[p.id], esc_)) + (p.cerrado ? '' : '<sup>*</sup>') + '</td>'; }).join('') +
             (anual ? '<td class="c"><strong>' + esc(fmt.nota(f.final, esc_)) + '</strong></td>' : '') +
-            '<td class="c">' + (ap == null ? '<span class="badge neu">Pendiente</span>' : ap ? '<span class="badge ok">Aprobado</span>' : '<span class="badge bad">Reprobado</span>') + '</td></tr>';
+            '<td class="c">' + (est_ && (est_ === 'Completiva' || est_ === 'Extraordinaria') && anual ? '<span class="badge warn">' + esc(est_) + ' pendiente</span>' : ap == null ? '<span class="badge neu">Pendiente</span>' : ap ? '<span class="badge ok">Aprobado' + (est_ && f.via && f.via !== 'cf' ? ' (' + esc(f.via) + ')' : '') + '</span>' : '<span class="badge bad">Reprobado</span>') + '</td></tr>';
         }).join('');
-        var prom = calc.promedioGeneral(finales), estado = hayRep ? 'Reprobado' : (hayPend ? 'Pendiente' : 'Aprobado');
+        var prom = calc.promedioGeneral(finales), estado = hayRep ? 'Reprobado' : (hayComp ? 'En completiva/extraordinaria' : (hayPend ? 'Pendiente' : 'Aprobado'));
         var provisional = anual && abiertos;
         var asis = d.asistencia.filter(function (a) { return a.estudianteId === est.id; }), aus = asis.filter(function (a) { return a.estado === 'A'; }).length;
         var tr = (esc_.tramos || []).slice().sort(function (a, b) { return a.desde - b.desde; });
@@ -112,7 +113,7 @@
           (filas.length ? '<div class="tw"><table class="t"><caption class="sr-only">Calificaciones de ' + esc(fmt.nombreCompleto(est)) + '</caption><thead><tr><th scope="col">Asignatura</th><th scope="col">Docente</th>' +
             colsP.map(function (p) { return '<th scope="col" class="c">' + esc(p.nombre) + '<br><small>' + esc(p.peso) + ' %</small></th>'; }).join('') + (anual ? '<th scope="col" class="c">Nota final</th>' : '') + '<th scope="col" class="c">Estado</th></tr></thead><tbody>' + body + '</tbody></table></div>' :
             '<p>No hay asignaturas registradas para este estudiante.</p>') +
-          '<div class="bo-res"><span>Promedio general: <b>' + esc(fmt.nota(prom, esc_)) + '</b>' + (tramo ? ' (' + esc(tramo.etiqueta) + ')' : '') + '</span><span>Situación: <b>' + esc(estado) + (provisional && estado !== 'Pendiente' ? ' (provisional)' : '') + '</b></span>' +
+          '<div class="bo-res"><span>Promedio general: <b>' + esc(fmt.nota(prom, esc_)) + '</b>' + (tramo ? ' (' + esc(tramo.etiqueta) + ')' : '') + '</span><span>Situación: <b>' + esc(estado) + (provisional && estado !== 'Pendiente' && !hayComp ? ' (provisional)' : '') + '</b></span>' +
           '<span>Asistencia: <b>' + (asis.length ? esc(fmt.pct((asis.length - aus) / asis.length * 100, 0)) : '—') + '</b>' + (asis.length ? ' (' + aus + ' ausencia(s) de ' + asis.length + ' días)' : '') + '</span></div>' +
           '<p class="bo-nota">Escala ' + esc(esc_.min) + '–' + esc(esc_.max) + ' · Nota mínima para aprobar: <strong>' + esc(esc_.notaMinAprobar) + '</strong>. ' + tr.map(function (t) { return esc(t.letra) + ' = ' + esc(t.etiqueta) + ' (≥ ' + esc(t.desde) + ')'; }).join(' · ') + '.' +
           (anual && abiertos ? ' <sup>*</sup> Periodo en curso: nota provisional; la nota final puede variar.' : (!anual && pSel && !pSel.cerrado ? ' <sup>*</sup> Periodo en curso: nota provisional.' : '')) + ' Las notas se calculan con todos los decimales y se muestran redondeadas.</p>' +

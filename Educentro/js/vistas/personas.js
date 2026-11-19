@@ -265,7 +265,7 @@
       var ses = EDU.estado.sesion(), r = rol(), id = params.id;
       var volver = r === 'estudiante' ? '' : '<a class="pf-volver" href="#/personas">← Volver a Personas</a>';
       function aviso(t, s) { cont.innerHTML = volver + '<div class="card">' + aHtml(ui.vacio({ titulo: t, texto: s })) + '</div>'; }
-      var d = await EDU.consultas.cargar(['estudiantes', 'tutores', 'matriculas', 'secciones', 'cursos', 'cargas', 'asignaturas', 'docentes', 'categorias', 'actividades', 'calificaciones', 'periodos', 'escalas', 'asistencia', 'anios']);
+      var d = await EDU.consultas.cargar(['estudiantes', 'tutores', 'matriculas', 'secciones', 'cursos', 'cargas', 'asignaturas', 'docentes', 'categorias', 'actividades', 'calificaciones', 'notasCompetencia', 'periodos', 'escalas', 'asistencia', 'anios']);
       var al = EDU.permisos.alcance(ses, d), est = pick(d.estudiantes, id);
       if (!est) return aviso('Estudiante no encontrado', 'No existe un estudiante con ese identificador en el centro activo.');
       if (al.estudianteIds && !al.estudianteIds.has(id)) return aviso('Acceso denegado', 'Solo puedes consultar estudiantes de tu alcance.');
@@ -292,7 +292,7 @@
 
       // Notas por asignatura
       var califs = d.calificaciones.filter(function (c) { return c.estudianteId === id; });
-      var filas = EDU.consultas.resumenNotas({ matriculas: mats, cargas: d.cargas, categorias: d.categorias, actividades: d.actividades, calificaciones: califs, periodos: d.periodos, escalas: d.escalas });
+      var filas = EDU.consultas.resumenNotas({ matriculas: mats, cargas: d.cargas, categorias: d.categorias, actividades: d.actividades, calificaciones: califs, notasCompetencia: d.notasCompetencia.filter(function (c) { return c.estudianteId === id; }), periodos: d.periodos, escalas: d.escalas });
       var perCentro = d.periodos.filter(function (p) { return p.centroId === est.centroId && (!act || p.anioId === act.anioId); }).sort(function (a, b) { return a.orden - b.orden; });
       h += '<section class="card pf-sec" aria-labelledby="pf-h-notas"><h2 id="pf-h-notas">Calificaciones por asignatura</h2>';
       if (!filas.length) h += '<p class="note">No hay asignaturas registradas: el estudiante no tiene matrícula activa o su sección no tiene cargas docentes.</p></section>';

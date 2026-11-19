@@ -38,11 +38,21 @@
       var perCentro = agrupar(d.periodos, 'centroId');
       var califEst = {};
       d.calificaciones.forEach(function (c) { (califEst[c.estudianteId] = califEst[c.estudianteId] || {})[c.actividadId] = c.puntos; });
+      var ncMap = {}; (d.notasCompetencia || []).forEach(function (n) { ncMap[n.cargaId + '|' + n.estudianteId] = n; });
       var out = [];
       d.matriculas.forEach(function (m) {
         if (m.estado !== 'activa') return;
         var esc = EDU.consultas.escalaDe(d.escalas, m.centroId);
         (cargasSec[m.seccionId] || []).forEach(function (cg) {
+          if (EDU.calculo.modelo(esc) === 'competencias') { // modelo por competencias: CF/estado desde notasCompetencia (ver docs/API.md)
+            var pl = (perCentro[m.centroId] || []).filter(function (p) { return p.anioId === cg.anioId; }).sort(function (x, y) { return x.orden - y.orden; });
+            var nc = ncMap[cg.id + '|' + m.estudianteId] || {};
+            var rc = EDU.calculo.calcularCompetencias({ competencias: nc.c, cec: nc.cec, cex: nc.cex, esp: nc.esp, escala: esc });
+            out.push({ centroId: m.centroId, estudianteId: m.estudianteId, seccionId: m.seccionId, cargaId: cg.id, asignaturaId: cg.asignaturaId, docenteId: cg.docenteId,
+              final: rc.final, pct: EDU.escala.porcentaje(rc.final, esc), aprobado: rc.aprobado, estado: rc.estado, cf: rc.cf, via: rc.via, modelo: 'competencias', calc: rc,
+              periodos: pl.map(function (p, i) { return { periodoId: p.id, peso: p.peso, nota: rc.periodos[i] == null ? null : rc.periodos[i], categorias: [] }; }), escala: esc });
+            return;
+          }
           var periodos = (perCentro[m.centroId] || []).filter(function (p) { return p.anioId === cg.anioId; }).map(function (p) { return { id: p.id, peso: p.peso }; });
           var r = EDU.calculo.calcularFinal({ categorias: catsCarga[cg.id] || [], actividades: actsCarga[cg.id] || [], calificaciones: califEst[m.estudianteId] || {},
             periodos: periodos, escala: esc });
