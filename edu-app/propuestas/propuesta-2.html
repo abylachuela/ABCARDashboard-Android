@@ -189,7 +189,7 @@ $("#kpis").innerHTML=kp.map(k=>`<div class="card kpi"><small>${k[0]}</small><b>$
  $("#barchart").innerHTML=s+"</svg>"})();
 $("#alerts").innerHTML=alertas.map(a=>`<li><span class="dot" style="background:var(--${a[2]==="bad"?"bad":"warn"})"></span><div><strong>${a[0]}</strong><span>${a[1]}</span></div><button class="lnk" style="all:unset;margin-left:auto;color:var(--cyan);font-size:13px;cursor:pointer;text-decoration:underline" data-est="${nombres.indexOf(a[0])}" onclick="openEst(${Math.max(0,nombres.indexOf(a[0]))})">Ver ficha</button></li>`).join("");
 (function(){const d=["L","M","X","J","V"];let h=`<div class="l h"></div>`+[...Array(8)].map((_,i)=>`<div class="h">S${i+1}</div>`).join("");
- d.forEach((x,r)=>{h+=`<div class="l">${x}</div>`;for(let c=0;c<8;c++){const v=Math.round(86+rnd()*13-(r==4?4:0)-(c==5&&r==0?5:0)),t=(v-84)/16;h+=`<div style="background:rgb(${Math.round(31+14*t)},${Math.round(74+138*t)},${Math.round(82+109*t)})" title="${x} S${c+1}: ${v}%">${v}</div>`}});
+ d.forEach((x,r)=>{h+=`<div class="l">${x}</div>`;for(let c=0;c<8;c++){const v=Math.round(86+rnd()*13-(r==4?4:0)-(c==5&&r==0?5:0)),t=(v-84)/16;h+=`<div style="background:rgb(${Math.round(31+14*t)},${Math.round(74+138*t)},${Math.round(82+109*t)});color:${t<.5?"#e8edf3":"#06161a"}" title="${x} S${c+1}: ${v}%">${v}</div>`}});
  $("#heat").innerHTML=h})();
 
 /* ---- centros ---- */
