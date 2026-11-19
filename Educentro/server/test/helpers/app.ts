@@ -40,6 +40,8 @@ export const envBase = (extra: Record<string, string> = {}): Record<string, stri
   DATABASE_URL: APP_URL,
   PUBLIC_URL: ORIGEN,
   LOG_LEVEL: 'info',
+  RATE_LIMIT_AUTH_MAX: '100000',
+  RATE_LIMIT_RECUPERAR_MAX: '100000',
   ...extra,
 });
 

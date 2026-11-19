@@ -59,7 +59,6 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
     // Fastify admite también un número de saltos (proxy-addr), aunque su tipo no lo declare.
     trustProxy: config.trustProxy as boolean | string[],
     bodyLimit: 1_048_576, // 1 MB
-    disableRequestLogging: false,
     routerOptions: { maxParamLength: 200 },
   });
 

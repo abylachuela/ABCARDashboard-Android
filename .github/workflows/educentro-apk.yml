@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'Educentro/**'
+      - 'Educentro/index.html'
+      - 'Educentro/css/**'
+      - 'Educentro/js/**'
+      - 'Educentro/mobile/**'
       - '.github/workflows/educentro-apk.yml'
 
 permissions:
