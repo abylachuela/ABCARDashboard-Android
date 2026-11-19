@@ -89,6 +89,13 @@
         return true;
       });
     },
+    /** Cobertura de indicadores de una secuencia segun los planes vinculados (plan.secuenciaId + plan.indicadorIds). */
+    cobertura: function (sec, planes) {
+      var inds = sec.indicadoresLogro || [], mios = (planes || []).filter(function (p) { return p.secuenciaId === sec.id; }), plan = {}, imp = {};
+      mios.forEach(function (p) { (p.indicadorIds || []).forEach(function (u) { plan[u] = true; if (p.estado === 'impartido') imp[u] = true; }); });
+      var pl = inds.filter(function (i) { return plan[i.uid]; }), im = inds.filter(function (i) { return imp[i.uid]; });
+      return { total: inds.length, planificados: pl.length, impartidos: im.length, faltan: inds.filter(function (i) { return !plan[i.uid]; }), sesiones: mios.length };
+    },
     badgeEstado: function (e) {
       var m = { borrador: ['Borrador', 'warn'], listo: ['Listo', 'info'], lista: ['Lista', 'info'], impartido: ['Impartido', 'ok'], en_ejecucion: ['En ejecución', 'info'], finalizada: ['Finalizada', 'ok'] }[e] || [e || '—', 'neu'];
       return EDU.ui.badge(m[0], m[1]);

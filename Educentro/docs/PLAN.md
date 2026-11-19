@@ -75,3 +75,10 @@ index.html, css/, js/{app,router,estado,core,data,ui,vistas}, tests/calculo.test
 - Cursos virtuales por carga: temas, recursos (texto/enlace/archivo), tareas con entrega y calificación (nota → libro de notas con auditoría), cuestionarios autocalificados, foros/anuncios, calendario de entregas, progreso.
 - Android: proyecto Capacitor independiente en `Educentro/mobile/` (no toca la app ABCAR de la raíz).
 - Límite: sin backend no hay sincronización entre usuarios ni notificaciones push reales.
+
+## Módulo: Cursos con asignación de estudiantes (añadido)
+- Distinto de la matrícula por sección: son cursos/talleres/electivas/refuerzos/módulos técnicos (p. ej. robótica, inglés conversacional, nivelación) con su propio cupo y periodo.
+- Entidades: `CursoExtra` {centroId, nombre, codigo, tipo: taller|electiva|refuerzo|modulo_tecnico|virtual, docenteId, nivel/grados permitidos, cupo, inicio, fin, horario (franjas), estado: abierto|en_curso|cerrado, curriculoRef?}, `InscripcionCurso` {cursoId, estudianteId, fecha, estado: inscrito|en_lista_espera|retirado|completado, nota?, asistencia%}.
+- Vistas: catálogo de cursos, ficha con lista de estudiantes inscritos, asignación individual y masiva (filtrar por grado/sección), lista de espera, validación de cupo, de grado permitido y de choque de horario del estudiante, constancia de participación imprimible.
+- Permisos: director/secretaría crean y asignan; docente del curso ve su lista y registra asistencia/nota; estudiante/tutor ven sus cursos.
+- Integración: un curso tipo `virtual` abre su espacio en el Aula virtual con los inscritos como participantes; su horario se une al horario docente y al del estudiante.
