@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduCentro · Propuesta 2 — Oscuro data-dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1115;--surf:#151a20;--surf2:#1b2128;--line:#2a323c;--line2:#38424f;
+  --tx:#e8edf3;--mut:#9fabb8;--teal:#2dd4bf;--cyan:#22d3ee;--vio:#a78bfa;
+  --ok:#34d399;--warn:#fbbf24;--bad:#f87171;
+  --sans:"Space Grotesk",Inter,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --rail:72px;--top:60px;
+}
+*{box-sizing:border-box;margin:0}
+html{color-scheme:dark}
+body{background:var(--bg);color:var(--tx);font:15px/1.5 var(--sans);min-height:100vh;
+  background-image:radial-gradient(900px 400px at 85% -10%,rgba(167,139,250,.10),transparent 60%),radial-gradient(700px 400px at 10% -10%,rgba(45,212,191,.08),transparent 60%);background-attachment:fixed}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px}
+.num,td.n,.kpi b,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:var(--teal);color:#04201c;padding:8px 12px;border-radius:6px;z-index:50}
+/* top */
+header.top{position:fixed;inset:0 0 auto 0;height:var(--top);display:flex;align-items:center;gap:16px;padding:0 20px 0 calc(var(--rail) + 20px);background:rgba(14,17,21,.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:20}
+.brand{position:fixed;left:0;top:0;width:var(--rail);height:var(--top);display:grid;place-items:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line);background:var(--bg);z-index:21}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--vio));display:grid;place-items:center;color:#07151a;font-weight:700}
+.top h1{font-size:16px;font-weight:600;letter-spacing:.01em}
+.top .sp{flex:1}
+.pill{font:500 12px var(--mono);color:var(--mut);border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.sel,.top select{background:var(--surf);color:var(--tx);border:1px solid var(--line2);border-radius:8px;padding:7px 10px;font:inherit;font-size:14px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--surf2);border:1px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--teal)}
+/* rail */
+nav.rail{position:fixed;left:0;top:var(--top);bottom:0;width:var(--rail);border-right:1px solid var(--line);background:var(--bg);display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;z-index:20}
+nav.rail button{width:48px;height:52px;border:1px solid transparent;border-radius:12px;background:none;color:var(--mut);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 10px var(--sans);transition:background .15s,color .15s}
+nav.rail button:hover{background:var(--surf);color:var(--tx)}
+nav.rail button[aria-current=page]{background:var(--surf2);color:var(--teal);border-color:var(--line2);box-shadow:inset 3px 0 0 var(--teal)}
+nav.rail svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+main{padding:calc(var(--top) + 24px) 24px 40px calc(var(--rail) + 24px);max-width:1500px}
+.view{display:none}.view.on{display:block;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px;margin-bottom:18px}
+.head h2{font-size:26px;font-weight:600;letter-spacing:-.01em}
+.head p{color:var(--mut);font-size:14px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1.5fr 1fr}.g2b{grid-template-columns:1fr 1fr}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.card h3{font-size:13px;font-weight:500;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kpi b{display:block;font-size:34px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.kpi small{color:var(--mut);font-size:13px}
+.delta{font:500 12px var(--mono);padding:2px 7px;border-radius:6px;margin-left:6px}
+.up{color:var(--ok);background:rgba(52,211,153,.12)}.dn{color:var(--bad);background:rgba(248,113,113,.12)}
+.kpi svg{width:100%;height:30px;margin-top:10px}
+svg text{font-family:var(--mono);fill:var(--mut);font-size:11px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mut)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+/* heat */
+.heat{display:grid;grid-template-columns:34px repeat(8,1fr);gap:4px;font:11px var(--mono);color:var(--mut)}
+.heat div{height:30px;border-radius:5px;display:grid;place-items:center;color:#06161a;font-weight:500}
+.heat .l{background:none;color:var(--mut);justify-content:start}.heat .h{height:auto;background:none;color:var(--mut)}
+/* alerts */
+.alerts{list-style:none;padding:0;display:grid;gap:10px}
+.alerts li{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surf2)}
+.alerts .dot{width:8px;height:36px;border-radius:4px;flex:none}
+.alerts strong{display:block;font-size:14px;font-weight:500}.alerts span{font-size:12.5px;color:var(--mut)}
+.alerts a{margin-left:auto;color:var(--cyan);font-size:13px;background:none;border:0;cursor:pointer;font-family:inherit;text-decoration:underline}
+/* tables */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-weight:500;color:var(--mut);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line)}
+td.n,th.n{text-align:right}
+tbody tr:hover{background:rgba(255,255,255,.025)}
+input.g{width:68px;background:var(--bg);border:1px solid var(--line2);color:var(--tx);border-radius:7px;padding:6px 8px;font:500 14px var(--mono);text-align:right}
+input.g:hover{border-color:var(--teal)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:999px;border:1px solid}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.b-ok{color:var(--ok);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+.b-warn{color:var(--warn);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.b-bad{color:var(--bad);border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08)}
+.bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;border-radius:4px}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ctrl label{font-size:12px;color:var(--mut);display:grid;gap:4px}
+.ctrl select{min-width:150px}
+.centros{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:16px}
+.centro h4{font-size:17px;font-weight:600}.centro p{color:var(--mut);font-size:13px;margin-bottom:12px}
+.centro dl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:13px}.centro dt{color:var(--mut)}.centro dd{text-align:right;margin:0;font-family:var(--mono)}
+.ficha{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.ficha .big{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,var(--vio),var(--teal));display:grid;place-items:center;font-size:26px;font-weight:700;color:#07151a;flex:none}
+.ficha dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}.ficha dt{color:var(--mut)}.ficha dd{margin:0}
+.note{font-size:12.5px;color:var(--mut);margin-top:10px}
+/* responsive */
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g2b{grid-template-columns:1fr}}
+@media(max-width:720px){
+  :root{--rail:0px}
+  header.top{padding:0 14px}.brand{position:static;width:auto;border:0;height:auto;background:none}.pill{display:none}
+  nav.rail{top:auto;bottom:0;width:100%;height:64px;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding:6px}
+  nav.rail button{width:auto;flex:1;height:100%}nav.rail button[aria-current=page]{box-shadow:inset 0 3px 0 var(--teal)}
+  main{padding:calc(var(--top) + 16px) 16px 90px}.g4{grid-template-columns:1fr 1fr}.kpi b{font-size:26px}.head h2{font-size:22px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+<a class="brand" href="#dashboard" aria-label="EduCentro"><span class="logo">E</span></a>
+<header class="top">
+  <h1>EduCentro</h1><span class="pill">Curso 2025–26 · 2.º trimestre</span><span class="sp"></span>
+  <label class="sr" style="position:absolute;left:-999px" for="gcentro">Centro</label>
+  <select id="gcentro"><option>Todos los centros</option><option>IES Cervantes</option><option>CEIP Rosalía</option><option>Colegio Lumen</option><option>IES Tramontana</option></select>
+  <span class="avatar" aria-label="Usuario: María Lozano">ML</span>
+</header>
+<nav class="rail" aria-label="Principal"></nav>
+<main id="main">
+<section class="view" id="v-dashboard" aria-labelledby="h-dashboard">
+  <div class="head"><div><h2 id="h-dashboard">Panel general</h2><p>Resumen del rendimiento académico · datos ficticios</p></div></div>
+  <div class="grid g4" id="kpis" style="margin-bottom:16px"></div>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3>Promedio por curso <span class="legend"><span><i style="background:var(--teal)"></i>≥ 7</span><span><i style="background:var(--vio)"></i>&lt; 7</span><span><i style="background:var(--warn)"></i>&lt; 6</span></span></h3><div id="barchart"></div></div>
+    <div class="card"><h3>Alertas de riesgo académico</h3><ul class="alerts" id="alerts"></ul></div>
+  </div>
+  <div class="card"><h3>Asistencia · últimas 8 semanas (%) <span class="legend"><span>menor</span><span style="background:linear-gradient(90deg,#1f4a52,#2dd4bf);width:80px;height:10px;border-radius:3px;align-self:center"></span><span>mayor</span></span></h3><div class="heat" id="heat" role="img" aria-label="Mapa de calor de asistencia por día de la semana y semana"></div></div>
+</section>
+
+<section class="view" id="v-centros" aria-labelledby="h-centros">
+  <div class="head"><div><h2 id="h-centros">Centros educativos</h2><p>Comparativa de indicadores clave entre centros</p></div></div>
+  <div class="centros" id="centros"></div>
+  <div class="card"><h3>Comparativa de indicadores</h3><div id="cmp"></div></div>
+</section>
+
+<section class="view" id="v-notas" aria-labelledby="h-notas">
+  <div class="head"><div><h2 id="h-notas">Calificaciones</h2><p>Edita las notas (0–10): el promedio ponderado se recalcula al instante</p></div>
+    <div class="ctrl"><label>Curso<select id="selCurso" class="sel"></select></label><label>Asignatura<select id="selAsig" class="sel"></select></label></div></div>
+  <div class="card"><div class="tw"><table><caption style="position:absolute;left:-999px">Calificaciones editables</caption><thead id="nh"></thead><tbody id="nb"></tbody></table></div>
+  <p class="note">Semáforo: <span class="badge b-ok">≥ 7 Óptimo</span> <span class="badge b-warn">5–6,9 En seguimiento</span> <span class="badge b-bad">&lt; 5 En riesgo</span></p></div>
+  <div class="grid g4" style="margin-top:16px" id="nsum"></div>
+</section>
+
+<section class="view" id="v-est" aria-labelledby="h-est">
+  <div class="head"><div><h2 id="h-est">Ficha del estudiante</h2><p>Perfil y evolución de calificaciones por trimestre</p></div>
+    <div class="ctrl"><label>Estudiante<select id="selEst" class="sel"></select></label></div></div>
+  <div class="grid g2b">
+    <div class="card"><div class="ficha" id="ficha"></div><h3>Resumen por asignatura</h3><div class="tw"><table><thead><tr><th>Asignatura</th><th class="n">T1</th><th class="n">T2</th><th class="n">T3</th><th>Estado</th></tr></thead><tbody id="eb"></tbody></table></div></div>
+    <div class="card"><h3>Evolución de notas <span class="legend" id="eleg"></span></h3><div id="line"></div></div>
+  </div>
+</section>
+</main>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s),NS="http://www.w3.org/2000/svg";
+const fmt=n=>n.toFixed(1).replace(".",",");
+const state=v=>v>=7?["ok","Óptimo"]:v>=5?["warn","En seguimiento"]:["bad","En riesgo"];
+const badge=v=>{const[s,t]=state(v);return `<span class="badge b-${s}">${t}</span>`};
+const col=v=>v>=7?"var(--teal)":v>=6?"var(--vio)":"var(--warn)";
+
+/* ---- datos ficticios ---- */
+const cursos=[["1.º ESO",7.4],["2.º ESO",6.8],["3.º ESO",6.2],["4.º ESO",7.1],["1.º Bach.",5.9],["2.º Bach.",7.6]];
+const asig=["Matemáticas","Lengua","Ciencias","Historia","Inglés"];
+const nombres=["Lucía Fernández","Mateo Ruiz","Sofía Navarro","Hugo Castillo","Valeria Ortega","Daniel Prieto","Carla Medina","Álvaro Gil","Noa Santos","Pablo Herrera"];
+const pesos=[["Tareas",.2],["Parcial",.3],["Proyecto",.2],["Examen",.3]];
+let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+const notas={}; // curso|asig -> [[4 notas]...]
+cursos.forEach(([c],ci)=>asig.forEach((a,ai)=>{notas[c+"|"+a]=nombres.map((_,i)=>pesos.map(()=>Math.round(Math.max(1.5,Math.min(10,4.2+rnd()*5.2+(i%4==0?1:0)-(i%7==3?2.4:0)))*10)/10))}));
+const centros=[
+ {n:"IES Cervantes",loc:"Madrid",al:812,prof:64,prom:7.2,asis:94.1,apr:91,ries:6},
+ {n:"CEIP Rosalía",loc:"Santiago",al:430,prof:31,prom:7.6,asis:96.3,apr:95,ries:3},
+ {n:"Colegio Lumen",loc:"Valencia",al:655,prof:49,prom:6.7,asis:92.4,apr:86,ries:11},
+ {n:"IES Tramontana",loc:"Palma",al:540,prof:42,prom:6.1,asis:89.7,apr:79,ries:17}];
+const alertas=[["Hugo Castillo","3.º ESO · 3 asignaturas suspensas","bad"],["Carla Medina","1.º Bach. · asistencia 71%","bad"],["Pablo Herrera","2.º ESO · caída de 2,1 pts en T2","warn"],["Noa Santos","4.º ESO · 2 entregas pendientes","warn"],["Álvaro Gil","3.º ESO · Matemáticas 4,6","bad"]];
+
+/* ---- navegación ---- */
+const views=[["dashboard","Panel","<path d='M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-4H4z'/>"],["centros","Centros","<path d='M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'/>"],["notas","Notas","<path d='M5 3h11l3 3v15H5zM9 9h6M9 13h6M9 17h3'/>"],["est","Alumno","<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/>"]];
+$(".rail").innerHTML=views.map(([id,t,p])=>`<button data-v="${id}" aria-label="${t}" title="${t}"><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>${t}</button>`).join("");
+function go(id){if(!views.some(v=>v[0]===id))id="dashboard";
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="v-"+id));
+  document.querySelectorAll(".rail button").forEach(b=>b.toggleAttribute("aria-current",b.dataset.v===id)||b.removeAttribute("aria-current"));
+  document.querySelectorAll(".rail button").forEach(b=>{if(b.dataset.v===id)b.setAttribute("aria-current","page")});
+  if(location.hash!=="#"+id)history.replaceState(null,"","#"+id);}
+$(".rail").addEventListener("click",e=>{const b=e.target.closest("button");if(b){go(b.dataset.v);scrollTo(0,0)}});
+addEventListener("hashchange",()=>go(location.hash.slice(1)));
+
+/* ---- dashboard ---- */
+const spark=(pts,c)=>{const m=Math.max(...pts),n=Math.min(...pts);return `<svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((p,i)=>`${i*100/(pts.length-1)},${27-(p-n)/(m-n||1)*24}`).join(" ")}"/></svg>`};
+const kp=[["Promedio general","7,0","+0,3","up","var(--teal)",[6.4,6.6,6.5,6.8,6.9,7.0]],["Asistencia media","93,1%","+1,2","up","var(--cyan)",[90,91,92,91.5,92.6,93.1]],["Tasa de aprobados","88%","−2","dn","var(--vio)",[91,90,91,89,90,88]],["Alumnos en riesgo","37","+5","dn","var(--warn)",[28,30,31,32,34,37]]];
+$("#kpis").innerHTML=kp.map(k=>`<div class="card kpi"><small>${k[0]}</small><b>${k[1]}<span class="delta ${k[3]}" aria-label="variación ${k[2]}">${k[2]}</span></b>${spark(k[5],k[4])}</div>`).join("");
+(function(){const W=640,H=280,m={l:34,b:34,t:10,r:8},bw=(W-m.l-m.r)/cursos.length;let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Promedio por curso: ${cursos.map(c=>c[0]+" "+fmt(c[1])).join(", ")}" width="100%">`;
+ for(let v=0;v<=10;v+=2.5){const y=H-m.b-(v/10)*(H-m.b-m.t);s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${m.l-6}" y="${y+4}" text-anchor="end">${v}</text>`}
+ const y7=H-m.b-.7*(H-m.b-m.t);s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y7}" y2="${y7}" stroke="var(--cyan)" stroke-dasharray="4 4" opacity=".6"/>`;
+ cursos.forEach(([c,v],i)=>{const h=(v/10)*(H-m.b-m.t),x=m.l+i*bw+bw*.2,y=H-m.b-h;s+=`<rect x="${x}" y="${y}" width="${bw*.6}" height="${h}" rx="5" fill="${col(v)}"><title>${c}: ${fmt(v)}</title></rect><text x="${x+bw*.3}" y="${y-6}" text-anchor="middle" style="fill:var(--tx)">${fmt(v)}</text><text x="${x+bw*.3}" y="${H-12}" text-anchor="middle">${c}</text>`});
+ $("#barchart").innerHTML=s+"</svg>"})();
+$("#alerts").innerHTML=alertas.map(a=>`<li><span class="dot" style="background:var(--${a[2]==="bad"?"bad":"warn"})"></span><div><strong>${a[0]}</strong><span>${a[1]}</span></div><button class="lnk" style="all:unset;margin-left:auto;color:var(--cyan);font-size:13px;cursor:pointer;text-decoration:underline" data-est="${nombres.indexOf(a[0])}" onclick="openEst(${Math.max(0,nombres.indexOf(a[0]))})">Ver ficha</button></li>`).join("");
+(function(){const d=["L","M","X","J","V"];let h=`<div class="l h"></div>`+[...Array(8)].map((_,i)=>`<div class="h">S${i+1}</div>`).join("");
+ d.forEach((x,r)=>{h+=`<div class="l">${x}</div>`;for(let c=0;c<8;c++){const v=Math.round(86+rnd()*13-(r==4?4:0)-(c==5&&r==0?5:0)),t=(v-84)/16;h+=`<div style="background:rgb(${Math.round(31+14*t)},${Math.round(74+138*t)},${Math.round(82+109*t)})" title="${x} S${c+1}: ${v}%">${v}</div>`}});
+ $("#heat").innerHTML=h})();
+
+/* ---- centros ---- */
+$("#centros").innerHTML=centros.map(c=>`<div class="card centro"><h4>${c.n}</h4><p>${c.loc}</p><dl><dt>Alumnos</dt><dd>${c.al}</dd><dt>Docentes</dt><dd>${c.prof}</dd><dt>Promedio</dt><dd>${fmt(c.prom)}</dd><dt>Asistencia</dt><dd>${c.asis}%</dd></dl></div>`).join("");
+(function(){const rows=[["Promedio",c=>c.prom,10,"var(--teal)",fmt],["Asistencia",c=>c.asis,100,"var(--cyan)",v=>v+"%"],["Aprobados",c=>c.apr,100,"var(--vio)",v=>v+"%"],["Alumnos en riesgo",c=>c.ries,20,"var(--warn)",v=>v]];
+ $("#cmp").innerHTML=`<div class="tw"><table><thead><tr><th>Indicador</th>${centros.map(c=>`<th>${c.n}</th>`).join("")}</tr></thead><tbody>`+rows.map(r=>`<tr><td>${r[0]}</td>${centros.map(c=>{const v=r[1](c);return `<td><div class="num" style="margin-bottom:4px">${r[4](v)}</div><div class="bar" role="presentation"><i style="width:${v/r[2]*100}%;background:${r[3]}"></i></div></td>`}).join("")}</tr>`).join("")+`</tbody></table></div>`})();
+
+/* ---- calificaciones ---- */
+cursos.forEach(([c])=>$("#selCurso").add(new Option(c,c)));asig.forEach(a=>$("#selAsig").add(new Option(a,a)));
+const wavg=r=>r.reduce((s,v,i)=>s+v*pesos[i][1],0);
+function renderNotas(){const k=$("#selCurso").value+"|"+$("#selAsig").value,d=notas[k];
+ $("#nh").innerHTML=`<tr><th>Estudiante</th>${pesos.map(p=>`<th class="n">${p[0]} · ${p[1]*100}%</th>`).join("")}<th class="n">Promedio</th><th>Desempeño</th></tr>`;
+ $("#nb").innerHTML=d.map((r,i)=>`<tr><td>${nombres[i]}</td>${r.map((v,j)=>`<td class="n"><input class="g" type="number" min="0" max="10" step="0.1" value="${v}" data-i="${i}" data-j="${j}" aria-label="${pesos[j][0]} de ${nombres[i]}"></td>`).join("")}<td class="n"><b class="mono" id="p${i}"></b></td><td id="s${i}"></td></tr>`).join("");
+ d.forEach((_,i)=>upd(i));sum()}
+function upd(i){const k=$("#selCurso").value+"|"+$("#selAsig").value,a=wavg(notas[k][i]);$("#p"+i).textContent=fmt(a);$("#s"+i).innerHTML=badge(a)}
+function sum(){const k=$("#selCurso").value+"|"+$("#selAsig").value,av=notas[k].map(wavg),m=av.reduce((a,b)=>a+b)/av.length;
+ $("#nsum").innerHTML=[["Promedio del grupo",fmt(m)],["Óptimos",av.filter(v=>v>=7).length],["En seguimiento",av.filter(v=>v>=5&&v<7).length],["En riesgo",av.filter(v=>v<5).length]].map(x=>`<div class="card kpi"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}
+$("#nb").addEventListener("input",e=>{const t=e.target;if(!t.matches("input"))return;let v=parseFloat(t.value);if(isNaN(v))return;v=Math.max(0,Math.min(10,v));const k=$("#selCurso").value+"|"+$("#selAsig").value;notas[k][+t.dataset.i][+t.dataset.j]=v;upd(+t.dataset.i);sum()});
+$("#selCurso").onchange=$("#selAsig").onchange=renderNotas;renderNotas();
+
+/* ---- estudiante ---- */
+nombres.forEach((n,i)=>$("#selEst").add(new Option(n,i)));
+const evo=nombres.map((_,i)=>asig.map((_,a)=>{let b=5+rnd()*3+(i%3==0?.8:0)-(i==3?1.6:0);return [0,1,2].map(t=>Math.round(Math.max(2,Math.min(10,b+(i%2?.5:-.3)*t+(rnd()-.5)))*10)/10)}));
+const colors=["#2dd4bf","#a78bfa","#22d3ee","#fbbf24","#f472b6"];
+function renderEst(){const i=+$("#selEst").value,e=evo[i],avg=e.flat().reduce((a,b)=>a+b)/15;
+ $("#ficha").innerHTML=`<div class="big" aria-hidden="true">${nombres[i].split(" ").map(w=>w[0]).join("")}</div><div><h3 style="margin:0 0 6px;text-transform:none;letter-spacing:0;font-size:20px;color:var(--tx);font-weight:600">${nombres[i]}</h3><dl><dt>Curso</dt><dd>${cursos[i%6][0]}</dd><dt>Centro</dt><dd>${centros[i%4].n}</dd><dt>Promedio</dt><dd class="mono">${fmt(avg)} ${badge(avg)}</dd><dt>Asistencia</dt><dd class="mono">${(88+i%9).toFixed(0)}%</dd></dl></div>`;
+ $("#eb").innerHTML=asig.map((a,j)=>`<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colors[j]};margin-right:8px"></i>${a}</td>${e[j].map(v=>`<td class="n">${fmt(v)}</td>`).join("")}<td>${badge(e[j][2])}</td></tr>`).join("");
+ $("#eleg").innerHTML="";
+ const W=560,H=300,m={l:30,r:14,t:14,b:34},x=t=>m.l+t*(W-m.l-m.r)/2,y=v=>H-m.b-(v-2)/8*(H-m.b-m.t);
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolución trimestral de notas de ${nombres[i]}">`;
+ for(let v=2;v<=10;v+=2)s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+ s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(5)}" y2="${y(5)}" stroke="var(--bad)" stroke-dasharray="4 4" opacity=".6"/>`;
+ ["T1","T2","T3"].forEach((t,k)=>s+=`<text x="${x(k)}" y="${H-10}" text-anchor="middle">${t}</text>`);
+ e.forEach((r,j)=>{s+=`<polyline fill="none" stroke="${colors[j]}" stroke-width="2.4" stroke-linejoin="round" points="${r.map((v,t)=>x(t)+","+y(v)).join(" ")}"/>`+r.map((v,t)=>`<circle cx="${x(t)}" cy="${y(v)}" r="4" fill="var(--surf)" stroke="${colors[j]}" stroke-width="2"><title>${asig[j]} T${t+1}: ${fmt(v)}</title></circle>`).join("")});
+ $("#line").innerHTML=s+`</svg><div class="legend" style="flex-wrap:wrap;margin-top:8px">${asig.map((a,j)=>`<span><i style="background:${colors[j]}"></i>${a}</span>`).join("")}<span style="color:var(--bad)">- - umbral 5</span></div>`}
+$("#selEst").onchange=renderEst;renderEst();
+function openEst(i){$("#selEst").value=i;renderEst();go("est");scrollTo(0,0)}
+go(location.hash.slice(1)||"dashboard");
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduCentro · Propuesta 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#14315c; --navy-2:#1d4580; --navy-900:#0c2040;
+  --amber:#f5a524; --amber-ink:#7a4b00; --amber-soft:#fdf0d5;
+  --bg:#f5f3ee; --card:#fff; --ink:#1b2433; --muted:#5a6578; --line:#e3dfd5;
+  --ok:#17693a; --ok-bg:#e3f4e9; --bad:#a82424; --bad-bg:#fbe7e7;
+  --shadow:0 1px 2px rgba(20,49,92,.06),0 6px 18px rgba(20,49,92,.07);
+  --serif:'Fraunces',Georgia,'Times New Roman',serif; --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+h1,h2,h3{font-family:var(--serif);color:var(--navy);margin:0;font-weight:600;letter-spacing:-.01em}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;padding:8px 12px;z-index:100}
+.skip:focus{left:8px}
+/* sidebar */
+.side{position:fixed;inset:0 auto 0 0;width:248px;background:var(--navy);color:#e8eefb;display:flex;flex-direction:column;padding:22px 14px;z-index:30;transition:transform .25s}
+.brand{display:flex;gap:10px;align-items:center;padding:0 8px 22px;font-family:var(--serif);font-size:22px;font-weight:700;color:#fff}
+.brand i{width:34px;height:34px;border-radius:9px;background:var(--amber);color:var(--navy-900);display:grid;place-items:center;font-style:normal;font-size:19px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:#d6e0f5;font-weight:500;border-left:3px solid transparent}
+.nav button:hover{background:rgba(255,255,255,.09);color:#fff}
+.nav button[aria-current=page]{background:rgba(255,255,255,.13);color:#fff;border-left-color:var(--amber)}
+.nav button:focus-visible{outline:3px solid var(--amber);outline-offset:1px}
+.nav svg{width:20px;height:20px;flex:none}
+.side .who{margin-top:auto;display:flex;gap:10px;align-items:center;padding:12px 8px;border-top:1px solid rgba(255,255,255,.15);font-size:13px}
+.av{width:36px;height:36px;border-radius:50%;background:var(--amber);color:var(--navy-900);display:grid;place-items:center;font-weight:700;flex:none}
+/* main */
+.main{margin-left:248px;min-height:100vh}
+.top{display:flex;align-items:center;gap:14px;padding:16px 32px;border-bottom:1px solid var(--line);background:rgba(245,243,238,.9);position:sticky;top:0;z-index:10;backdrop-filter:blur(6px)}
+.burger{display:none;all:unset;cursor:pointer;padding:8px;border-radius:8px;color:var(--navy)}
+.burger:focus-visible{outline:3px solid var(--amber)}
+.burger svg{width:26px;height:26px;display:block}
+.top .sp{flex:1}
+label.sel{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+select,input{font:inherit;color:var(--ink)}
+select{padding:8px 10px;border:1px solid #b9b3a4;border-radius:8px;background:#fff;min-width:200px}
+.wrap{padding:28px 32px 48px;max-width:1200px}
+.view{display:none}.view.on{display:block;animation:in .3s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-ink);font-weight:600}
+.head{margin-bottom:22px}.head h1{font-size:34px;line-height:1.15;margin-top:4px}.head p{color:var(--muted);margin:6px 0 0}
+.card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:20px;border:1px solid #efece4}
+.grid{display:grid;gap:18px}
+.kpis{grid-template-columns:repeat(4,1fr);margin-bottom:18px}
+.kpi{position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber)}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--navy);line-height:1.2}
+.kpi .d{font-size:12.5px;color:var(--ok);font-weight:600}.kpi .d.neg{color:var(--bad)}
+.two{grid-template-columns:1.6fr 1fr}
+.bars{display:flex;align-items:flex-end;gap:14px;height:200px;padding:10px 4px 0;border-bottom:1px solid var(--line)}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:6px;font-size:12px;color:var(--muted)}
+.bar b{width:100%;max-width:56px;background:linear-gradient(var(--navy-2),var(--navy));border-radius:6px 6px 0 0;display:block;transition:height .5s}
+.bar.hi b{background:linear-gradient(#ffc356,var(--amber))}
+.bar span.n{color:var(--ink);font-weight:600}
+.xl{display:flex;gap:14px;padding:6px 4px 0;font-size:12px;color:var(--muted)}.xl span{flex:1;text-align:center}
+.alert{display:flex;gap:12px;padding:12px;border-radius:10px;background:var(--amber-soft);margin-top:10px;border-left:4px solid var(--amber)}
+.alert.red{background:var(--bad-bg);border-color:var(--bad)}
+.alert strong{display:block;font-size:14px}.alert small{color:#4a4338;font-size:13px}
+.alert.red small{color:#5a2020}
+/* centers */
+.centers{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+.center{cursor:pointer;text-align:left;font:inherit;color:inherit;transition:transform .15s,box-shadow .15s;width:100%}
+.center:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(20,49,92,.14)}
+.center[aria-pressed=true]{outline:3px solid var(--navy);outline-offset:0}
+.center .ban{height:70px;border-radius:10px;margin-bottom:14px;display:flex;align-items:flex-end;padding:10px;color:#fff;font-family:var(--serif);font-size:26px;font-weight:700}
+.center h3{font-size:19px}.center p{margin:4px 0 12px;color:var(--muted);font-size:13.5px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:#eef2f9;color:var(--navy);border-radius:99px;padding:3px 10px;font-size:12.5px;font-weight:500}
+.chip.amb{background:var(--amber-soft);color:var(--amber-ink)}
+/* grades */
+.bar-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:680px}
+th,td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:#faf8f3}
+th:first-child,td:first-child{text-align:left}
+td input{width:64px;padding:6px;text-align:center;border:1px solid #b9b3a4;border-radius:6px;background:#fff}
+td input:focus{border-color:var(--navy)}
+td input[aria-invalid=true]{border-color:var(--bad);background:var(--bad-bg)}
+.avg{font-weight:700;border-radius:99px;padding:4px 12px;display:inline-block;min-width:60px}
+.avg.ok{background:var(--ok-bg);color:var(--ok)}.avg.bad{background:var(--bad-bg);color:var(--bad)}
+.note{font-size:13px;color:var(--muted);margin-top:12px}
+.stu-link{all:unset;cursor:pointer;color:var(--navy);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.stu-link:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+/* student */
+.ficha{grid-template-columns:300px 1fr;align-items:start}
+.ficha .pic{width:96px;height:96px;border-radius:50%;background:var(--navy);color:#fff;font:700 34px var(--serif);display:grid;place-items:center;border:4px solid var(--amber);margin-bottom:14px}
+dl{margin:16px 0 0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+dt{color:var(--muted)}dd{margin:0;font-weight:500}
+.bol{display:flex;flex-direction:column;gap:12px}
+.row{display:grid;grid-template-columns:130px 1fr 58px;gap:12px;align-items:center;font-size:14px}
+.track{height:12px;background:#ece8de;border-radius:99px;overflow:hidden;position:relative}
+.track i{display:block;height:100%;border-radius:99px;background:var(--ok)}.track i.bad{background:var(--bad)}
+.track::after{content:"";position:absolute;left:60%;top:0;bottom:0;width:2px;background:var(--navy)}
+.row b{text-align:right}
+/* responsive */
+.scrim{display:none}
+@media(max-width:960px){
+  .kpis{grid-template-columns:repeat(2,1fr)}.two,.ficha{grid-template-columns:1fr}
+}
+@media(max-width:820px){
+  .side{transform:translateX(-100%)}.side.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  .main{margin-left:0}.burger{display:block}
+  .top{padding:12px 16px}.wrap{padding:20px 16px 40px}
+  .scrim.on{display:block;position:fixed;inset:0;background:rgba(10,20,40,.5);z-index:20}
+  .head h1{font-size:28px}select{min-width:0}
+  .row{grid-template-columns:100px 1fr 48px}
+}
+@media(max-width:480px){.kpis{grid-template-columns:1fr}.top label.sel{flex:1}.top select{width:100%}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+<aside class="side" id="side" aria-label="Navegación principal">
+  <div class="brand"><i aria-hidden="true">E</i>EduCentro</div>
+  <nav class="nav" id="nav">
+    <button data-v="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+    <button data-v="centros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v9h14v-9M9 19v-5h6v5"/></svg>Centros educativos</button>
+    <button data-v="notas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg>Calificaciones</button>
+    <button data-v="estudiante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Estudiante</button>
+  </nav>
+  <div class="who"><div class="av" aria-hidden="true">LM</div><div><strong>Lucía Mendoza</strong><br><span style="opacity:.8">Coordinadora académica</span></div></div>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="main">
+  <header class="top">
+    <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="sp"></div>
+    <label class="sel">Centro activo<select id="centerSel"></select></label>
+  </header>
+  <main class="wrap" id="main" tabindex="-1">
+
+  <section class="view" id="v-dashboard" aria-labelledby="t-dashboard">
+    <div class="head"><div class="eyebrow" id="dEyebrow"></div><h1 id="t-dashboard">Panel general</h1><p>Resumen del periodo 2026-2027 · Primer trimestre</p></div>
+    <div class="grid kpis" id="kpis"></div>
+    <div class="grid two">
+      <div class="card"><h2 style="font-size:20px;margin-bottom:4px">Promedio por asignatura</h2><p class="note" style="margin:0 0 10px">Escala 0–100 · en ámbar, la asignatura con mejor desempeño</p>
+        <div class="bars" id="bars" role="img" aria-label="Gráfico de barras de promedio por asignatura"></div><div class="xl" id="xl" aria-hidden="true"></div></div>
+      <div class="card"><h2 style="font-size:20px">Alertas</h2>
+        <div class="alert red"><div><strong>6 estudiantes en riesgo de reprobar</strong><small>Matemática · 3.º B tiene promedio bajo 60.</small></div></div>
+        <div class="alert"><div><strong>Asistencia en descenso</strong><small>Cayó 2 puntos respecto al mes anterior en 2.º A.</small></div></div>
+        <div class="alert"><div><strong>Cierre de notas: 28 de nov.</strong><small>Faltan 4 docentes por registrar calificaciones.</small></div></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-centros" aria-labelledby="t-centros">
+    <div class="head"><div class="eyebrow">Red educativa</div><h1 id="t-centros">Centros educativos</h1><p>Selecciona un centro para filtrar todo el panel.</p></div>
+    <div class="grid centers" id="centers"></div>
+  </section>
+
+  <section class="view" id="v-notas" aria-labelledby="t-notas">
+    <div class="head"><div class="eyebrow">Registro académico</div><h1 id="t-notas">Calificaciones</h1><p>Edita las notas (0–100); el promedio ponderado se recalcula al instante.</p></div>
+    <div class="card">
+      <div class="bar-tools">
+        <label class="sel">Curso<select id="courseSel"><option>3.º B Secundaria</option><option>2.º A Secundaria</option></select></label>
+        <label class="sel">Asignatura<select id="subjSel"></select></label>
+        <span class="chip amb" id="pesos"></span>
+      </div>
+      <div class="tw"><table><caption class="note" style="text-align:left;caption-side:bottom">Mínimo para aprobar: 60. Pondera: Tareas 20 % · Parcial 30 % · Proyecto 20 % · Final 30 %.</caption>
+        <thead><tr><th scope="col">Estudiante</th><th scope="col">Tareas</th><th scope="col">Parcial</th><th scope="col">Proyecto</th><th scope="col">Final</th><th scope="col">Promedio</th><th scope="col">Estado</th></tr></thead>
+        <tbody id="gbody"></tbody></table></div>
+      <p class="note" id="gsum" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="view" id="v-estudiante" aria-labelledby="t-estudiante">
+    <div class="head"><div class="eyebrow">Ficha individual</div><h1 id="t-estudiante">Estudiante</h1>
+      <label class="sel" style="margin-top:10px;display:inline-flex">Seleccionar estudiante<select id="stuSel"></select></label></div>
+    <div class="grid ficha">
+      <div class="card" id="ficha"></div>
+      <div class="card"><h2 style="font-size:20px">Mini boletín</h2><p class="note" style="margin:2px 0 14px">La línea azul marca el mínimo para aprobar (60).</p><div class="bol" id="bol"></div>
+        <p id="bsum" style="margin:18px 0 0;font-weight:600" aria-live="polite"></p></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+const W=[.2,.3,.2,.3];
+const subjects=['Matemática','Lengua Española','Ciencias','Historia','Inglés'];
+const centers=[
+ {id:'c1',n:'Colegio San Ignacio',loc:'Santo Domingo · Sector Norte',est:482,prom:78.4,asis:94.2,apr:89,color:'#14315c'},
+ {id:'c2',n:'Instituto Politécnico Duarte',loc:'Santiago · Centro',est:615,prom:74.9,asis:91.5,apr:84,color:'#1d4580'},
+ {id:'c3',n:'Liceo Nueva Esperanza',loc:'La Vega · Zona Este',est:326,prom:81.2,asis:95.8,apr:93,color:'#7a4b00'},
+ {id:'all',n:'Todos los centros',loc:'Vista consolidada',est:1423,prom:77.6,asis:93.1,apr:88,color:'#2c3e50'}
+];
+const names=['Ana Beltré','Carlos Ramírez','Daniela Peña','Eduardo Santana','Fátima Jiménez','Gabriel Núñez','Helena Castillo','Iván Marte'];
+// seed notes
+let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+const data={};
+['3.º B Secundaria','2.º A Secundaria'].forEach(c=>{data[c]={};subjects.forEach((s,si)=>{data[c][s]=names.map((n,i)=>[0,1,2,3].map(()=>Math.round(48+rnd()*50-(i===3||i===6?10:0))));});});
+const avgOf=r=>r.reduce((a,v,i)=>a+(+v||0)*W[i],0);
+const cls=v=>v>=60?'ok':'bad';
+const $=id=>document.getElementById(id);
+let cur=centers[0],student=0;
+
+/* navigation */
+const side=$('side'),scrim=$('scrim'),burger=$('burger');
+function toggleMenu(o){side.classList.toggle('open',o);scrim.classList.toggle('on',o);burger.setAttribute('aria-expanded',o);burger.setAttribute('aria-label',o?'Cerrar menú':'Abrir menú')}
+burger.onclick=()=>toggleMenu(!side.classList.contains('open'));scrim.onclick=()=>toggleMenu(false);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleMenu(false)});
+function go(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  document.querySelectorAll('#nav button').forEach(b=>b.toggleAttribute('aria-current',b.dataset.v===v)||(b.removeAttribute('aria-current')));
+  document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.v===v)b.setAttribute('aria-current','page')});
+  toggleMenu(false);history.replaceState(null,'','#'+v);scrollTo(0,0);
+}
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
+
+/* centers */
+function renderSel(){$('centerSel').innerHTML=centers.map(c=>`<option value="${c.id}" ${c.id===cur.id?'selected':''}>${c.n}</option>`).join('')}
+function renderCenters(){
+  $('centers').innerHTML=centers.map(c=>`<button class="card center" data-id="${c.id}" aria-pressed="${c.id===cur.id}">
+   <div class="ban" style="background:${c.color}">${c.n.split(' ').filter(w=>w.length>3).slice(0,2).map(w=>w[0]).join('')||'E'}</div>
+   <h3>${c.n}</h3><p>${c.loc}</p><div class="chips"><span class="chip">${c.est.toLocaleString('es')} estudiantes</span><span class="chip">Prom. ${c.prom}</span><span class="chip amb">${c.apr}% aprobados</span></div></button>`).join('');
+}
+function setCenter(id){cur=centers.find(c=>c.id===id);renderSel();renderCenters();renderDash()}
+$('centers').onclick=e=>{const b=e.target.closest('.center');if(b){setCenter(b.dataset.id);go('dashboard')}};
+$('centerSel').onchange=e=>setCenter(e.target.value);
+
+/* dashboard */
+function renderDash(){
+  $('dEyebrow').textContent=cur.n;
+  const k=[['Estudiantes',cur.est.toLocaleString('es'),'▲ 3,2 % vs. año anterior',0],['Promedio general',cur.prom,'▲ 1,4 puntos',0],['Asistencia',cur.asis+' %','▼ 0,8 puntos',1],['Aprobados',cur.apr+' %','▲ 2 puntos',0]];
+  $('kpis').innerHTML=k.map(x=>`<div class="card kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div><div class="d ${x[3]?'neg':''}">${x[2]}</div></div>`).join('');
+  const off=(cur.prom-77.6);const vals=[82,76,79,74,80].map((v,i)=>Math.round(v+off+(i-2)*.6));
+  const max=Math.max(...vals);
+  $('bars').innerHTML=vals.map(v=>`<div class="bar ${v===max?'hi':''}"><span class="n">${v}</span><b style="height:${(v-40)/60*100}%"></b></div>`).join('');
+  $('xl').innerHTML=subjects.map(s=>`<span>${s.split(' ')[0]}</span>`).join('');
+}
+
+/* grades */
+function renderGrades(){
+  const c=$('courseSel').value,s=$('subjSel').value,rows=data[c][s];
+  $('gbody').innerHTML=rows.map((r,i)=>`<tr data-i="${i}"><th scope="row" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);background:none;font-weight:500"><button class="stu-link" data-s="${i}">${names[i]}</button></th>
+   ${r.map((v,j)=>`<td><input type="number" min="0" max="100" inputmode="numeric" value="${v}" data-j="${j}" aria-label="${['Tareas','Parcial','Proyecto','Final'][j]} de ${names[i]}"></td>`).join('')}
+   <td><span class="avg"></span></td><td class="st"></td></tr>`).join('');
+  $('gbody').querySelectorAll('tr').forEach(tr=>upd(tr));summ();
+}
+function upd(tr){
+  const rows=data[$('courseSel').value][$('subjSel').value][+tr.dataset.i];
+  const a=avgOf(rows),sp=tr.querySelector('.avg');
+  sp.textContent=a.toFixed(1);sp.className='avg '+cls(a);
+  tr.querySelector('.st').innerHTML=`<span class="avg ${cls(a)}" style="font-weight:600">${a>=60?'Aprobado':'Reprobado'}</span>`;
+}
+function summ(){
+  const rows=data[$('courseSel').value][$('subjSel').value].map(avgOf);
+  const p=rows.filter(a=>a>=60).length;
+  $('gsum').textContent=`Promedio del curso: ${(rows.reduce((a,b)=>a+b,0)/rows.length).toFixed(1)} · ${p} de ${rows.length} aprobados.`;
+}
+$('gbody').addEventListener('input',e=>{
+  const inp=e.target;if(!inp.matches('input'))return;const tr=inp.closest('tr');
+  let v=parseFloat(inp.value);const bad=isNaN(v)||v<0||v>100;inp.setAttribute('aria-invalid',bad);
+  data[$('courseSel').value][$('subjSel').value][+tr.dataset.i][+inp.dataset.j]=bad?0:v;upd(tr);summ();
+});
+$('gbody').addEventListener('click',e=>{const b=e.target.closest('.stu-link');if(b){student=+b.dataset.s;$('stuSel').value=student;renderStu();go('estudiante')}});
+$('courseSel').onchange=renderGrades;$('subjSel').onchange=renderGrades;
+$('subjSel').innerHTML=subjects.map(s=>`<option>${s}</option>`).join('');
+$('pesos').textContent='Ponderación 20 / 30 / 20 / 30';
+
+/* student */
+$('stuSel').innerHTML=names.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+$('stuSel').onchange=e=>{student=+e.target.value;renderStu()};
+function renderStu(){
+  const n=names[student],c='3.º B Secundaria';
+  $('ficha').innerHTML=`<div class="pic" aria-hidden="true">${n.split(' ').map(w=>w[0]).join('')}</div><h2 style="font-size:24px">${n}</h2><p class="note" style="margin:2px 0 0">Matrícula 2026-0${140+student}</p>
+   <dl><dt>Curso</dt><dd>${c}</dd><dt>Centro</dt><dd>Colegio San Ignacio</dd><dt>Edad</dt><dd>${15+student%3} años</dd><dt>Tutor</dt><dd>Marta ${n.split(' ')[1]}</dd><dt>Contacto</dt><dd>809-555-01${10+student}</dd><dt>Asistencia</dt><dd>${(97-student*1.3).toFixed(1)} %</dd></dl>`;
+  const res=subjects.map(s=>({s,a:avgOf(data[c][s][student])}));
+  $('bol').innerHTML=res.map(r=>`<div class="row"><span>${r.s}</span><div class="track" role="img" aria-label="${r.s}: ${r.a.toFixed(1)}"><i class="${r.a>=60?'':'bad'}" style="width:${Math.min(100,r.a)}%"></i></div><b style="color:var(--${r.a>=60?'ok':'bad'})">${r.a.toFixed(1)}</b></div>`).join('');
+  const g=res.reduce((a,r)=>a+r.a,0)/res.length,f=res.filter(r=>r.a<60).length;
+  $('bsum').textContent=`Promedio general: ${g.toFixed(1)} · ${f?f+' asignatura(s) en riesgo':'Todas las asignaturas aprobadas'}`;
+}
+/* init */
+renderSel();renderCenters();renderDash();renderGrades();renderStu();
+const h=location.hash.slice(1);go(['dashboard','centros','notas','estudiante'].includes(h)?h:'dashboard');
+</script>
+</body>
+</html>
