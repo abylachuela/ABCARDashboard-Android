@@ -5,7 +5,9 @@
 #   sudo bash Educentro/deploy/deploy.sh                 # HTTPS con certificado autofirmado
 #   sudo SERVER_NAME=notas.midominio.edu EMAIL=yo@x.edu HTTPS_MODE=letsencrypt bash Educentro/deploy/deploy.sh
 # Variables: SERVER_NAME (def. IP/hostname de la VM), HTTPS_MODE=selfsigned|letsencrypt|none (def. selfsigned),
-#            EMAIL (solo letsencrypt), APP_DIR (def. /var/www/educentro), KEEP (versiones a conservar, def. 5).
+#            EMAIL (solo letsencrypt), APP_DIR (def. /var/www/educentro), KEEP (versiones a conservar, def. 5),
+#            WITH_API=1 (opt-in: añade `location /api/` con proxy a la API de Educentro; def. 0 = solo estático),
+#            API_UPSTREAM (def. 127.0.0.1:3000; solo con WITH_API=1).
 set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || { echo "Ejecuta como root (sudo)." >&2; exit 1; }
@@ -15,6 +17,8 @@ SRC="$(cd "$SCRIPT_DIR/.." && pwd)"                 # carpeta Educentro/
 APP_DIR="${APP_DIR:-/var/www/educentro}"
 HTTPS_MODE="${HTTPS_MODE:-selfsigned}"
 KEEP="${KEEP:-5}"
+WITH_API="${WITH_API:-0}"
+API_UPSTREAM="${API_UPSTREAM:-127.0.0.1:3000}"
 SERVER_NAME="${SERVER_NAME:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
 SERVER_NAME="${SERVER_NAME:-localhost}"
 EMAIL="${EMAIL:-}"
@@ -22,6 +26,8 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 REL="$APP_DIR/releases/$STAMP"
 
 case "$HTTPS_MODE" in selfsigned|letsencrypt|none) ;; *) echo "HTTPS_MODE inválido: $HTTPS_MODE" >&2; exit 1;; esac
+case "$WITH_API" in 0|1) ;; *) echo "WITH_API inválido: $WITH_API (use 0 o 1)" >&2; exit 1;; esac
+[[ "$API_UPSTREAM" =~ ^[A-Za-z0-9._-]+:[0-9]{1,5}$ ]] || { echo "API_UPSTREAM inválido (use host:puerto)." >&2; exit 1; }
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "SERVER_NAME inválido." >&2; exit 1; }
 [ -f "$SRC/index.html" ] || { echo "No encuentro $SRC/index.html" >&2; exit 1; }
 if [ "$HTTPS_MODE" = letsencrypt ]; then
@@ -51,7 +57,7 @@ find "$REL" \( -iname '*.xlsx' -o -iname '*.xls' -o -iname '*.csv' -o -name 'dat
 chown -R root:root "$REL"; find "$REL" -type d -exec chmod 755 {} +; find "$REL" -type f -exec chmod 644 {} +
 ln -sfn "$REL" "$APP_DIR/current.new" && mv -Tf "$APP_DIR/current.new" "$APP_DIR/current"
 
-echo "==> Configurando nginx ($HTTPS_MODE)"
+echo "==> Configurando nginx ($HTTPS_MODE$([ "$WITH_API" = 1 ] && echo ", con proxy /api/ -> $API_UPSTREAM"))"
 SNIP=/etc/nginx/snippets; mkdir -p "$SNIP" /etc/nginx/conf.d
 CSP="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; frame-ancestors 'none'"
 cat > "$SNIP/educentro-headers.conf" <<HDR
@@ -81,6 +87,48 @@ location ^~ /propuestas/ { return 404; }
 location = /index.html { include $SNIP/educentro-headers.conf; add_header Cache-Control "no-cache" always; }
 location ~* \.(js|css)\$ { include $SNIP/educentro-headers.conf; add_header Cache-Control "no-cache" always; }
 APP
+
+# --- API (opt-in): sin la variable WITH_API=1 estos archivos no existen y /api/ responde 404 como cualquier ruta.
+rm -f "$SNIP/educentro-api.conf" "$SNIP/educentro-api-proxy.conf" /etc/nginx/conf.d/educentro-api-zones.conf
+if [ "$WITH_API" = 1 ]; then
+  # Zonas de limit_req (contexto http): una general y otra más estricta para /api/v1/auth/.
+  cat > /etc/nginx/conf.d/educentro-api-zones.conf <<ZONES
+limit_req_zone \$binary_remote_addr zone=edu_api:10m rate=10r/s;
+limit_req_zone \$binary_remote_addr zone=edu_auth:10m rate=2r/s;
+ZONES
+  cat > "$SNIP/educentro-api-proxy.conf" <<PROXY
+proxy_pass http://$API_UPSTREAM;
+proxy_http_version 1.1;
+proxy_set_header Connection "";
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$remote_addr;
+proxy_set_header X-Forwarded-Proto \$scheme;
+proxy_set_header X-Forwarded-Host \$host;
+proxy_connect_timeout 5s;
+proxy_read_timeout 30s;
+proxy_send_timeout 30s;
+client_max_body_size 1m;
+limit_req_status 429;
+# Sin caché de ningún tipo. Declarar add_header aquí corta la herencia de las cabeceras del sitio estático:
+# las de seguridad de la API (CSP, nosniff, HSTS…) las envía la propia API y pasan tal cual.
+proxy_cache off;
+proxy_no_cache 1;
+add_header Cache-Control "no-store" always;
+proxy_hide_header Cache-Control;
+PROXY
+  cat > "$SNIP/educentro-api.conf" <<APICONF
+location ^~ /api/v1/auth/ {
+    limit_req zone=edu_auth burst=10 nodelay;
+    include $SNIP/educentro-api-proxy.conf;
+}
+location ^~ /api/ {
+    limit_req zone=edu_api burst=30 nodelay;
+    include $SNIP/educentro-api-proxy.conf;
+}
+APICONF
+  printf 'include %s/educentro-api.conf;\n' "$SNIP" >> "$SNIP/educentro-app.conf"
+fi
 
 SITE=/etc/nginx/conf.d/educentro.conf
 # Escucha IPv6 solo si el sistema la soporta (si no, nginx no arrancaría).
@@ -157,6 +205,18 @@ for p in datos-privados/ docs/ mobile/ tests/ propuestas/ x.xlsx; do
   c=$(curl -sk -o /dev/null -w '%{http_code}' -H "Host: $SERVER_NAME" "$BASE/$p" || true)
   [ "$c" = 404 ] && echo "OK  /$p: 404 (no se publica)" || { echo "FALLO: /$p devolvió $c" >&2; exit 1; }
 done
+if [ "$WITH_API" = 1 ]; then
+  for i in 1 2 3 4 5 6 7 8 9 10; do   # la recarga de nginx es asíncrona: reintentar mientras siga el 404 antiguo
+    c=$(curl -sk -o /dev/null -w '%{http_code}' -H "Host: $SERVER_NAME" "$BASE/api/health" || true)
+    [ "$c" != 404 ] && break
+    sleep 1
+  done
+  case "$c" in
+    200) echo "OK  /api/health: 200 (la API responde)";;
+    502|503|504) echo "AVISO: nginx enruta /api/ pero la API no responde en $API_UPSTREAM (HTTP $c). Arráncala (docker compose up -d en Educentro/server) y revisa /api/health.";;
+    *) echo "FALLO: /api/health devolvió $c: nginx no está enrutando /api/ a la API" >&2; exit 1;;
+  esac
+fi
 echo
 PROTO=https; [ "$HTTPS_MODE" = none ] && PROTO=http
 echo "Listo: $PROTO://$SERVER_NAME/   (versión $STAMP, en $REL)"

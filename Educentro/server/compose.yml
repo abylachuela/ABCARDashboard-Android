@@ -1,0 +1,112 @@
+# EduCentro · API + PostgreSQL + copias. Uso (en la VM):
+#   cd Educentro/server && bash secrets/generar.sh && cp .env.example .env   # y edita .env (PUBLIC_URL, SMTP_*…)
+#   docker compose build && docker compose up -d
+# La base de datos NO publica ningún puerto. La API solo escucha en 127.0.0.1 (nginx hace de proxy).
+
+x-api-entorno: &api-entorno
+  NODE_ENV: production
+  PUBLIC_URL: ${PUBLIC_URL:?define PUBLIC_URL (https://…) en .env}
+  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+  TRUST_PROXY: ${TRUST_PROXY:-loopback,uniquelocal}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  MAIL_TRANSPORT: smtp
+  MAIL_FROM: ${MAIL_FROM:?define MAIL_FROM en .env}
+  SMTP_HOST: ${SMTP_HOST:?define SMTP_HOST en .env}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS_FILE: /run/secrets/smtp_pass
+  DATABASE_URL_FILE: /run/secrets/database_url
+  MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
+  SESSION_SECRET_FILE: /run/secrets/session_secret
+
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      EDUCENTRO_DB: educentro
+    secrets: [postgres_password, db_owner_password, db_app_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/roles.sql:/opt/educentro/roles.sql:ro
+      - ./db/init/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+    # Sin "ports": solo accesible desde la red interna de compose.
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d educentro"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  migrar:
+    build: .
+    image: educentro-api:local
+    command: ["node", "dist/cli/migrar.js"]
+    environment: *api-entorno
+    secrets: [database_url, migration_database_url, session_secret, smtp_pass]
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [backend]
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    build: .
+    image: educentro-api:local
+    restart: unless-stopped
+    environment: *api-entorno
+    secrets: [database_url, migration_database_url, session_secret, smtp_pass]
+    depends_on:
+      db: { condition: service_healthy }
+      migrar: { condition: service_completed_successfully }
+    ports:
+      - "${API_BIND:-127.0.0.1:3000}:3000"
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  backup:
+    build: ./backup
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: educentro
+      PGUSER: educentro_owner
+      PGPASSWORD_FILE: /run/secrets/db_owner_password
+      BACKUP_PASSPHRASE_FILE: /run/secrets/backup_passphrase
+      RETENCION_DIAS: ${BACKUP_RETENTION_DAYS:-30}
+      INTERVALO_HORAS: "24"
+    secrets: [db_owner_password, backup_passphrase]
+    volumes:
+      - backups:/backups
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [backend]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  backend: {}
+
+volumes:
+  pgdata: {}
+  backups: {}
+
+secrets:
+  postgres_password:      { file: ./secrets/postgres_password }
+  db_owner_password:      { file: ./secrets/db_owner_password }
+  db_app_password:        { file: ./secrets/db_app_password }
+  database_url:           { file: ./secrets/database_url }
+  migration_database_url: { file: ./secrets/migration_database_url }
+  session_secret:         { file: ./secrets/session_secret }
+  backup_passphrase:      { file: ./secrets/backup_passphrase }
+  smtp_pass:              { file: ./secrets/smtp_pass }

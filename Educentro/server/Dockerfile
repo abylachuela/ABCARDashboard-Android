@@ -3,7 +3,7 @@
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Etapa 2: compilación (con devDependencies)
 FROM node:22-bookworm-slim AS build

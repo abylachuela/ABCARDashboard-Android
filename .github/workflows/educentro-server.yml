@@ -1,0 +1,59 @@
+name: Educentro server
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Educentro/server/**'
+      - '.github/workflows/educentro-server.yml'
+  pull_request:
+    paths:
+      - 'Educentro/server/**'
+      - '.github/workflows/educentro-server.yml'
+
+permissions:
+  contents: read
+
+# Repositorio privado: minutos limitados. Una sola ejecución por rama y se cancela la anterior.
+concurrency:
+  group: educentro-server-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Educentro/server
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          # Solo para la BD efímera del job (no es un secreto real).
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_PG_ADMIN_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Educentro/server/package-lock.json
+
+      - run: psql --version   # las pruebas crean roles y BD con db/roles.sql vía psql
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high

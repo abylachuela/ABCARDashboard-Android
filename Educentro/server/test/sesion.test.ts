@@ -95,7 +95,7 @@ describe('cambiar contraseña', () => {
     expect((await me(nueva)).statusCode).toBe(200);
     expect((await login(app, u.email, u.clave)).statusCode).toBe(401);
     expect((await login(app, u.email, 'Nueva-clave-segura-77')).statusCode).toBe(200);
-    expect((await owner().query("SELECT count(*)::int AS n FROM auditoria_accesos WHERE evento = 'cambio_clave'")).rows[0].n).toBe(1);
+    expect((await owner().query("SELECT count(*)::int AS n FROM auditoria_accesos WHERE evento = 'cambio_clave' AND usuario_id = $1", [u.id])).rows[0].n).toBe(1);
   });
 
   it('exige la contraseña actual correcta (y suma un fallo)', async () => {

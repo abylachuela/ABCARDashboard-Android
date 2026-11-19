@@ -4,7 +4,7 @@ Lo ya hecho está en [Historial](Historial). Pendiente, por prioridad.
 
 ## 1. Backend/API real y control de acceso en servidor (bloqueante para datos reales)
 
-> Plan detallado: [`docs/BACKEND.md`](../BACKEND.md) (stack, autenticación, permisos en servidor con RLS, API, migración y fases).
+> Plan detallado: [`docs/BACKEND.md`](../BACKEND.md) (stack, autenticación, permisos en servidor con RLS, API, migración y fases). **Fase 0 ya implementada** (autenticación, sesiones, auditoría de accesos): ver [Backend](Backend).
 - Autenticación (OIDC o sesión HttpOnly) y autorización por centro, rol y alcance **en el servidor**; repetir allí las reglas de `permisos.js` y de propiedad del repo.
 - Adaptador API para `EDU.repo.usar(adaptadorApi)`; endpoints propios para `auditar` y `registrarLectura`; auditoría inmutable.
 - Calificación de cuestionarios y validaciones de negocio (periodo cerrado, pesos, notas) en servidor.

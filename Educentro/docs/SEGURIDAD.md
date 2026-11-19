@@ -80,6 +80,9 @@ object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker
 - El contexto enviado es una lista blanca de ids, horas y restricciones; los docentes viajan como alias `D01…` y el texto libre (≤ 300 caracteres) pasa por `limpiarTexto`. El simulado no usa red; la API key sigue solo en el servidor.
 - La salida del proveedor se valida por esquema (ids conocidos, días 1–5, franjas de clase), se descarta lo inválido y el motor re-valida conflictos antes de la vista previa; todo dato mostrado pasa por `EDU.esc` y la resolución queda en `agenteLog` y `auditoria` (`EDU.repo.auditar`). Para ello `secretaria` recibió escritura en `agenteLog`.
 
+## Backend, Fase 0 (`Educentro/server/`)
+Existe ya la base del servidor: login real con sesión en cookie opaca `__Host-edu_sid` (HttpOnly, Secure, SameSite=Lax; solo se guarda su hash), argon2id, bloqueo con retroceso y rate limit, CSRF (`X-EDU-CSRF` + `Origin`), recuperación por token de un solo uso y auditoría de accesos append-only en PostgreSQL (rol de la app distinto del propietario). **Aún no protege los datos del frontend**: la autorización por rol/centro/alcance, la RLS y la conexión de `EDU.repo` llegan en la Fase 1, así que las limitaciones de abajo siguen vigentes hasta entonces. Ver `docs/BACKEND.md` y `server/README.md`.
+
 ## Limitaciones conocidas (requieren backend)
 1. Autenticación y autorización reales (hoy el login es un selector de usuarios demo y la sesión es editable en `localStorage`).
 2. Datos en el servidor, no en el navegador: cifrado en reposo, copias, retención, borrado.

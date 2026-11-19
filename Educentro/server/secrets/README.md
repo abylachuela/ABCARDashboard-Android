@@ -1,7 +1,7 @@
 # secrets/
 
 Aquí van (solo en la VM, **nunca en git**; `.gitignore` los excluye) los archivos que `compose.yml` monta como Docker secrets.
-Crea cada archivo con `umask 077` y sin salto de línea sobrante no es necesario (se recorta):
+El directorio queda en modo 700 y los archivos en 644 (así los lee el usuario no root de cada contenedor; el acceso lo limita el directorio). Un salto de línea final en cada archivo se recorta al leerlo.
 
 | Archivo | Contenido |
 |---|---|

@@ -34,11 +34,12 @@ EduCentro es una aplicación web de **gestión de notas y centros educativos** a
 | [Seguridad y privacidad](Seguridad-y-privacidad) | Resumen de `docs/SEGURIDAD.md` |
 | [Pruebas](Pruebas) | `tests/` y verificación con Playwright |
 | [Decisiones y limitaciones](Decisiones-y-limitaciones) | Lo pendiente de verificar y los límites |
+| [Backend](Backend) | Servidor Node + PostgreSQL: Fase 0 (autenticación) implementada |
 | [Hoja de ruta](Hoja-de-ruta) | Fases pendientes |
 | [Historial](Historial) | Cronología |
 
 ## Documentos fuente en el repositorio
-`docs/PLAN.md`, `docs/API.md` (contrato técnico), `docs/CURRICULO-MINERD.md`, `docs/PLANTILLAS-CALIFICACION.md`, `docs/SEGURIDAD.md`. Esta wiki los resume; ante discrepancias, manda el código.
+`docs/PLAN.md`, `docs/API.md` (contrato técnico), `docs/BACKEND.md` (plan del servidor), `docs/CURRICULO-MINERD.md`, `docs/PLANTILLAS-CALIFICACION.md`, `docs/SEGURIDAD.md`. Esta wiki los resume; ante discrepancias, manda el código.
 
 ## Privacidad de esta wiki
 Solo contiene datos de la semilla ficticia. Los datos reales (planilla de calificaciones) viven en `Educentro/datos-privados/`, ignorada por git, y no se describen aquí.

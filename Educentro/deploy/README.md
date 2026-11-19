@@ -1,6 +1,6 @@
 # Despliegue de Educentro en una VM (nginx)
 
-Educentro es un **sitio estático** (HTML/CSS/JS): nginx solo sirve archivos. Los datos viven en el navegador de cada usuario hasta que exista un backend (ver `docs/SEGURIDAD.md`).
+Educentro es un **sitio estático** (HTML/CSS/JS): nginx solo sirve archivos. Los datos viven en el navegador de cada usuario hasta que el backend (Fase 0 ya implementada en `Educentro/server`, ver `docs/BACKEND.md`) se conecte al frontend en la Fase 1; el proxy de la API es opcional (`WITH_API=1`).
 
 ## Qué hace `deploy.sh`
 - Instala nginx si falta (apt, dnf o yum).
@@ -29,7 +29,19 @@ scp -r Educentro root@IP_DE_LA_VM:/root/Educentro   # solo index.html, css y js 
 | `HTTPS_MODE=letsencrypt SERVER_NAME=notas.tudominio.edu EMAIL=tu@correo` | Certificado válido y renovable. Necesita un **dominio** que apunte a la VM y el puerto 80 abierto a internet (no funciona con IPs privadas). |
 | `HTTPS_MODE=none` | Solo HTTP. No lo uses con datos reales. |
 
-Otras variables: `SERVER_NAME` (por defecto la IP de la VM), `APP_DIR`, `KEEP`.
+Otras variables: `SERVER_NAME` (por defecto la IP de la VM), `APP_DIR`, `KEEP`, `WITH_API` y `API_UPSTREAM` (ver abajo).
+
+## Con la API (opt-in: `WITH_API=1`)
+Por defecto el despliegue es **solo estático** y no cambia. Con `WITH_API=1` el script añade además el proxy a la API del backend (`Educentro/server`, Fase 0):
+```bash
+# 1) Arranca la API (Educentro/server/README.md → «Docker»): escucha en 127.0.0.1:3000
+# 2) Publica web + proxy:
+sudo WITH_API=1 SERVER_NAME=notas.tudominio.edu EMAIL=tu@correo HTTPS_MODE=letsencrypt bash Educentro/deploy/deploy.sh
+```
+- Crea `location ^~ /api/` y `location ^~ /api/v1/auth/` (proxy a `API_UPSTREAM`, por defecto `127.0.0.1:3000`) con `X-Forwarded-For/Proto/Host` fijados por nginx (el cliente no puede falsear su IP), `client_max_body_size 1m`, `limit_req` con zonas propias (`edu_api` 10 r/s, `edu_auth` 2 r/s con ráfaga) y sin caché. Las cabeceras de seguridad de `/api/` las envía la propia API.
+- Configura la API con `PUBLIC_URL=https://<SERVER_NAME>` y `TRUST_PROXY` con la IP de nginx. Como web y API comparten origen, la CSP (`connect-src 'self'`) **no cambia**.
+- Si la API aún no responde, el script avisa (502) pero termina bien; si nginx no enruta `/api/` (404) falla. Volver a ejecutar sin `WITH_API` elimina el proxy.
+- Probado aquí con nginx real (modo estático y modo API, `nginx -t` en ambos, y con la API detrás: login por HTTPS, cookie `__Host-`, 413 a 1 MB, 429 por `limit_req`); no probado en tu VM.
 
 ## Actualizar y volver atrás
 ```bash

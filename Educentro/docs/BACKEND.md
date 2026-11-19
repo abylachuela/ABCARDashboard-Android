@@ -1,6 +1,24 @@
 # Plan del backend de Educentro
 
-Estado: **plan, sin implementar**. Sustituye el almacenamiento en `localStorage` por un servidor real con control de acceso en el servidor (el punto crítico de `SEGURIDAD.md`). Repositorio privado de GitHub; una sola VM Linux; datos de menores.
+Estado: **Fase 0 implementada** (ver «Estado de la Fase 0» abajo); las Fases 1–6 siguen siendo plan. Sustituye el almacenamiento en `localStorage` por un servidor real con control de acceso en el servidor (el punto crítico de `SEGURIDAD.md`). Repositorio privado de GitHub; una sola VM Linux; datos de menores.
+
+## Estado de la Fase 0 (implementada en `Educentro/server/`)
+Hecho y probado con PostgreSQL 16 real (86 pruebas, lint y typecheck limpios, `npm audit --omit=dev` sin vulnerabilidades): configuración validada (`src/config.ts`), migraciones SQL con ejecutor transaccional, `centros`/`usuarios`/`sesiones`/`tokens_recuperacion`/`auditoria_accesos` (append-only), autenticación bajo `/api/v1/auth` (login, logout, me, cambiar-clave, recuperar, restablecer), `/api/health`, `/api/v1/ping`, CLI `crear-admin` y `semilla-dev`, Dockerfile, `compose.yml` (api, db, migrar, backup), `deploy.sh` con `WITH_API=1` (probado con nginx real) y CI (`.github/workflows/educentro-server.yml`). Guía de uso: `server/README.md`.
+
+**Lo que difiere del plan**
+- **Sin ORM**: SQL plano con `pg` y un ejecutor de migraciones propio (en lugar de Drizzle/Kysely); validación con Zod (no TypeBox).
+- **Cookie `Path=/`**, no `Path=/api`: el prefijo `__Host-` lo exige. Nombre `__Host-edu_sid` (en desarrollo `edu_sid`, sin `Secure`).
+- **CSRF**: el token es un HMAC (de `SESSION_SECRET`) ligado a la sesión, devuelto en el cuerpo de login/me y enviado en `X-EDU-CSRF`; no hay cookie de doble envío. Además se comprueba `Origin` en todo método no seguro.
+- **Bloqueo por usuario** con retroceso (5 fallos → 15 min, luego 30, 60…); la IP se limita con rate limit (en la API y en nginx), no se bloquea «usuario+IP».
+- **Migraciones**: no se aplican al arrancar `api`; las ejecuta el servicio `migrar` de Compose (rol propietario) antes de `api`. El respaldo previo sigue siendo manual.
+- **`TRUST_PROXY`** exige lista de IP/CIDR (Fastify 5 no admite «nº de saltos» de forma segura).
+- **Cuerpo máx. 1 MB** también en nginx (`/api/`); el límite de 12 MB para subidas llega con la Fase 4.
+- **Auditoría**: la Fase 0 solo crea `auditoria_accesos` (accesos); la tabla `auditoria` de calificaciones con `antes/despues` es de la Fase 2.
+- **`cambiar-clave`** revoca todas las sesiones y emite una nueva para el dispositivo actual.
+- **Pruebas** contra un PostgreSQL local (no Testcontainers/Docker); en CI, servicio `postgres`.
+- **Copias**: `pg_dump` + gzip + GPG AES-256 diario con retención de 30 días; **la copia fuera de la VM y la prueba de restauración trimestral siguen pendientes**. WAL/PITR no está implementado.
+- **No hecho aún** (según el plan): altas por invitación desde la API, 2FA, autorización por rol/centro/alcance, RLS por colección, repositorio genérico y `repo-api.js` (Fase 1).
+- **No probado aquí**: `docker build`/`docker compose up` (sin daemon de Docker en el entorno; solo se validó `docker compose config`, y se ejecutaron por separado `backup.sh`, `db/roles.sql`, el build de producción con `npm ci --omit=dev` y la API detrás de nginx real), SMTP real, Let's Encrypt.
 
 ## Lo que condiciona el diseño (hallazgos del código actual)
 - `EDU.repo` (`js/data/repo.js`) ya actúa de controlador: centro activo, escritura por colección (`ESCRIBE`), propiedad (docente→sus cargas, estudiante→lo propio), auditoría de calificaciones, `auditar`, `registrarLectura`, `exportarTodo/importarTodo`. Casi todo se traslada 1:1 al servidor.
