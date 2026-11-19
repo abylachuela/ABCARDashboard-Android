@@ -33,6 +33,7 @@
   EDU.router.register('reportes', {
     titulo: 'Reportes',
     render: async function (cont) {
+      if (!document.getElementById('rp-css')) { var st = document.createElement('style'); st.id = 'rp-css'; st.textContent = '#rp-cuerpo .tw{position:relative;contain:inline-size}#rp-cuerpo select,#rp-s{max-width:100%}'; document.head.appendChild(st); }
       var ses = EDU.estado.sesion(), rol = ses.rol, d = await EDU.consultas.cargar(COLS);
       var puedeExportar = EDU.permisos.puede(rol, 'reportes', 'exportar');
       var resumen = EDU.consultas.resumenNotas(d);
