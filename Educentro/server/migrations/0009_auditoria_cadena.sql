@@ -32,6 +32,8 @@ CREATE TABLE auditoria_cabeza (
 );
 
 -- Relleno de las filas existentes (Fase 1): orden por fecha e id. El trigger de inmutabilidad se suspende SOLO aquí.
+-- (con RLS FORCE y sin política de UPDATE el propio propietario no podría actualizar filas: se suspende solo aquí)
+ALTER TABLE auditoria NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE auditoria DISABLE TRIGGER auditoria_sin_cambios;
 DO $$
 DECLARE
@@ -55,6 +57,7 @@ BEGIN
   END LOOP;
 END $$;
 ALTER TABLE auditoria ENABLE TRIGGER auditoria_sin_cambios;
+ALTER TABLE auditoria FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE auditoria
   ALTER COLUMN seq SET NOT NULL,

@@ -62,14 +62,21 @@ export const rutasNotas: FastifyPluginAsync = async (app: FastifyInstance) => {
   app.get('/auditoria/verificar', guardia, async (req) => {
     const ses = sesionDe(req);
     if (!ROLES_LEEN_AUDITORIA.includes(ses.rol)) throw new ErrorHttp(403, 'sin_permiso', 'Sin permiso para verificar la auditoría.');
-    const { centroId } = z.object({ centroId: z.string().min(1).max(100).optional() }).parse(req.query);
+    // anclaSeq + anclaHash: el último hash guardado fuera de la VM (CLI anclar-auditoria): detecta una reescritura total de la cadena.
+    const q = z.object({
+      centroId: z.string().min(1).max(100).optional(),
+      anclaSeq: z.coerce.number().int().min(1).optional(),
+      anclaHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+    }).parse(req.query);
+    const { centroId } = q;
+    if ((q.anclaSeq === undefined) !== (q.anclaHash === undefined)) throw new ErrorHttp(422, 'datos_invalidos', 'anclaSeq y anclaHash van juntos.', ['anclaSeq', 'anclaHash']);
     if (ses.rol !== 'admin_red' && centroId !== undefined && centroId !== ses.centroId) throw new ErrorHttp(404, 'no_encontrado', 'Centro no encontrado.');
     const centro = ses.rol === 'admin_red' ? centroId : ses.centroId;
     if (!centro) throw new ErrorHttp(422, 'datos_invalidos', 'centroId es obligatorio (elige un centro).', ['centroId']);
     return abrir(req, async (p) => {
       const existe = await p.tx.query('SELECT 1 FROM centros WHERE id = $1', [centro]);
       if (!existe.rowCount) throw new ErrorHttp(404, 'no_encontrado', 'Centro no encontrado.');
-      return verificarCadena(p.tx, centro);
+      return verificarCadena(p.tx, centro, q.anclaSeq !== undefined && q.anclaHash !== undefined ? { seq: q.anclaSeq, hash: q.anclaHash } : undefined);
     });
   });
 };

@@ -312,7 +312,8 @@ export async function reabrirPeriodo(p: Peticion, periodoId: string, cuerpoBruto
 }
 
 // ------------------------------------------------------------------------------------------------ resumen
-export const esquemaResumen = z.object({
+const iso = (c: string): string => `to_char(${c} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+export const esquemaResumen = z.strictObject({
   seccionId: z.string().min(1).max(100).optional(),
   cargaId: z.string().min(1).max(100).optional(),
   estudianteId: z.string().min(1).max(100).optional(),
@@ -339,8 +340,12 @@ export async function resumenNotas(p: Peticion, consulta: unknown): Promise<{ da
     const where = ['centro_id = $1', 'borrado_en IS NULL', ...extra(params)];
     const cond = condicionAlcance(nombre, p.ses, alc, params);
     if (cond) where.push(cond);
-    const r = await p.tx.query<{ id: string; centro_id: string; datos: Json }>(`SELECT id, centro_id, datos FROM ${m.tabla} WHERE ${where.join(' AND ')} ORDER BY id`, params);
-    return r.rows.map((f) => ({ ...f.datos, id: f.id, centroId: f.centro_id }));
+    const r = await p.tx.query<{ id: string; centro_id: string; datos: Json; creado_en: string; actualizado_en: string }>(
+      `SELECT id, centro_id, datos, ${iso('creado_en')} AS creado_en, ${iso('actualizado_en')} AS actualizado_en FROM ${m.tabla} WHERE ${where.join(' AND ')} ORDER BY id`,
+      params,
+    );
+    // mismo registro plano que devuelve /c/:col (el cliente calcula sobre eso)
+    return r.rows.map((f) => ({ ...f.datos, id: f.id, centroId: f.centro_id, creadoEn: f.creado_en, actualizadoEn: f.actualizado_en }));
   };
   const matriculas = await cargar('matriculas', (pr) => {
     const w = [`datos->>'estado' = 'activa'`];

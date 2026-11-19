@@ -189,7 +189,7 @@ const MAX_ERRORES = 50;
 export interface ErrorCadena {
   seq: number | null;
   id: string | null;
-  tipo: 'hash_alterado' | 'enlace_roto' | 'seq_discontinuo' | 'cabeza_distinta' | 'cabeza_ausente';
+  tipo: 'hash_alterado' | 'enlace_roto' | 'seq_discontinuo' | 'cabeza_distinta' | 'cabeza_ausente' | 'ancla_distinta';
   mensaje: string;
 }
 export interface InformeCadena {
@@ -211,7 +211,7 @@ export interface InformeCadena {
  * truncado de la cola (la cabeza guardada no coincide con la última fila). NO detecta que quien controla toda la
  * BD reescriba cadena y cabeza completas: para eso se ancla el hash final fuera de la VM (`anclar-auditoria`).
  */
-export async function verificarCadena(tx: Tx, centroId: string): Promise<InformeCadena> {
+export async function verificarCadena(tx: Tx, centroId: string, ancla?: { seq: number; hash: string }): Promise<InformeCadena> {
   const errores: ErrorCadena[] = [];
   let truncado = false;
   const err = (e: ErrorCadena): void => {
@@ -223,6 +223,7 @@ export async function verificarCadena(tx: Tx, centroId: string): Promise<Informe
   let registros = 0;
   let ultimoSeq = 0;
   let ultimoHash = GENESIS;
+  let anclaVista = false;
   const LOTE = 2000;
   for (let desdeSeq = Number.MIN_SAFE_INTEGER; ; ) {
     const r = await tx.query<{ seq: string; id: string; prev_hash: string; hash: string; canon: string }>(
@@ -243,6 +244,10 @@ export async function verificarCadena(tx: Tx, centroId: string): Promise<Informe
       if (calculado !== f.hash) {
         err({ seq, id: f.id, tipo: 'hash_alterado', mensaje: 'El contenido de la entrada no coincide con su hash (alterada).' });
       }
+      if (ancla && seq === ancla.seq) {
+        anclaVista = true;
+        if (f.hash !== ancla.hash) err({ seq, id: f.id, tipo: 'ancla_distinta', mensaje: 'El hash de la entrada no coincide con el ancla guardada fuera de la VM: la cadena fue reescrita.' });
+      }
       hashPrevio = f.hash;
       esperadoSeq = seq + 1;
       ultimoSeq = seq;
@@ -251,6 +256,7 @@ export async function verificarCadena(tx: Tx, centroId: string): Promise<Informe
     if (r.rows.length < LOTE) break;
     desdeSeq = Number((r.rows[r.rows.length - 1] as { seq: string }).seq);
   }
+  if (ancla && !anclaVista) err({ seq: ancla.seq, id: null, tipo: 'ancla_distinta', mensaje: 'La entrada anclada ya no existe (la cadena es más corta que el ancla).' });
   const cab = await tx.query<{ seq: string; hash: string }>('SELECT seq, hash FROM auditoria_cabeza WHERE centro_id = $1', [centroId]);
   const c = cab.rows[0];
   if (!c) {
