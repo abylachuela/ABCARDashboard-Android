@@ -19,3 +19,6 @@ Los resultados de abajo vienen de `docs/SEGURIDAD.md`; los scripts de Playwright
 
 ## Pendiente
 Versionar los scripts de smoke/XSS/aislamiento y ejecutarlos en CI ([Hoja de ruta](Hoja-de-ruta)). No hay pruebas automáticas de los módulos de aula, horarios y cursos más allá del smoke.
+
+## Fase 2 (servidor)
+506 pruebas Vitest con PostgreSQL real: paridad de cálculo (28 casos portados contra servidor y cliente + 6000 generados contra un oráculo), periodo cerrado por rol, rangos, mass-assignment, pesos y cierre, lotes, UNIQUE bajo concurrencia, EXPLAIN con índices, cadena de hashes (concurrencia, manipulación como propietario, ancla) y `/notas/resumen` == cliente con la semilla. e2e de 6 roles con flujo de notas contra el servidor real (`tests/e2e/api.e2e.mjs`).

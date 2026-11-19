@@ -34,3 +34,6 @@ El cliente `repo-api.js` (siguiente tramo), notas y auditoría inmutable de cali
 Ver `server/README.md`: crear roles con `db/roles.sql`, `npm run migrar`, `npm run crear-admin`, `npm run dev`.
 
 Ver también [Seguridad y privacidad](Seguridad-y-privacidad) y [Hoja de ruta](Hoja-de-ruta).
+
+## Fase 2: notas, periodos y auditoría
+El servidor aplica las reglas de notas (periodo cerrado con motivo del director, rangos, pesos = 100, propiedad), calcula con el mismo `calculo.js` del cliente (`calculo-shim`) y expone `GET /notas/resumen`, lotes por fila, `POST /periodos/:id/{cerrar,reabrir}` y `GET /auditoria/verificar` (cadena de hashes por centro; ancla externa con `npm run anclar-auditoria`). Detalle: `docs/API-REST.md` §10 y `docs/BACKEND.md`.

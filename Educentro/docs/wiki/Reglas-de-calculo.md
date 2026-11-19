@@ -40,3 +40,6 @@ CF = (78 + 75 + 60 + 90) / 4 = **75.75** → Aprobado. En C1 el P2 = 65 < 70 se 
 - `validarPesos`: los pesos de categorías y periodos deben sumar 100.
 
 Pruebas de estas reglas: [Pruebas](Pruebas). Origen de la regla de competencias: `docs/PLANTILLAS-CALIFICACION.md`; la base normativa oficial (ordenanza de evaluación) sigue sin verificarse contra el PDF ([Decisiones y limitaciones](Decisiones-y-limitaciones)).
+
+## Cálculo en el servidor
+El servidor no reimplementa las reglas: carga `js/core/escala.js`, `calculo.js` y `data/consultas.js` (`resumenNotas`) bajo `vm` y falla cerrado si cambian de forma o de resultados canarios. Las notas se guardan sin redondear; `GET /notas/resumen` devuelve las mismas filas que `EDU.consultas.resumenNotas` (ambos modelos). Los campos calculados que envíe el cliente se ignoran.

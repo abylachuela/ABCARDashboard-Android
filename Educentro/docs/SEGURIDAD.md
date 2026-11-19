@@ -114,3 +114,8 @@ La API `/api/v1/c/:col` aplica en el **servidor** rol → colección, centro, al
 ## Pruebas de regresión (Playwright/Chromium, `file://`)
 - `tests/calculo.test.html`: PASS 28/28. `tests/planilla.test.html`: PASS 10/10 (2 nuevas: aborto por contaminación de prototipos; rechazo de macros/enlaces externos/exceso de componentes).
 - Smoke: 6 roles × 30 rutas (incluye rutas con parámetros y una inexistente) = 180 visitas en cada configuración, a 1280 px y 375 px, con modelo ponderado y con modelo por competencias: **0 errores de consola (incluidas violaciones de CSP), 0 tarjetas de error, 0 desbordamientos horizontales**.
+
+## Fase 2: notas y auditoría en el servidor
+- Periodo cerrado, rangos, pesos y propiedad de las notas se validan en el servidor (no solo en el cliente); el director/admin_red edita un periodo cerrado solo con motivo y queda auditado. Pruebas: `server/test/notas-*.test.ts`.
+- La auditoría de datos es de solo anexado (sin UPDATE/DELETE/TRUNCATE para la API ni, por trigger, para el propietario por la vía normal) y **encadenada con SHA-256 por centro** (`seq`, `huella`, `huellaPrevia`; IP y user-agent truncados fijados por el servidor). `GET /auditoria/verificar` la recorre y detecta alteración, borrado, reordenamiento y cola truncada, incluso si se hizo como propietario suspendiendo triggers (probado).
+- **Límite honesto**: un administrador de la BD con acceso total puede reescribir toda la cadena y su cabeza de forma coherente; la verificación sola no lo detecta. Mitigación: anclar periódicamente el hash final fuera de la VM con `npm run anclar-auditoria` (imprime centro, seq, hash y fecha) y comprobarlo con `/auditoria/verificar?anclaSeq=&anclaHash=` (probado).

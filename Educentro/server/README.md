@@ -20,6 +20,7 @@ npm run migrar
 npm run crear-admin -- --email admin@tu-dominio --nombre "Nombre Apellido"   # pide la contraseña oculta
 npm run dev               # http://127.0.0.1:3000/api/health
 npm run semilla-dev       # opcional, SOLO desarrollo: carga la semilla demo del frontend (js/data/semilla.js, datos ficticios) + un usuario por rol (cen_1) con contraseñas aleatorias impresas una vez
+npm run anclar-auditoria  # imprime el hash final de la auditoría de cada centro (guárdalo FUERA de la VM)
 npm run paridad           # comprueba que src/domain/permisos.json coincide con js/core/permisos.js (-- --generar lo regenera)
 ```
 Los scripts cargan `.env` con `--env-file-if-exists` de Node. En desarrollo el correo de recuperación se imprime por consola (transporte `consola`); en producción es obligatorio SMTP.
@@ -79,7 +80,7 @@ Vitest contra **PostgreSQL real** (sin Testcontainers). Necesitan un PostgreSQL 
 ```bash
 sudo apt-get install -y postgresql postgresql-client && sudo pg_ctlcluster 16 main start
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres'"     # solo en una máquina de pruebas
-npm test            # 362 pruebas (86 de la Fase 0 + paridad, RLS, matriz 6 roles × 39 colecciones, aislamiento y seguridad de la API)
+npm test            # 506 pruebas (Fases 0-1 + cálculo compartido, reglas de notas, cierre de periodos, cadena de auditoría)
 npm run lint && npm run typecheck
 ```
 
