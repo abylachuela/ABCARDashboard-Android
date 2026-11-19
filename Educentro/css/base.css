@@ -27,3 +27,4 @@ select{padding:8px 10px;border:1px solid var(--field-line);border-radius:8px;bac
 /* Areas tactiles >= 44 px para checkbox/radio: la etiqueta que los envuelve es el objetivo (WCAG 2.5.5 / Material) */
 input[type=checkbox],input[type=radio]{width:22px;height:22px;accent-color:var(--navy);flex:none;vertical-align:middle}
 label:has(>input[type=checkbox]),label:has(>input[type=radio]){display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}
+[hidden]{display:none!important}

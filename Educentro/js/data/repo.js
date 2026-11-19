@@ -91,6 +91,17 @@
     }
   }
 
+  /** Copia el registro y le asigna/valida centroId (comun a guardar y guardarMuchos). */
+  function preparar(s, col, rec) {
+    rec = Object.assign({}, rec);
+    if (GLOBALES.indexOf(col) === -1) {
+      if (!rec.centroId) rec.centroId = s.centroActivo;
+      if (!rec.centroId && !(col === 'usuarios' && s.rol === 'admin_red')) throw new Error('centroId requerido (elige un centro activo)');
+      if (rec.centroId && !EDU.permisos.centroPermitido(s, rec.centroId)) throw new Error('Centro no permitido');
+    }
+    return rec;
+  }
+
   async function listar(col, o) {
     o = o || {};
     var cid = centroLectura(col, o);
@@ -123,26 +134,28 @@
     /** guardar(col, reg): crea (genera id) o actualiza. Asigna centroId del centro activo si falta. */
     guardar: async function (col, rec) {
       var s = permitir(col, 'guardar');
-      rec = Object.assign({}, rec);
-      if (GLOBALES.indexOf(col) === -1) {
-        if (!rec.centroId) rec.centroId = s.centroActivo;
-        if (!rec.centroId && !(col === 'usuarios' && s.rol === 'admin_red')) throw new Error('centroId requerido (elige un centro activo)');
-        if (rec.centroId && !EDU.permisos.centroPermitido(s, rec.centroId)) throw new Error('Centro no permitido');
-      }
-      var antes = rec.id ? await A().obtener(col, rec.id) : null;
+      rec = preparar(s, col, rec);
+      // Con servidor (esServidor) la autoridad es la API: no se relee `antes` (centro inmutable, propiedad y auditoria los aplica el servidor).
+      var antes = rec.id && !A().esServidor ? await A().obtener(col, rec.id) : null;
       if (antes && antes.centroId && rec.centroId !== antes.centroId) throw new Error('No se puede cambiar el centro de un registro');
       await propiedad(s, col, rec, antes);
       var g = await A().guardar(col, rec);
-      if (SIN_AUDITAR.indexOf(col) === -1) await auditar(s, antes ? 'editar' : 'crear', col, g.id, antes, g);
+      if (!A().esServidor && SIN_AUDITAR.indexOf(col) === -1) await auditar(s, antes ? 'editar' : 'crear', col, g.id, antes, g);
       return g;
     },
     guardarMuchos: async function (col, recs) {
-      var out = [];
-      for (var i = 0; i < recs.length; i++) out.push(await EDU.repo.guardar(col, recs[i]));
+      var out = [], i;
+      if (A().esServidor && typeof A().guardarMuchos === 'function') { // un solo viaje por lotes (maximo 500) tras validar cada registro
+        var s = permitir(col, 'guardar'), lote = [];
+        for (i = 0; i < recs.length; i++) { var r = preparar(s, col, recs[i]); await propiedad(s, col, r, null); lote.push(r); }
+        return lote.length ? A().guardarMuchos(col, lote) : [];
+      }
+      for (i = 0; i < recs.length; i++) out.push(await EDU.repo.guardar(col, recs[i]));
       return out;
     },
     borrar: async function (col, id) {
       var s = permitir(col, 'borrar');
+      if (A().esServidor) return A().borrar(col, id);
       var antes = await A().obtener(col, id);
       if (!antes) return false;
       if (antes.centroId && !EDU.permisos.centroPermitido(s, antes.centroId)) throw new Error('Centro no permitido');
@@ -162,13 +175,14 @@
       if (!cid || !EDU.permisos.centroPermitido(s, cid)) throw new Error('Centro no permitido');
       var reg = { centroId: cid, usuarioId: s.usuarioId, rol: s.rol, accion: STR(accion, 60), fecha: new Date().toISOString() };
       CAMPOS_AUDIT.forEach(function (k) { if (datos[k] !== undefined && k !== 'accion') reg[k] = typeof datos[k] === 'string' ? STR(datos[k], 600) : datos[k]; });
-      return A().guardar('auditoria', reg);
+      return typeof A().auditar === 'function' ? A().auditar(reg) : A().guardar('auditoria', reg); // servidor: POST /auditoria (fija usuario, rol y fecha)
     },
     /** Confirmacion de lectura de un comunicado por el propio usuario (tutor/estudiante/docente no escriben `comunicados`).
         Solo anade {usuarioId, fecha} propio a `lecturas`; valida centro, estado publicado y audiencia por rol. */
     registrarLectura: async function (comunicadoId) {
       var s = esc();
       if (!s || !EDU.permisos.puede(s.rol, 'comunicados', 'ver')) throw new Error('Sin permiso');
+      if (typeof A().registrarLectura === 'function') return A().registrarLectura(comunicadoId); // servidor: valida centro, estado y audiencia
       var c = await A().obtener('comunicados', comunicadoId);
       if (!c || c.centroId !== s.centroUsuario || c.estado !== 'publicado') throw new Error('Comunicado no disponible.');
       var aud = c.destinatarios || 'todos';
@@ -194,6 +208,7 @@
     importarTodo: async function (o) {
       var s = esc(); if (!s || !EDU.permisos.puede(s.rol, 'respaldo', 'importar')) throw new Error('Sin permiso');
       if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Respaldo invalido');
+      if (A().esServidor) throw new Error('La importación de respaldos estará disponible en la Fase 5.');
       var actual = await A().exportarTodo(), full = {}, admin = s.rol === 'admin_red';
       EDU.repoLocal.COLECCIONES.forEach(function (c) {
         var nuevo = o[c];

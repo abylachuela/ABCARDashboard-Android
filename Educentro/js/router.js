@@ -46,6 +46,7 @@
     if (!m) { actual = { ruta: p.path, modulo: modulo, titulo: 'No encontrada' }; document.title = 'No encontrada · EduCentro'; msg('Página no encontrada (404)', 'La ruta "' + p.path + '" no existe.'); avisar(actual); return; }
     var def = m.r.def;
     if (!def.publica && !auth) { location.replace('#/login'); return; }
+    if (auth && modulo !== 'cambiar-clave' && EDU.estado.debeCambiarClave && EDU.estado.debeCambiarClave()) { location.replace('#/cambiar-clave'); return; } // modo api: cambio de contrasena obligatorio
     if (def.publica && auth && modulo === 'login') { location.replace('#/dashboard'); return; }
     var rol = EDU.estado.rol();
     actual = { ruta: p.path, modulo: modulo, titulo: def.titulo || modulo, params: Object.assign({}, p.query, m.params) };

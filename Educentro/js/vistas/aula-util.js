@@ -25,7 +25,10 @@
 
   /* ---------- datos y alcance ---------- */
   A.cargar = async function () {
-    var d = await EDU.consultas.cargar(A.COLS), ses = EDU.estado.sesion();
+    var ses0 = EDU.estado.sesion();
+    // `secuencias` solo se lee con acceso al modulo (el servidor la niega con 403 a tutor y estudiante)
+    var d = await EDU.consultas.cargar(A.COLS.filter(function (c) { return c !== 'secuencias' || EDU.permisos.puedeModulo(ses0.rol, 'secuencias'); })), ses = ses0;
+    if (!d.secuencias) d.secuencias = [];
     d.ses = ses; d.rol = ses.rol;
     d.al = EDU.permisos.alcance(ses, d);
     d.m = { carga: A.byId(d.cargas), seccion: A.byId(d.secciones), curso: A.byId(d.cursos), asig: A.byId(d.asignaturas), doc: A.byId(d.docentes), est: A.byId(d.estudiantes), periodo: A.byId(d.periodos), act: A.byId(d.actividades), sec: A.byId(d.secuencias) };
@@ -74,6 +77,7 @@
   };
   A.tamano = function (b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; };
   A.usoAlmacen = function () {
+    if (EDU.estado && EDU.estado.modo === 'api') return null; // modo servidor: sin cuota local
     var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { return null; }
     return n;
   };
@@ -91,6 +95,7 @@
   };
   A.avisoCuota = function () {
     var uso = A.usoAlmacen();
+    if (EDU.estado && EDU.estado.modo === 'api') return 'Máximo 500 KB por archivo. Para archivos grandes usa un enlace.';
     return 'Máximo 500 KB por archivo. Se guarda en este dispositivo (localStorage' + (uso != null ? ', uso aprox. ' + fmt.num(uso / A.CUOTA_CHARS * 100) + ' % de ~5 MB' : '') + '). Para archivos grandes usa un enlace.';
   };
   A.postGuardar = function () { if (EDU.repoLocal && EDU.repoLocal.advertencia) ui.toast(EDU.repoLocal.advertencia, 'warn', 6000); };

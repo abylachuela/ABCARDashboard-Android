@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CSP, EXIT, ErrorDeEntrada, archivosNginx, argsOpensslAutofirmado, generarApp, generarApiConf, generarApiProxy,
-  generarSan, generarSite, ordenarVersiones, resolverConfig, sellarVersion, validarApiUpstream, validarAppDir,
+  generarConfigJs, generarSan, generarSite, ordenarVersiones, resolverConfig, sellarVersion, validarApiUpstream, validarAppDir,
   validarEmail, validarKeep, validarServerName, validarWithApi, esIPv4,
 } from '../deploy.mjs';
 import { elegirAnterior } from '../rollback.mjs';
@@ -140,4 +140,17 @@ test('códigos de salida distintos y sin shell en el código', () => {
     assert.doesNotMatch(src, /shell\s*:\s*true|execSync|(?<![.\w])exec\(/, f);
     assert.doesNotMatch(src, /from ['"](?!node:|\.\/)/, `${f} solo puede importar node: y ./`);
   }
+});
+
+test('js/config.js publicado: modo api solo con WITH_API; el estático publica local', () => {
+  const api = generarConfigJs(cfg({ WITH_API: '1' }));
+  const est = generarConfigJs(cfg());
+  assert.match(api, /modo: 'api', apiBase: '\/api\/v1'/);
+  assert.match(est, /modo: 'local', apiBase: '\/api\/v1'/);
+  assert.doesNotMatch(est, /'api'/ );
+  // el repositorio conserva 'local' y el despliegue lo reescribe siempre
+  const repo = fs.readFileSync(path.join(AQUI, '..', '..', 'js', 'config.js'), 'utf8');
+  assert.match(repo, /modo: 'local'/);
+  const src = fs.readFileSync(path.join(AQUI, '..', 'deploy.mjs'), 'utf8');
+  assert.match(src, /generarConfigJs\(cfg\)/);
 });

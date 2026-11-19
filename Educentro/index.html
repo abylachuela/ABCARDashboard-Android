@@ -22,7 +22,7 @@
 <aside class="side" id="side" aria-label="Navegación principal">
   <div class="brand"><i aria-hidden="true">E</i>EduCentro</div>
   <nav class="nav" id="nav" aria-label="Módulos"></nav>
-  <div class="who"><span>Datos demo (MINERD)</span><button type="button" id="resetDemo">Restablecer datos demo</button></div>
+  <div class="who" id="who"><span>Datos demo (MINERD)</span><button type="button" id="resetDemo">Restablecer datos demo</button></div>
 </aside>
 <div class="scrim" id="scrim"></div>
 <div class="main">
@@ -31,6 +31,7 @@
     <div class="sp"></div>
     <label class="sel">Centro activo<select id="centerSel"></select></label>
     <div class="userchip"><div class="av" id="uAv" aria-hidden="true"></div><div class="txt"><strong id="uNom"></strong><small id="uRol"></small></div>
+      <a class="btn sec sm" id="cuentaClave" href="#/cambiar-clave" hidden>Contraseña</a>
       <button type="button" class="btn sec sm" id="logout">Salir</button></div>
   </header>
   <main class="wrap" id="main" tabindex="-1"><div id="view" aria-live="off"></div></main>
@@ -39,6 +40,7 @@
 <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
 
 <!-- Orden de carga: NO usar ES modules (debe funcionar por file://). Todo cuelga de window.EDU. Ver docs/API.md -->
+<script src="js/config.js"></script>
 <script src="js/core/almacen.js"></script>
 <script src="js/core/formato.js"></script>
 <script src="js/core/escala.js"></script>
@@ -49,6 +51,7 @@
 <script src="js/core/permisos.js"></script>
 <script src="js/data/repo-local.js"></script>
 <script src="js/data/repo.js"></script>
+<script src="js/data/repo-api.js"></script>
 <script src="js/data/curriculo-semilla.js"></script>
 <script src="js/data/semilla.js"></script>
 <script src="js/data/cursos-semilla.js"></script>
@@ -58,6 +61,7 @@
 <script src="js/router.js"></script>
 <!-- Vistas base -->
 <script src="js/vistas/login.js"></script>
+<script src="js/vistas/cuenta.js"></script>
 <script src="js/vistas/dashboard.js"></script>
 <script src="js/vistas/centros.js"></script>
 <script src="js/vistas/config.js"></script>

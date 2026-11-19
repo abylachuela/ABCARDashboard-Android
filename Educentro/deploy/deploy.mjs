@@ -189,6 +189,14 @@ location ~* \\.(js|css)$ { include ${snip}/educentro-headers.conf; add_header Ca
   return s;
 }
 
+/** js/config.js de la versión PUBLICADA (nunca el del repositorio): 'api' solo con --with-api; si no, 'local' (demo en el navegador). */
+export function generarConfigJs(cfg) {
+  const modo = cfg.withApi ? 'api' : 'local';
+  return `/* Generado por deploy.mjs (${modo === 'api' ? 'con --with-api' : 'solo estático'}). No editar: se rehace en cada despliegue. */
+window.EDU_CONFIG = Object.freeze({ modo: '${modo}', apiBase: '/api/v1' });
+`;
+}
+
 export function generarApiZones() {
   return `limit_req_zone $binary_remote_addr zone=edu_api:10m rate=10r/s;
 limit_req_zone $binary_remote_addr zone=edu_auth:10m rate=2r/s;
@@ -480,8 +488,15 @@ export async function desplegar(cfg, ctx) {
   for (let n = 1; fs.existsSync(path.join(cfg.appDir, 'releases', stamp)); n++) stamp = `${stamp0}-${n}`;
   const REL = path.join(cfg.appDir, 'releases', stamp);
   ctx.log(`==> Copiando la web a ${REL} (solo index.html, css, js)`);
-  if (ctx.dry) ctx.log(`   [dry-run] copiaría index.html, css/, js/ (y assets/ si existe), eliminaría *.xlsx/*.xls/*.csv y datos-privados, permisos 755/644 root`);
-  else copiarWeb(ctx, SRC, REL);
+  if (ctx.dry) ctx.log(`   [dry-run] copiaría index.html, css/, js/ (y assets/ si existe), eliminaría *.xlsx/*.xls/*.csv y datos-privados, permisos 755/644 root, y js/config.js con modo '${cfg.withApi ? 'api' : 'local'}'`);
+  else {
+    copiarWeb(ctx, SRC, REL);
+    const cfgJs = path.join(REL, 'js', 'config.js');   // siempre se reescribe: la versión publicada decide el modo, no el repo
+    fs.writeFileSync(cfgJs, generarConfigJs(cfg), { mode: 0o644 });
+    fs.chmodSync(cfgJs, 0o644);
+    try { fs.chownSync(cfgJs, 0, 0); } catch { /* sin permiso: ya somos root en uso real */ }
+    ctx.log(`   js/config.js publicado con modo '${cfg.withApi ? 'api' : 'local'}'`);
+  }
 
   // 3) nginx (con copia de seguridad de lo que se reescribe, para restaurar si nginx -t falla)
   ctx.log(`==> Configurando nginx (${modoTxt})`);
