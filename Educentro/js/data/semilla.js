@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var EDU = (window.EDU = window.EDU || {});
-  var VERSION = 3, KEY_META = 'edu:v1:meta';
+  var VERSION = 4, KEY_META = 'edu:v1:meta';
 
   function rng(seed) {
     return function () {
@@ -50,6 +50,61 @@
   function sumaDias(iso, d) {
     var t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + d);
     return t.getUTCFullYear() + '-' + p2(t.getUTCMonth() + 1) + '-' + p2(t.getUTCDate());
+  }
+
+  /* Centro 3 (Secundaria, modelo POR COMPETENCIAS de la planilla MINERD): TODOS los datos son ficticios (nombres y notas generados al azar). */
+  function sembrarCompetencias(D, add) {
+    var n = 3, cid = 'cen_3', anio = 'ani_3_2026', areas = ['LE', 'MAT', 'CS', 'CN', 'ING', 'EF', 'EA', 'FIHR'];
+    add('centros', { id: cid, activo: true, pais: 'República Dominicana', telefono: '809-555-0300', nombre: 'Liceo Politécnico Demo (competencias)', codigo: '04-0999', ciudad: 'San Cristóbal', regional: '04 San Cristóbal',
+      distrito: '04-02', nivel: 'Secundario', color: '#17693a', director: 'Ignacio Valdivia' });
+    add('anios', { id: anio, centroId: cid, nombre: 'Año escolar 2026-2027', inicio: '2026-01-12', fin: '2026-11-27', activo: true });
+    var pdef = [['2026-01-12', '2026-03-27'], ['2026-04-06', '2026-06-19'], ['2026-08-24', '2026-10-09'], ['2026-10-12', '2026-11-27']];
+    var per = pdef.map(function (x, i) { return add('periodos', { id: 'per_3_' + (i + 1), centroId: cid, anioId: anio, orden: i + 1, nombre: 'P' + (i + 1) + ' · Periodo ' + (i + 1), peso: 25, inicio: x[0], fin: x[1], cerrado: i < 3 }); });
+    var esc = EDU.escala.porDefecto();
+    add('escalas', Object.assign({ id: 'esc_3', centroId: cid, activa: true, modelo: 'competencias',
+      competencias: { competencias: 4, periodos: 4, regla: 'reemplaza', nombres: ['Comunicativa', 'Pensamiento lógico, creativo y crítico', 'Resolución de problemas', 'Ética y ciudadana'],
+        completiva: { cf: 50, cec: 50 }, extraordinaria: { cf: 30, cex: 70 }, especial: { ce: 100 } } }, esc));
+    areas.forEach(function (k) { add('asignaturas', { id: 'asg_3_' + k.toLowerCase(), centroId: cid, codigo: k, nombre: AREAS[k], color: COLORES[k] }); });
+    var docs = [], nd = ['Teodoro', 'Marisol', 'Eliezer', 'Noemí'], na = ['Ventura', 'Lantigua', 'Concepción', 'Brito'];
+    for (var d = 0; d < 4; d++) {
+      var did = 'doc_3_' + p2(d + 1);
+      docs.push(add('docentes', { id: did, centroId: cid, nombres: nd[d], apellidos: na[d] + ' ' + APELL[(d * 5) % APELL.length], email: slug(nd[d]) + '.' + slug(na[d]) + '3@educentro.demo', telefono: '809-555-13' + p2(d), especialidad: AREAS[areas[d]], genero: d % 2 ? 'F' : 'M' }));
+    }
+    add('cursos', { id: 'cur_3_1', centroId: cid, nombre: '6.º Secundario · General', orden: 1, nivel: 'Secundario', grado: 6, ciclo: 'Segundo ciclo', modalidad: 'General' });
+    var sec = add('secciones', { id: 'sec_3_1A', centroId: cid, cursoId: 'cur_3_1', anioId: anio, nombre: 'A', tanda: 'Jornada Extendida', capacidad: 30 });
+    var cargas = areas.map(function (k, ai) { return add('cargas', { id: 'car_3_1A_' + k.toLowerCase(), centroId: cid, anioId: anio, seccionId: sec.id, asignaturaId: 'asg_3_' + k.toLowerCase(), docenteId: docs[ai % 4].id, horasSemana: 4 }); });
+    var ests = [];
+    for (var e = 0; e < 12; e++) {
+      var fem = R() < 0.5, nom = pick(fem ? NOM_F : NOM_M), eid = 'est_3_' + p2(e + 1);
+      var es = add('estudiantes', { id: eid, centroId: cid, nombres: nom, apellidos: pick(APELL) + ' ' + pick(APELL), matricula: 'MAT-3-' + (3000 + e), fechaNacimiento: '2009-' + p2(1 + e % 12) + '-' + p2(1 + (e * 2) % 28), genero: fem ? 'F' : 'M', direccion: 'Calle ' + (e + 1) + ', San Cristóbal' });
+      es._h = e < 2 ? 55 + R() * 8 : e < 4 ? 66 + R() * 6 : 76 + R() * 22; ests.push(es);
+      add('matriculas', { id: 'mtr_' + eid, centroId: cid, estudianteId: eid, seccionId: sec.id, anioId: anio, estado: 'activa', fecha: '2026-01-08' });
+    }
+    function nota(h) { return Math.max(20, Math.min(100, Math.round(h + gauss() * 6))); }
+    cargas.forEach(function (cg) {
+      ests.forEach(function (es, ei) {
+        var comps = [];
+        for (var c = 0; c < 4; c++) {
+          var pv = [], rp = [];
+          for (var i = 0; i < 4; i++) {
+            var v = nota(es._h + (R() - 0.5) * 8), r = null;
+            if (v < 70 && R() < 0.7) r = Math.min(100, v + 5 + Math.round(R() * 20));
+            if (i === 3 && (ei === 10 || ei === 11) && c > 1) { v = null; r = null; } // P4 aun sin registrar (ficticio)
+            pv.push(v); rp.push(r);
+          }
+          comps.push({ p: pv, rp: rp });
+        }
+        var rc = EDU.calculo.calcularCompetencias({ competencias: comps, escala: Object.assign({ modelo: 'competencias' }, esc), cec: null });
+        var rec = { id: 'nc_' + cg.id + '_' + es.id, centroId: cid, cargaId: cg.id, estudianteId: es.id, c: comps, cec: null, cex: null, esp: null };
+        if (rc.estado === 'Completiva' || rc.estado === 'Extraordinaria') { rec.cec = Math.round(55 + R() * 40); var r2 = EDU.calculo.calcularCompetencias({ competencias: comps, escala: esc, cec: rec.cec });
+          if (r2.estado === 'Extraordinaria' && R() < 0.6) rec.cex = Math.round(50 + R() * 45); }
+        add('notasCompetencia', rec);
+      });
+    });
+    ests.forEach(function (es) { delete es._h; });
+    add('usuarios', { id: 'usr_dir_3', centroId: cid, nombre: 'Ignacio Valdivia', email: 'direccion3@educentro.demo', rol: 'director', refId: null });
+    add('usuarios', { id: 'usr_sec_3', centroId: cid, nombre: 'Yaneris Polanco', email: 'secretaria3@educentro.demo', rol: 'secretaria', refId: null });
+    docs.forEach(function (dc) { add('usuarios', { id: 'usr_doc_' + dc.id.slice(4), centroId: cid, nombre: dc.nombres + ' ' + dc.apellidos, email: dc.email, rol: 'docente', refId: dc.id }); });
   }
 
   function generar() {
@@ -177,6 +232,7 @@
     add('usuarios', { id: 'usr_admin', centroId: null, nombre: 'Marta Beltré', email: 'admin@educentro.demo', rol: 'admin_red', refId: null });
     D.agenteLog.push({ id: 'agl_1', centroId: 'cen_1', usuarioId: 'usr_doc_1_01', fecha: '2026-11-10T14:00:00.000Z', tarea: 'generar_plan', entrada: 'Plan de clase sobre fracciones', salida: 'Borrador de plan (simulado)', aprobadoPor: 'usr_doc_1_01' });
     D.estudiantes.forEach(function (e) { delete e.habilidad; });
+    sembrarCompetencias(D, add);
     if (EDU.curriculoSemilla) EDU.curriculoSemilla.sembrar(D); // catalogo curricular MINERD (js/data/curriculo-semilla.js)
     if (EDU.cursosSemilla) EDU.cursosSemilla.sembrar(D); // cursos/talleres de ejemplo (js/data/cursos-semilla.js)
     return D;

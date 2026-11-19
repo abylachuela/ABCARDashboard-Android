@@ -302,8 +302,8 @@
         var cs = S.ctx.cargas.filter(function (c) { return S.vista === 'docente' ? c.docenteId === id : c.seccionId === id; });
         h += '<div class="no-print"><p class="note" style="margin:0 0 6px">Arrastra una carga a la grilla, o selecciónala y pulsa Intro sobre una celda. También puedes arrastrar los bloques para moverlos.</p><div class="hz-pal" role="group" aria-label="Cargas para asignar">' + cs.map(function (c) {
           var n = val.horasCarga[c.id] || 0, r = M.horasDe(c), a = S.ctx.asigPor[c.asignaturaId];
-          return '<button type="button" class="hz-chip' + (r && n >= r ? ' ok' : '') + '" draggable="true" data-chip="' + esc(c.id) + '" aria-pressed="' + (S.selCarga === c.id ? 'true' : 'false') + '" style="border-left-color:' + colorOk(a && a.color) + '">' +
-            esc(M.nombreAsig(S.ctx, c.asignaturaId)) + '<small>' + esc(S.vista === 'docente' ? nombreSec(c.seccionId) : (c.docenteId ? M.nombreDoc(S.ctx, c.docenteId) : 'Sin docente')) + ' · ' + n + '/' + r + ' h</small></button>';
+          return '<div role="button" tabindex="0" class="hz-chip' + (r && n >= r ? ' ok' : '') + '" draggable="true" data-chip="' + esc(c.id) + '" aria-pressed="' + (S.selCarga === c.id ? 'true' : 'false') + '" style="border-left-color:' + colorOk(a && a.color) + '">' +
+            esc(M.nombreAsig(S.ctx, c.asignaturaId)) + '<small>' + esc(S.vista === 'docente' ? nombreSec(c.seccionId) : (c.docenteId ? M.nombreDoc(S.ctx, c.docenteId) : 'Sin docente')) + ' · ' + n + '/' + r + ' h</small></div>';
         }).join('') + '</div></div>';
       }
       /* selector de dia (movil) */
@@ -347,6 +347,7 @@
         repintarHorario(); var ns = panel.querySelector('select[data-sel="' + s.dataset.sel + '"]'); if (ns) ns.focus();
       });
       panel.addEventListener('keydown', function (ev) {
+        if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches && ev.target.matches('[data-chip]')) { ev.preventDefault(); ev.target.click(); return; }
         var td = ev.target.closest && ev.target.closest('td.hz-c'); if (!td || ev.target !== td) return;
         var tabla = td.closest('table'), m = celdas(tabla), r = -1, c = -1;
         m.forEach(function (fila, i) { var j = fila.indexOf(td); if (j >= 0) { r = i; c = j; } });

@@ -30,7 +30,7 @@
     '.hz-e.mal{background:var(--bad-bg);border-left-color:var(--bad)}',
     '.hz-e em{display:block;font-style:normal;font-weight:700;color:var(--bad);font-size:11.5px}',
     '.hz-pal{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}',
-    '.hz-chip{all:unset;box-sizing:border-box;cursor:grab;border:1px solid var(--field-line);border-left:5px solid var(--navy);border-radius:8px;background:#fff;padding:5px 10px;font-size:12.5px;line-height:1.3}',
+    '.hz-chip{all:unset;-webkit-user-drag:element;user-select:none;box-sizing:border-box;cursor:grab;border:1px solid var(--field-line);border-left:5px solid var(--navy);border-radius:8px;background:#fff;padding:5px 10px;font-size:12.5px;line-height:1.3}',
     '.hz-chip:hover{background:#f4f7fc}',
     '.hz-chip[aria-pressed=true]{background:var(--navy);color:#fff;border-color:var(--navy)}',
     '.hz-chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}',

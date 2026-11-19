@@ -135,9 +135,15 @@
         custom: function (x, t) { return t.min != null && x != null && x <= t.min ? 'El máximo debe ser mayor que el mínimo.' : null; } },
         { nombre: 'notaMinAprobar', label: 'Nota mínima de aprobación', tipo: 'number', requerido: true, deshabilitado: ro, ayuda: 'Debe estar dentro de la escala.',
           custom: function (x, t) { return t.min != null && t.max != null && x != null && (x < t.min || x > t.max) ? 'Debe estar entre ' + t.min + ' y ' + t.max + '.' : null; } },
-        { nombre: 'decimales', label: 'Decimales al mostrar', tipo: 'number', entero: true, requerido: true, min: 0, max: 3, deshabilitado: ro }];
+        { nombre: 'decimales', label: 'Decimales al mostrar', tipo: 'number', entero: true, requerido: true, min: 0, max: 3, deshabilitado: ro },
+        { nombre: 'modelo', label: 'Modelo de calificación', tipo: 'select', deshabilitado: ro, ancho: 'full', ayuda: 'Ponderado: categorías y actividades. Por competencias: planilla MINERD (4 competencias × 4 periodos con RP, completiva y extraordinaria).',
+          opciones: [{ valor: 'ponderado', texto: 'Ponderado por categorías y actividades' }, { valor: 'competencias', texto: 'Por competencias (planilla MINERD)' }] },
+        { nombre: 'regla', label: 'Regla de recuperación (RP)', tipo: 'select', deshabilitado: ro, opciones: [{ valor: 'reemplaza', texto: 'El RP reemplaza al periodo si P < mínimo' }, { valor: 'maximo', texto: 'Vale el mayor entre P y RP' }] },
+        { nombre: 'cCf', label: 'Completiva: % de CF', tipo: 'number', min: 0, max: 100, deshabilitado: ro }, { nombre: 'cCec', label: 'Completiva: % de CEC', tipo: 'number', min: 0, max: 100, deshabilitado: ro },
+        { nombre: 'xCf', label: 'Extraordinaria: % de CF', tipo: 'number', min: 0, max: 100, deshabilitado: ro }, { nombre: 'xCex', label: 'Extraordinaria: % de CEX', tipo: 'number', min: 0, max: 100, deshabilitado: ro }];
     }
-    function pintarForm(v) { form = ui.formulario({ campos: campos(v), valores: v, sinBotones: true }); fe.innerHTML = ''; fe.appendChild(form.el); }
+    function valModelo(e) { var c = EDU.calculo.configCompetencias(e); return { modelo: EDU.calculo.modelo(e), regla: c.regla, cCf: c.completiva.cf, cCec: c.completiva.cec, xCf: c.extraordinaria.cf, xCex: c.extraordinaria.cex }; }
+    function pintarForm(v) { var m = form ? (function (c) { return { modelo: c.modelo, regla: c.regla, cCf: c.cCf, cCec: c.cCec, xCf: c.xCf, xCex: c.xCex }; })(form.valores()) : valModelo(actual || {}); v = Object.assign({}, m, v); form = ui.formulario({ campos: campos(v), valores: v, sinBotones: true }); fe.innerHTML = ''; fe.appendChild(form.el); }
     function pintarTramos() {
       var t = p.querySelector('#tr');
       t.innerHTML = '<table class="t"><caption class="sr-only">Tramos de desempeño</caption><thead><tr><th scope="col">Desde (nota)</th><th scope="col">Etiqueta</th><th scope="col">Letra</th>' + (ro ? '' : '<th scope="col"><span class="sr-only">Quitar</span></th>') + '</tr></thead><tbody>' +
@@ -174,7 +180,10 @@
       if (errs.length) { msg.innerHTML = '<div><strong>Revisa la escala</strong><small>' + errs.map(esc).join('<br>') + '</small></div>'; msg.classList.remove('hidden'); return; }
       try {
         var sc = EDU.escala.crear({ min: v.min, max: v.max, notaMinAprobar: v.notaMinAprobar, decimales: v.decimales, tramos: ts });
-        await EDU.repo.guardar('escalas', Object.assign({}, actual || {}, sc, { activa: true }));
+        var prev = (actual && actual.competencias) || {}, mod = v.modelo === 'competencias' ? 'competencias' : 'ponderado';
+        var competencias = Object.assign({}, prev, { regla: v.regla === 'maximo' ? 'maximo' : 'reemplaza', completiva: { cf: Number(v.cCf), cec: Number(v.cCec) }, extraordinaria: { cf: Number(v.xCf), cex: Number(v.xCex) } });
+        if (competencias.completiva.cf + competencias.completiva.cec <= 0 || competencias.extraordinaria.cf + competencias.extraordinaria.cex <= 0) { msg.innerHTML = '<div><strong>Revisa la escala</strong><small>Los pesos de completiva y extraordinaria no pueden sumar 0.</small></div>'; msg.classList.remove('hidden'); return; }
+        await EDU.repo.guardar('escalas', Object.assign({}, actual || {}, sc, { activa: true, modelo: mod, competencias: competencias }));
         ui.toast('Escala guardada.', 'ok'); EDU.router.recargar();
       } catch (er) { falla(er); }
     });

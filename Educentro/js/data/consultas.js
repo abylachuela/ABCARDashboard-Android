@@ -49,7 +49,7 @@
             var nc = ncMap[cg.id + '|' + m.estudianteId] || {};
             var rc = EDU.calculo.calcularCompetencias({ competencias: nc.c, cec: nc.cec, cex: nc.cex, esp: nc.esp, escala: esc });
             out.push({ centroId: m.centroId, estudianteId: m.estudianteId, seccionId: m.seccionId, cargaId: cg.id, asignaturaId: cg.asignaturaId, docenteId: cg.docenteId,
-              final: rc.final, pct: EDU.escala.porcentaje(rc.final, esc), aprobado: rc.aprobado, estado: rc.estado, cf: rc.cf, via: rc.via, modelo: 'competencias', calc: rc,
+              final: rc.final, pct: EDU.escala.porcentaje(rc.final, esc), aprobado: rc.aprobado === null && rc.cf !== null ? EDU.calculo.aprobado(rc.cf, esc) : rc.aprobado, /* ano en curso: provisional, como en el modelo ponderado */ estado: rc.estado, cf: rc.cf, via: rc.via, modelo: 'competencias', calc: rc,
               periodos: pl.map(function (p, i) { return { periodoId: p.id, peso: p.peso, nota: rc.periodos[i] == null ? null : rc.periodos[i], categorias: [] }; }), escala: esc });
             return;
           }

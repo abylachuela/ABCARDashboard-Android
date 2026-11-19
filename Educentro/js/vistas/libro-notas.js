@@ -31,6 +31,7 @@
       var esDir = rol === 'director', esDoc = rol === 'docente';
       var puedeCerrar = EDU.permisos.puede(rol, 'libro-notas', 'cerrar');
       var d = await EDU.consultas.cargar(COLS);
+      if (EDU.libroCompetencias && calc.modelo(EDU.consultas.escalaDe(d.escalas, EDU.estado.centroActivo() || ses.centroUsuario)) === 'competencias') return EDU.libroCompetencias.render(cont, params); // centros con modelo por competencias
       var S = { carga: null, periodoId: null, dirty: {}, invalidos: {}, modoEd: false, motivoEd: null };
       var vivo = true;
 

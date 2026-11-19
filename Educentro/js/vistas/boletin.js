@@ -91,12 +91,12 @@
           var nota = anual ? f.final : (pSel ? porP[pSel.id] : f.final);
           var ap = nota == null ? null : calc.aprobado(nota, esc_), est_ = f.modelo === 'competencias' ? f.estado : null;
           if (est_) { ap = (anual || !pSel) ? f.aprobado : ap; if (est_ === 'Completiva' || est_ === 'Extraordinaria') hayComp = true; }
-          if (nota == null) hayPend = true; else { finales.push(nota); if (ap === false && !(est_ === 'Completiva' || est_ === 'Extraordinaria')) hayRep = true; if (est_ === 'Pendiente') hayPend = true; }
+          if (nota == null) hayPend = true; else { finales.push(nota); if (ap === false && !(est_ && est_ !== 'Reprobado')) hayRep = true; if (est_ === 'Pendiente') hayPend = true; }
           return '<tr><th scope="row" style="text-align:left;font-weight:500">' + esc(asigNombre(f.asignaturaId)) + '</th>' +
             '<td>' + esc(docNombre(f.docenteId)) + '</td>' +
             colsP.map(function (p) { return '<td class="c">' + esc(fmt.nota(porP[p.id], esc_)) + (p.cerrado ? '' : '<sup>*</sup>') + '</td>'; }).join('') +
             (anual ? '<td class="c"><strong>' + esc(fmt.nota(f.final, esc_)) + '</strong></td>' : '') +
-            '<td class="c">' + (est_ && (est_ === 'Completiva' || est_ === 'Extraordinaria') && anual ? '<span class="badge warn">' + esc(est_) + ' pendiente</span>' : ap == null ? '<span class="badge neu">Pendiente</span>' : ap ? '<span class="badge ok">Aprobado' + (est_ && f.via && f.via !== 'cf' ? ' (' + esc(f.via) + ')' : '') + '</span>' : '<span class="badge bad">Reprobado</span>') + '</td></tr>';
+            '<td class="c">' + (est_ && (est_ === 'Completiva' || est_ === 'Extraordinaria') && anual ? '<span class="badge warn">' + esc(est_) + ' pendiente</span>' : (ap == null || est_ === 'Pendiente') ? '<span class="badge neu">Pendiente</span>' : ap ? '<span class="badge ok">Aprobado' + (est_ && f.via && f.via !== 'cf' ? ' (' + esc(f.via) + ')' : '') + '</span>' : '<span class="badge bad">Reprobado</span>') + '</td></tr>';
         }).join('');
         var prom = calc.promedioGeneral(finales), estado = hayRep ? 'Reprobado' : (hayComp ? 'En completiva/extraordinaria' : (hayPend ? 'Pendiente' : 'Aprobado'));
         var provisional = anual && abiertos;
