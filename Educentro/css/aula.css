@@ -1,0 +1,99 @@
+/* Aula virtual · mobile-first. Touch targets >= 44px, sin scroll horizontal de pagina (las tabs se desplazan dentro de su franja). */
+.aula{min-width:0;max-width:100%}
+.aula *{min-width:0}
+.aula .btn,dialog.aula-m .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.aula .btn.sm,dialog.aula-m .btn.sm{min-height:44px;padding:8px 14px}
+.aula input[type=text],.aula input[type=url],.aula input[type=date],.aula input[type=time],.aula input[type=file],.aula select,.aula textarea,
+dialog.aula-m input[type=text],dialog.aula-m input[type=url],dialog.aula-m input[type=date],dialog.aula-m input[type=time],dialog.aula-m input[type=file],dialog.aula-m select,dialog.aula-m textarea{min-height:44px;font-size:16px;max-width:100%}
+.aula select,dialog.aula-m select{min-width:0;width:100%}
+.aula .modal-x,dialog.aula-m .modal-x{min-width:44px;min-height:44px;display:grid;place-items:center}
+.aula-volver{display:inline-flex;align-items:center;min-height:44px;font-weight:600;text-decoration:none;color:var(--navy-2)}
+.aula-volver:hover{text-decoration:underline}
+.aula-h2{font-size:22px;margin:6px 0 10px}.aula-h3{font-size:17px;margin:18px 0 8px;display:flex;gap:8px;align-items:center}
+
+/* tabs: franja desplazable internamente */
+.aula-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 16px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;max-width:100%}
+.aula-tab{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;padding:0 16px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0;white-space:nowrap}
+.aula-tab:hover{color:var(--navy);background:#efece4}
+.aula-tab[aria-current=page]{color:var(--navy);border-bottom-color:var(--amber)}
+#aula-panel:focus{outline:none}
+
+/* cursos */
+.aula-cursos{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr))}
+.aula-curso{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;padding:18px 18px 18px 22px;height:100%}
+a.aula-curso:hover{box-shadow:0 2px 4px rgba(20,49,92,.1),0 10px 24px rgba(20,49,92,.12)}
+.aula-curso-franja{position:absolute;left:0;top:0;bottom:0;width:6px}
+.aula-curso-t strong{display:block;font-family:var(--serif);font-size:19px;color:var(--navy);overflow-wrap:anywhere}
+.aula-curso-t small{color:var(--muted);font-size:13px}
+.aula-curso-vacio{border-style:dashed}
+
+/* listas */
+.aula-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aula-fila{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.aula-fila-a{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:56px;text-decoration:none;color:var(--ink);flex-wrap:wrap}
+a.aula-fila-a:hover{background:var(--soft);border-radius:12px}
+.aula-fila-t{flex:1 1 180px;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.aula-fila-t strong{font-weight:600}.aula-fila-t small{color:var(--muted);font-size:13px}
+.aula-ic{flex:none;width:36px;height:36px;border-radius:10px;background:#eef2f9;color:var(--navy);display:grid;place-items:center}
+.aula-chip{text-decoration:none;margin-top:4px;overflow-wrap:anywhere;white-space:normal}
+.aula-cobertura{font-size:13.5px;color:var(--muted);margin:0 0 12px}
+.aula-toolbar{margin-bottom:12px}
+.sel-hijo{max-width:360px;margin-bottom:12px}
+.aula-acc{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.aula-desc,.aula-resumen{margin-bottom:12px}
+.aula-resumen-t{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:15px}
+.aula .track{display:block;height:10px;border-radius:99px;background:#ece8dd;overflow:hidden;margin:6px 0}
+.aula .track i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.aula .track::after{display:none}
+
+/* contenido */
+.aula-tema{margin-bottom:14px}
+.aula-tema h3{font-size:20px;overflow-wrap:anywhere}
+.aula-items{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.aula-recurso{border-top:1px solid var(--line);padding-top:10px}
+.aula-recurso.aula-act{padding-top:6px}
+.aula-r-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.aula-texto{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.aula-enlace,.aula-archivo{display:inline-flex;gap:8px;align-items:center;min-height:44px;overflow-wrap:anywhere;word-break:break-word;font-weight:500}
+.aula-archivo small{color:var(--muted)}
+.aula-anuncio h3,.aula-hilo h3{overflow-wrap:anywhere}
+.aula-anuncio{margin-bottom:12px}
+.aula-entrega-v{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:6px}
+.aula-opt{min-height:44px;font-weight:500;color:var(--ink)}
+.aula-opt input{flex:none}
+.aula-opt span{overflow-wrap:anywhere}
+.aula-opt input[type=checkbox],.aula-opt input[type=radio]{width:22px;height:22px}
+.aula-fs{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0}
+.aula-fs legend{font-size:13px;font-weight:600;color:var(--muted);padding:0 4px}
+.aula-form .fgrid{grid-template-columns:1fr}
+@media(min-width:640px){.aula-form .fgrid{grid-template-columns:repeat(2,1fr)}}
+
+/* preguntas / cuestionarios */
+.aula-preg{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px;background:var(--soft)}
+.aula-preg legend{font-weight:600;color:var(--navy);padding:0 6px;overflow-wrap:anywhere;max-width:100%}
+.aula-opciones{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.aula-opc{display:flex;gap:8px;align-items:center}
+.aula-opc input[type=text]{flex:1 1 auto;width:auto}
+.aula-radio{width:24px;height:24px;flex:none;accent-color:var(--navy);margin:0 10px}
+.aula-x{min-width:44px;padding:0 10px}
+.aula-resp .aula-opt{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#fff}
+.aula-timer{position:sticky;top:64px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;flex-wrap:wrap}
+.aula-reloj{font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy)}
+.aula-reloj-bajo{color:var(--bad)}
+.aula-nota{font-size:22px;margin:6px 0 0}
+.aula-rev p{overflow-wrap:anywhere}
+
+/* foros */
+.aula-msg{margin:6px 0}
+.aula-msg-m{margin:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.aula-resps{list-style:none;margin:10px 0 0 0;padding:0 0 0 12px;border-left:3px solid var(--amber-soft);display:flex;flex-direction:column;gap:8px}
+
+/* progreso */
+.aula-fila-col{padding:0}
+.aula-fila-col details{padding:0}
+.aula-sum{display:flex;gap:12px;align-items:center;min-height:56px;padding:10px 12px;cursor:pointer;list-style:none}
+.aula-sum::-webkit-details-marker{display:none}
+.aula-pct{font-weight:700;color:var(--navy);flex:none}
+.aula-fila-col details>.track,.aula-fila-col details>.aula-lista,.aula-fila-col details>p{margin-left:12px;margin-right:12px}
+.aula-fila-col details>.aula-lista{margin-bottom:12px}
+@media(max-width:480px){.aula-timer{top:56px}}
