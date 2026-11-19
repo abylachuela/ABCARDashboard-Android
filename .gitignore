@@ -34,3 +34,8 @@ android/app/google-services.json
 ## Env
 .env
 .env.local
+
+# Datos reales de estudiantes: nunca al repositorio
+Educentro/datos-privados/
+Educentro/**/*.xlsx
+Educentro/**/*.xls
