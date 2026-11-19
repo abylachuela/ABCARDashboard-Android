@@ -1,4 +1,4 @@
-# Plan: edu-app (gestión de notas y centros educativos)
+# Plan: Educentro (gestión de notas y centros educativos)
 
 Vanilla HTML/CSS/JS (ES modules, sin build), datos en localStorage con capa de repositorio aislada para migrar a API.
 

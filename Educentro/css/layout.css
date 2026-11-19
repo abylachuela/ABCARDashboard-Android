@@ -14,7 +14,7 @@
 .av{width:36px;height:36px;border-radius:50%;background:var(--amber);color:var(--navy-900);display:grid;place-items:center;font-weight:700;flex:none;font-size:14px}
 .main{margin-left:var(--side-w);min-height:100vh}
 .top{display:flex;align-items:center;gap:14px;padding:14px 32px;border-bottom:1px solid var(--line);background:rgba(245,243,238,.92);position:sticky;top:0;z-index:10;backdrop-filter:blur(6px)}
-.burger{display:none;all:unset;cursor:pointer;padding:8px;border-radius:8px;color:var(--navy)}
+.burger{all:unset;display:none;cursor:pointer;padding:8px;border-radius:8px;color:var(--navy)}
 .burger:focus-visible{outline:3px solid var(--amber)}
 .burger svg{width:26px;height:26px;display:block}
 .top .sp{flex:1}

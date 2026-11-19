@@ -1,0 +1,96 @@
+# EduCentro · contrato para añadir módulos
+
+App estática: abre `index.html` por `file://`. **Sin ES modules, sin build.** Todo cuelga del namespace global `window.EDU`; cada archivo es una IIFE `(function(){ 'use strict'; var EDU = (window.EDU = window.EDU || {}); ... })();`.
+Alineada al sistema educativo dominicano (MINERD): niveles Inicial / Primario (1.º–6.º) / Secundario (1.º–6.º; 2.º ciclo: General, Técnico-Profesional, Artes), escala 0–100 con nota mínima configurable (defecto **70**), textos/fechas es-DO (`RD$ 1,250.00`, `19 nov 2026`).
+Referencia curricular: `docs/CURRICULO-MINERD.md` (la redacta otro agente).
+
+## 1. Orden de `<script>` (index.html)
+`core/almacen → core/formato → core/escala → core/calculo → core/validacion → core/permisos → data/repo-local → data/repo → data/semilla → data/consultas → estado → ui/componentes → router → vistas/login, dashboard → vistas/<modulos> → app.js`.
+Las vistas se cargan **después** de router/ui y **antes** de `app.js`. Un módulo nuevo: crea `js/vistas/<ruta>.js`, añade su `<script>` en index.html y su entrada en `EDU.permisos.NAV` y `MATRIZ`.
+
+## 2. Convenciones de archivos
+- Un archivo por vista: `js/vistas/<ruta>.js` (ruta = id del módulo: `centros config curriculo personas matricula libro-notas planificacion agente boletin reportes asistencia comunicados respaldo`). **Ya existen como stubs "En construcción": reemplaza solo TU archivo.** Si necesitas helpers privados, quédate en tu IIFE (o crea `js/vistas/<ruta>-x.js` y lístalo antes).
+- No toques `core/`, `data/`, `ui/` ni `router.js` salvo para bugs; si falta algo, documenta/pide.
+- **Seguridad XSS: TODO dato de usuario insertado en HTML pasa por `EDU.esc(...)`** (o `EDU.html` con plantillas). `textContent` no necesita escape. Nunca `innerHTML = dato`.
+- Notas: se guardan y calculan **sin redondear**; solo se redondea al mostrar (`EDU.fmt.nota`).
+
+## 3. Registrar una vista
+```js
+EDU.router.register('libro-notas', {
+  titulo: 'Calificaciones',
+  // roles: ['docente']   // opcional; si se omite se usa EDU.permisos.puedeModulo(rol, modulo)
+  // publica: true        // solo login
+  render: async function (container, params) {   // params = {...:param de ruta, ...query}
+    container.innerHTML = EDU.ui.cabecera({ eyebrow: 'Registro', titulo: 'Calificaciones' }); // un solo <h1>
+    // ... pintar. Puede devolver una funcion de limpieza (se llama al salir de la vista).
+  }
+});
+```
+Rutas con parametros: `'personas/:id'` (hash `#/personas/est_1_01`, query `#/libro-notas?cargaId=x`). El modulo de una ruta es su primer segmento (`personas`). Si el render lanza error, el router muestra una tarjeta de error. 403/404 los resuelve el router.
+`EDU.router`: `register(ruta, def)`, `ir(ruta, query?)`, `recargar()` (re-renderiza la vista actual; se llama solo al cambiar de centro), `actual()` → `{ruta, modulo, titulo, params}`, `onNavegar(fn)`, `rutas()`.
+
+## 4. Sesion y centro activo — `EDU.estado`
+`sesion()` → `{usuarioId, nombre, email, rol, refId, centroUsuario, centroActivo}` o `null`; `autenticado()`, `rol()`, `centroActivo()` (id, o `null` = "Todos" solo `admin_red`), `iniciarSesion(usuario)`, `cerrarSesion()`, `cambiarCentro(id)`, `onCambio(fn({tipo:'login'|'logout'|'centro'}))` → función para desuscribir. `refId` = id de docente/estudiante/tutor según el rol. Persistida en `localStorage['edu:sesion']`.
+
+## 5. Repositorio — `EDU.repo` (todo asincrono: `await`)
+Colecciones: `centros usuarios anios periodos cursos secciones asignaturas cargas docentes estudiantes tutores matriculas escalas categorias actividades calificaciones asistencia comunicados planes horarios agenteConfig agenteLog auditoria curriculoVersiones curriculoContenidos`.
+Todo registro (salvo `centros`) lleva `centroId`. **El repo filtra solo por el centro activo** (o el del usuario); un no-admin que pida otro centro recibe `Error('Centro no permitido')`. Sin sesión solo se leen `usuarios`/`centros` (login).
+
+| Método | Descripción |
+|---|---|
+| `listar(col, {centroId?, filtro?, orden?, desc?, limite?, offset?})` | Lista (copias). `filtro`: objeto `{campo: valor \| [valores] \| fn(valor,reg)}` o `fn(reg)`. `orden`: nombre de campo o fn. |
+| `consultar(col, filtro, opts?)` / `contar(col, filtro?, opts?)` | Atajos de `listar`. |
+| `obtener(col, id)` | Registro o `null` (también `null` si es de otro centro). |
+| `guardar(col, reg)` | Crea (genera `id`, `creadoEn`) o actualiza (`actualizadoEn`). Si falta, asigna `centroId` = centro activo (en "Todos" debes poner `centroId`). Lanza `Error('Sin permiso…')` si el rol no puede escribir la colección. Guardar `calificaciones` escribe automáticamente en `auditoria` {usuarioId, accion, antes, despues, fecha}. |
+| `guardarMuchos(col, regs)` · `borrar(col, id)` | |
+| `exportarTodo()` / `importarTodo(obj)` | Respaldo; requiere permiso `respaldo` exportar/importar. |
+| `usar(adaptador)` | Cambia el backend (API HTTP) con la misma interfaz que `EDU.repoLocal`. |
+
+Adaptador por defecto `EDU.repoLocal` (`localStorage`, claves `edu:v1:col:<coleccion>`; fallback en memoria si no hay storage o se llena; `EDU.repoLocal.advertencia` informa). `EDU.almacen` = `get/set/remove/keys/getJSON/setJSON/modo()` seguro.
+Para operaciones compuestas (cargar varias colecciones, resumen de notas): `EDU.consultas`
+- `cargar(['cargas','estudiantes',...])` → `{cargas:[], estudiantes:[]}`
+- `escalaDe(escalas, centroId)`, `periodoAbierto(periodos, centroId)`, `agrupar(lista, clave)`
+- `resumenNotas({matriculas,cargas,categorias,actividades,calificaciones,periodos,escalas})` → filas `{centroId, estudianteId, seccionId, cargaId, asignaturaId, docenteId, final, pct, aprobado, periodos, escala}` (`pct` = 0–100 comparable entre centros).
+
+### Modelo (campos principales)
+- `centros`: id, nombre, codigo, ciudad, regional, distrito, nivel, color, director. `usuarios`: id, centroId (null = admin_red), nombre, email, rol, refId.
+- `anios`: id, centroId, nombre, inicio, fin, activo. `periodos`: id, centroId, anioId, orden, nombre, **peso** (suman 100), inicio, fin, cerrado.
+- `cursos`: id, centroId, nombre, **nivel** (`Inicial|Primario|Secundario`), grado, ciclo (`Primer ciclo|Segundo ciclo`), modalidad (`General|Técnico-Profesional|Artes|null`), orden. `secciones`: id, cursoId, anioId, nombre, tanda, capacidad.
+- `asignaturas`: id, codigo, nombre (áreas MINERD), color. `cargas`: id, anioId, seccionId, asignaturaId, docenteId. `docentes`/`estudiantes`: nombres, apellidos, … ; `tutores`: …, `estudianteIds[]`. `matriculas`: estudianteId, seccionId, anioId, estado (`activa`…).
+- `escalas`: min, max, notaMinAprobar (defecto 70), decimales, tramos `[{desde, etiqueta, letra}]`, activa.
+- `categorias`: cargaId, nombre, **peso** (suman 100 por carga). `actividades`: cargaId, categoriaId, periodoId, nombre, puntosMax, fecha. `calificaciones`: id=`cal_<act>_<est>`, actividadId, estudianteId, `puntos` (null = sin nota), comentario.
+- `asistencia`: seccionId, estudianteId, fecha, estado `P|A|T|J`. `comunicados`, `planes` (PlanClase del PLAN.md, + docenteId), `horarios` (cargaId, dia 1-5, hora, duracion), `agenteConfig`, `agenteLog`, `auditoria`.
+- **`curriculoVersiones`** (vacía en la semilla): una versión de un currículo/diseño curricular (p. ej. {id, centroId, nombre, nivel, año de vigencia, fuente, estado}). **`curriculoContenidos`** (vacía): contenidos/competencias/indicadores ligados a una versión ({id, centroId, versionId, areaId/asignaturaId, grado, tipo, descripcion, orden}). La estructura final la define el módulo `curriculo` (otro agente, `js/vistas/curriculo.js`); el repo ya acepta cualquier objeto con `id`/`centroId`. Escriben admin_red y director; lectura para todos los roles.
+- IDs estables de la semilla: `cen_1`, `ani_1_2026`, `per_1_1`, `cur_1_1`, `sec_1_1A`, `asg_1_mat`, `car_<sec>_<area>`, `doc_1_01`, `est_1_01`, `tut_1_01`, `mtr_est_1_01`, `cat_<carga>_tar`, `act_<carga>_<p>_<k>`, `cal_<act>_<est>`, usuarios `usr_admin`, `usr_dir_1`, `usr_doc_1_01`, `usr_sec_1`, `usr_tut_1`, `usr_est_1` (y `_2` para el centro 2).
+- Semilla: `EDU.semilla.asegurar()` (arranque), `EDU.semilla.restablecer()` (borra todo y resiembra; botón en login y sidebar), `EDU.semilla.generar()` (datos sin escribir).
+
+## 6. Permisos — `EDU.permisos`
+Roles: `admin_red director docente secretaria tutor estudiante`. `puedeModulo(rol, mod)`, `puede(rol, mod, accion)` (acciones: `ver crear editar borrar exportar importar imprimir cerrar aprobar`), `modulosDe(rol)`, `rolesDeModulo(mod)`, `etiquetaRol(rol)`, `puedeEscribirColeccion(rol, col)`, `centroPermitido(sesion, centroId)`.
+Alcance dentro del centro (docente: sus cargas; tutor/estudiante: lo propio):
+```js
+var al = EDU.permisos.alcance(EDU.estado.sesion(), {cargas, matriculas, tutores}); // Sets o null (=sin restriccion)
+EDU.permisos.filtrar(al, 'cargas'|'secciones'|'estudiantes', lista);
+EDU.permisos.filtrarPorEstudiante(al, calificaciones); EDU.permisos.filtrarPorCarga(al, actividades);
+```
+Usa `puede(...)` para mostrar/ocultar botones de edición. Es control de cliente (demo): el backend real debe repetirlo.
+Módulos: `curriculo` lectura todos, edición `admin_red`/`director`; `libro-notas` edita docente (director/secretaría lectura, director `cerrar`).
+
+## 7. Cálculo, escala, validación, formato
+- `EDU.calculo` (puro): `notaActividad`, `detalleCategoria`/`notaCategoria`, `ponderar`, `notaAsignaturaPeriodo`, `notaFinal`, `calcularPeriodo({categorias, actividades, calificaciones, estudianteId?, periodoId?, escala})`, `calcularFinal({..., periodos:[{id,peso}]})` → `{final, aprobado, periodos}`, `aprobado(nota, escala)` (≥ min sin redondear), `promedioGeneral`, `validarPesos(pesos, 100)`, `redondear(n, dec)` (half-up). Notas sin registrar se excluyen (no cuentan como 0).
+- `EDU.escala`: `porDefecto()`, `PRESETS`, `crear`, `validar`, `tramo(nota, escala)`, `porcentaje`, `desdePorcentaje`, `convertir`, `minAprobarPct`.
+- `EDU.validacion.validar(valores, esquema)` → `{ok, errores, valores}`; esquema `{campo:{label, requerido, tipo:'texto|numero|entero|email|fecha|select|booleano', min,max,minLen,maxLen,patron,custom}}`; `puntos(valor, max)`.
+- `EDU.esc(txt)`; `EDU.html\`...${dato}...\`` (escapa interpolaciones; `EDU.raw(html)` marca HTML seguro; `EDU.Safe`); `EDU.fmt`: `nota(n, escala)`, `num`, `pct`, `moneda`, `fecha(iso, largo?)`, `fechaHora`, `hoy()`, `nombreCompleto`, `iniciales`, `plural`, `norm`.
+
+## 8. Componentes — `EDU.ui`
+Estáticos devuelven `EDU.Safe` (HTML seguro, concatenable; úsalo con `innerHTML`): `icono(nombre)`, `badge(texto, 'ok|bad|warn|info|neu')`, `chip`, `kpi({etiqueta, valor, detalle, tono})`, `kpis([..])`, `vacio({titulo, texto, accion:{texto,href}})`, `cabecera({eyebrow,titulo,descripcion,acciones})`, `barras([{etiqueta,valor,texto,destacado}])`, `progreso({etiqueta,valor,minimo,texto})`, `opciones(lista, sel)`.
+Interactivos devuelven objetos con `.el`:
+- `tabla({columnas:[{clave,titulo,orden,buscable,align:'c|r',valor(f),formato(v,f),render(f)}], filas, buscar, ordenInicial, desc, porPagina:10|false, caption, vacio, acciones:[{texto,tipo,alClic(f),visible(f)}]})` → `{el, actualizar(filas), filas()}`. Las celdas por defecto se escapan; `render` devuelve HTML (escápalo).
+- `modal({titulo, contenido:Node|html, botones:[{texto,valor,tipo,alClic(cerrar)}], tamano:'sm|lg'})` → `{el, cuerpo, cerrar(v), resultado:Promise}`; `<dialog>`, foco inicial y retorno, Esc/fondo/X → `null`.
+- `confirmar({titulo, mensaje, textoOk, peligro})` → `Promise<boolean>`.
+- `formulario({campos:[{nombre,label,tipo:'text|number|email|date|select|textarea|checkbox',requerido,opciones,ayuda,min,max,minLen,maxLen,patron,custom,ancho:'full',valor}], valores, alEnviar(vals), alCancelar, textoEnviar, sinBotones})` → `{el, valores(), validar(), enviar(), setErrores({campo|_general:msg}), enfocar()}`; errores con `aria-invalid` + `aria-describedby`; si `alEnviar` lanza, el mensaje se muestra en el formulario. `formularioModal({titulo, campos, valores})` → `Promise<valores|null>`.
+- `tabs({tabs:[{id,titulo,render(panel)}], activa, alCambiar, siempre})` → `{el, seleccionar(id)}` (flechas/Home/End). `paginacion({total, porPagina, pagina, alCambiar})` → `{el, actualizar({total,pagina})}`.
+- `toast(msg, 'info|ok|error|warn', ms)` (región `aria-live`), `montar(contenedor, nodoOHtml)`, `el(html)`.
+- CSS reutilizable (`css/componentes.css`): `.card .grid .two .kpis .btn(.sec .amb .dng .sm) .badge .chip .alert(.red .ok) .tabs .fgrid .fld .note .tw table.t`. Impresión: `css/print.css` (`.no-print`, `.print-only`, `.salto-pagina`).
+
+## 9. Pruebas
+`tests/calculo.test.html` (abrir en el navegador; título `PASS`/`FAIL`, `window.__resultado`). Ejecución con Playwright: abrir por `file://` y leer `#res`.
