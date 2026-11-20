@@ -12,6 +12,7 @@ import { crearPool, type Pool } from './db/pool.js';
 import { aRespuesta, ErrorHttp } from './errores.js';
 import { calculo } from './domain/calculo-shim.js';
 import { rutasApi } from './routes/api.js';
+import { rutasNegocio } from './routes/negocio.js';
 import { rutasNotas } from './routes/notas.js';
 import { rutasSalud } from './routes/salud.js';
 
@@ -144,6 +145,7 @@ export async function buildApp(config: Config, deps: Dependencias = {}): Promise
       await v1.register(rutasAuth, { prefix: '/auth' });
       await v1.register(rutasApi);
       await v1.register(rutasNotas);
+      await v1.register(rutasNegocio);
       v1.get('/ping', { preHandler: exigirSesion() }, async (req) => ({
         pong: true,
         usuario: req.sesion?.usuario.id,

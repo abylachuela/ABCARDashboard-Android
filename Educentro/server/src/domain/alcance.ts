@@ -99,14 +99,22 @@ const hijosDelTutor: Regla = (c) => `datos->'estudianteIds' ?| ${c.p(c.alc.estud
 const calificacionesDeMisCargas: Regla = (c) =>
   `actividad_id IN (SELECT id FROM actividades WHERE borrado_en IS NULL AND carga_id = ANY(${c.p(c.alc.cargaIds)}::text[]))`;
 
-/** Comunicados: solo publicados y dirigidos al rol (o a todos); un segmento de tutor solo lo ve ese tutor. */
+/**
+ * Comunicados: solo publicados y dirigidos al rol (o a todos). Segmento: «tutor» solo lo ve ese tutor; «curso»/«sección» solo
+ * quien tiene una sección del alcance en ese curso/sección (docente: sus cargas; tutor: sus hijos; estudiante: la suya).
+ * La visibilidad se resuelve en el SERVIDOR (GET /c/comunicados y GET /comunicados): nadie lee borradores ni comunicados ajenos.
+ */
 const comunicadosVisibles: Regla = (c) => {
   const aud: Record<string, string> = { docente: 'docentes', tutor: 'tutores', estudiante: 'estudiantes' };
-  const segmento =
+  const seccionesAlc = c.p(c.alc.seccionIds);
+  const porTipoTutor =
     c.ses.rol === 'tutor'
       ? `(datos->'segmento'->>'tipo' IS DISTINCT FROM 'tutor' OR datos->'segmento'->>'id' = ${c.p(c.ses.refId)})`
       : `(datos->'segmento'->>'tipo' IS DISTINCT FROM 'tutor')`;
-  return `(datos->>'estado' = 'publicado' AND coalesce(datos->>'destinatarios', 'todos') IN ('todos', ${c.p(aud[c.ses.rol])}) AND ${segmento})`;
+  const alcanceGeo = `(coalesce(datos->'segmento'->>'tipo', 'centro') NOT IN ('curso', 'seccion')
+      OR (datos->'segmento'->>'tipo' = 'seccion' AND datos->'segmento'->>'id' = ANY(${seccionesAlc}::text[]))
+      OR (datos->'segmento'->>'tipo' = 'curso' AND datos->'segmento'->>'id' IN (SELECT curso_id FROM secciones WHERE id = ANY(${seccionesAlc}::text[]) AND borrado_en IS NULL)))`;
+  return `(datos->>'estado' = 'publicado' AND coalesce(datos->>'destinatarios', 'todos') IN ('todos', ${c.p(aud[c.ses.rol])}) AND ${porTipoTutor} AND ${alcanceGeo})`;
 };
 
 const todos = (r: Regla): Record<RolRestringido, Regla> => ({ docente: r, tutor: r, estudiante: r });

@@ -55,7 +55,7 @@ export function puedeAdministrarUsuario(ses: SesionApi, antes: Registro | null |
  * debe traer la carga; sin ella se deniega, como hace `propiedad()` con actividades/categorías).
  */
 const POR_CARGA_DOCENTE = new Set([
-  'notasCompetencia', 'actividades', 'categorias', 'horarios', 'aulaContenidos', 'tareas', 'cuestionarios', 'foros', 'anuncios',
+  'notasCompetencia', 'actividades', 'categorias', 'horarios', 'secuencias', 'aulaContenidos', 'tareas', 'cuestionarios', 'foros', 'anuncios',
   'entregas', 'intentos', 'foroMensajes',
 ]);
 

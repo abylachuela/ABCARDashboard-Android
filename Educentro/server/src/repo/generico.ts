@@ -11,6 +11,7 @@ import type { Tx } from '../db/contexto.js';
 import { aplicarFiltros, paginacion, sqlOrden, type Columnas, type Consulta } from './consulta.js';
 import { registrarAuditoria } from './auditoria.js';
 import { aplicarReglas, tieneReglas, type PeriodoFila } from './reglas-notas.js';
+import { aplicarIntegridad, tieneIntegridad } from './reglas-integridad.js';
 import { calculo, normalizar } from '../domain/calculo-shim.js';
 
 export const MAX_DATOS_BYTES = 256 * 1024;
@@ -324,6 +325,16 @@ export async function guardar(p: Peticion, meta: MetaColeccion, cuerpo: Registro
     }
   }
 
+  // integridad (Fase 3A): campos protegidos, validadores, referencias y dependencias; también por /c/:col y los lotes
+  if (tieneIntegridad(meta.nombre) && !op.sinReglas) {
+    try {
+      await aplicarIntegridad({ p, meta, accion: actualiza ? 'editar' : 'crear', centro, id, antes, nuevo: bruto });
+    } catch (e) {
+      if (e instanceof ErrorHttp && etiqueta) throw new ErrorHttp(e.status, e.codigo, etiqueta + e.message, e.campos, e.extra);
+      throw e;
+    }
+  }
+
   const json = JSON.stringify(bruto);
   let guardada: Fila;
   if (actualiza) {
@@ -368,6 +379,7 @@ export async function borrar(p: Peticion, meta: MetaColeccion, id: string, ifMat
   const dec = await puede(p.ses, meta.nombre, 'borrar', antes, { antes, alcance: await p.alcance(), cargaDeActividad: (a) => p.cargaDeActividad(a) });
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, dec.mensaje);
   const extraAud = tieneReglas(meta.nombre) ? ((await aplicarReglas({ p, meta, accion: 'borrar', centro: fila.centro_id, id, antes, nuevo: null })).auditoria ?? {}) : {};
+  if (tieneIntegridad(meta.nombre)) await aplicarIntegridad({ p, meta, accion: 'borrar', centro: fila.centro_id, id, antes, nuevo: null });
   await p.tx.query(`UPDATE ${tabla(meta)} SET borrado_en = now() WHERE id = $1`, [id]);
   if (AUDITADAS.includes(meta.nombre)) {
     await registrarAuditoria(p.tx, p.ses, fila.centro_id, { accion: 'borrar', coleccion: meta.nombre, registroId: id, antes, despues: null, extra: extraAud });
