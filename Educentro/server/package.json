@@ -1,0 +1,43 @@
+{
+  "name": "educentro-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend de EduCentro (Fases 1-2 servidor: autenticación, repositorio genérico, autorización, RLS, notas, periodos y auditoría encadenada)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "migrar": "tsx --env-file-if-exists=.env src/cli/migrar.ts",
+    "crear-admin": "tsx --env-file-if-exists=.env src/cli/crear-admin.ts",
+    "semilla-dev": "tsx --env-file-if-exists=.env src/cli/semilla-dev.ts",
+    "paridad": "tsx scripts/paridad.ts",
+    "anclar-auditoria": "tsx --env-file-if-exists=.env src/cli/anclar-auditoria.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.5",
+    "@fastify/rate-limit": "11.2.2",
+    "@node-rs/argon2": "2.2.2",
+    "fastify": "5.12.8",
+    "nodemailer": "10.6.0",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.20.5",
+    "@types/nodemailer": "8.0.2",
+    "@types/pg": "8.23.1",
+    "eslint": "9.39.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "3.2.7"
+  }
+}

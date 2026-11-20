@@ -1,0 +1,17 @@
+/* Impresion: boletines y reportes. Usar .no-print / .print-only / .salto-pagina */
+.print-only{display:none}
+@media print{
+  :root{--bg:#fff}
+  body{background:#fff;font-size:12pt;color:#000}
+  .side,.top,.scrim,.toasts,.no-print,.skip,.btn,.pager,.tabla-tools{display:none!important}
+  .main{margin:0!important}
+  .wrap{padding:0!important;max-width:none}
+  .print-only{display:block}
+  .card{box-shadow:none;border:1px solid #999;break-inside:avoid}
+  .tw{overflow:visible}
+  table{min-width:0!important}
+  a{color:#000;text-decoration:none}
+  .salto-pagina{break-after:page}
+  #view{animation:none}
+}
+@page{margin:16mm}

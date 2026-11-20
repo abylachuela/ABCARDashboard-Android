@@ -1,0 +1,532 @@
+{
+  "ROLES": [
+    "admin_red",
+    "director",
+    "docente",
+    "secretaria",
+    "tutor",
+    "estudiante"
+  ],
+  "NAV": [
+    "dashboard",
+    "centros",
+    "config",
+    "curriculo",
+    "personas",
+    "matricula",
+    "cursos",
+    "horarios",
+    "aula",
+    "libro-notas",
+    "planificacion",
+    "secuencias",
+    "agente",
+    "asistencia",
+    "boletin",
+    "comunicados",
+    "reportes",
+    "importar-planilla",
+    "respaldo"
+  ],
+  "COLECCIONES": [
+    "centros",
+    "usuarios",
+    "anios",
+    "periodos",
+    "cursos",
+    "secciones",
+    "asignaturas",
+    "cargas",
+    "docentes",
+    "estudiantes",
+    "tutores",
+    "matriculas",
+    "escalas",
+    "categorias",
+    "actividades",
+    "calificaciones",
+    "asistencia",
+    "comunicados",
+    "planes",
+    "horarios",
+    "agenteConfig",
+    "agenteLog",
+    "auditoria",
+    "notasCompetencia",
+    "curriculoVersiones",
+    "curriculoContenidos",
+    "secuencias",
+    "franjas",
+    "disponibilidad",
+    "cursosExtra",
+    "inscripciones",
+    "aulaContenidos",
+    "tareas",
+    "entregas",
+    "cuestionarios",
+    "intentos",
+    "foros",
+    "foroMensajes",
+    "anuncios"
+  ],
+  "MATRIZ": {
+    "admin_red": {
+      "agente": [
+        "editar",
+        "ver"
+      ],
+      "aula": [
+        "ver"
+      ],
+      "boletin": [
+        "imprimir",
+        "ver"
+      ],
+      "centros": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "comunicados": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "config": [
+        "ver"
+      ],
+      "curriculo": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "cursos": [
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "importar-planilla": [
+        "exportar",
+        "importar",
+        "ver"
+      ],
+      "personas": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "reportes": [
+        "exportar",
+        "ver"
+      ],
+      "respaldo": [
+        "exportar",
+        "importar",
+        "ver"
+      ]
+    },
+    "director": {
+      "agente": [
+        "aprobar",
+        "editar",
+        "ver"
+      ],
+      "asistencia": [
+        "ver"
+      ],
+      "aula": [
+        "ver"
+      ],
+      "boletin": [
+        "imprimir",
+        "ver"
+      ],
+      "comunicados": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "config": [
+        "borrar",
+        "cerrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "curriculo": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "cursos": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "importar-planilla": [
+        "exportar",
+        "importar",
+        "ver"
+      ],
+      "libro-notas": [
+        "cerrar",
+        "editar",
+        "ver"
+      ],
+      "matricula": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "personas": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "planificacion": [
+        "editar",
+        "ver"
+      ],
+      "reportes": [
+        "exportar",
+        "ver"
+      ],
+      "respaldo": [
+        "exportar",
+        "importar",
+        "ver"
+      ],
+      "secuencias": [
+        "editar",
+        "ver"
+      ]
+    },
+    "docente": {
+      "agente": [
+        "aprobar",
+        "editar",
+        "ver"
+      ],
+      "asistencia": [
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "aula": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "comunicados": [
+        "ver"
+      ],
+      "curriculo": [
+        "ver"
+      ],
+      "cursos": [
+        "editar",
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "ver"
+      ],
+      "libro-notas": [
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "matricula": [
+        "ver"
+      ],
+      "personas": [
+        "ver"
+      ],
+      "planificacion": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "secuencias": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ]
+    },
+    "estudiante": {
+      "asistencia": [
+        "ver"
+      ],
+      "aula": [
+        "crear",
+        "ver"
+      ],
+      "boletin": [
+        "imprimir",
+        "ver"
+      ],
+      "comunicados": [
+        "ver"
+      ],
+      "curriculo": [
+        "ver"
+      ],
+      "cursos": [
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "ver"
+      ],
+      "personas": [
+        "ver"
+      ]
+    },
+    "secretaria": {
+      "asistencia": [
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "aula": [
+        "ver"
+      ],
+      "boletin": [
+        "imprimir",
+        "ver"
+      ],
+      "comunicados": [
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "curriculo": [
+        "ver"
+      ],
+      "cursos": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "importar-planilla": [
+        "exportar",
+        "importar",
+        "ver"
+      ],
+      "libro-notas": [
+        "ver"
+      ],
+      "matricula": [
+        "borrar",
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "personas": [
+        "crear",
+        "editar",
+        "ver"
+      ],
+      "planificacion": [
+        "ver"
+      ],
+      "secuencias": [
+        "ver"
+      ]
+    },
+    "tutor": {
+      "asistencia": [
+        "ver"
+      ],
+      "aula": [
+        "ver"
+      ],
+      "boletin": [
+        "imprimir",
+        "ver"
+      ],
+      "comunicados": [
+        "ver"
+      ],
+      "curriculo": [
+        "ver"
+      ],
+      "cursos": [
+        "ver"
+      ],
+      "dashboard": [
+        "ver"
+      ],
+      "horarios": [
+        "ver"
+      ],
+      "personas": [
+        "ver"
+      ]
+    }
+  },
+  "ESCRIBE": {
+    "admin_red": [
+      "actividades",
+      "agenteConfig",
+      "agenteLog",
+      "anios",
+      "anuncios",
+      "asignaturas",
+      "asistencia",
+      "aulaContenidos",
+      "calificaciones",
+      "cargas",
+      "categorias",
+      "centros",
+      "comunicados",
+      "cuestionarios",
+      "curriculoContenidos",
+      "curriculoVersiones",
+      "cursos",
+      "cursosExtra",
+      "disponibilidad",
+      "docentes",
+      "entregas",
+      "escalas",
+      "estudiantes",
+      "foroMensajes",
+      "foros",
+      "franjas",
+      "horarios",
+      "inscripciones",
+      "intentos",
+      "matriculas",
+      "notasCompetencia",
+      "periodos",
+      "planes",
+      "secciones",
+      "secuencias",
+      "tareas",
+      "tutores",
+      "usuarios"
+    ],
+    "director": [
+      "actividades",
+      "agenteConfig",
+      "agenteLog",
+      "anios",
+      "anuncios",
+      "asignaturas",
+      "asistencia",
+      "aulaContenidos",
+      "calificaciones",
+      "cargas",
+      "categorias",
+      "comunicados",
+      "cuestionarios",
+      "curriculoContenidos",
+      "curriculoVersiones",
+      "cursos",
+      "cursosExtra",
+      "disponibilidad",
+      "docentes",
+      "entregas",
+      "escalas",
+      "estudiantes",
+      "foroMensajes",
+      "foros",
+      "franjas",
+      "horarios",
+      "inscripciones",
+      "intentos",
+      "matriculas",
+      "notasCompetencia",
+      "periodos",
+      "planes",
+      "secciones",
+      "secuencias",
+      "tareas",
+      "tutores",
+      "usuarios"
+    ],
+    "docente": [
+      "actividades",
+      "agenteConfig",
+      "agenteLog",
+      "anuncios",
+      "asistencia",
+      "aulaContenidos",
+      "calificaciones",
+      "categorias",
+      "cuestionarios",
+      "entregas",
+      "foroMensajes",
+      "foros",
+      "horarios",
+      "inscripciones",
+      "intentos",
+      "notasCompetencia",
+      "planes",
+      "secuencias",
+      "tareas"
+    ],
+    "estudiante": [
+      "entregas",
+      "foroMensajes",
+      "intentos"
+    ],
+    "secretaria": [
+      "agenteLog",
+      "asistencia",
+      "comunicados",
+      "cursosExtra",
+      "disponibilidad",
+      "estudiantes",
+      "franjas",
+      "horarios",
+      "inscripciones",
+      "matriculas",
+      "notasCompetencia",
+      "tutores"
+    ],
+    "tutor": []
+  }
+}

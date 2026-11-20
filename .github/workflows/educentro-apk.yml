@@ -1,0 +1,70 @@
+name: Educentro APK (debug)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Educentro/index.html'
+      - 'Educentro/css/**'
+      - 'Educentro/js/**'
+      - 'Educentro/mobile/**'
+      - '.github/workflows/educentro-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: educentro-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Educentro/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Educentro/mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar dependencias de Capacitor
+        run: npm ci
+
+      - name: Copiar la web a mobile/www
+        run: npm run sync-web
+
+      - name: Sincronizar Capacitor con Android
+        run: npx cap sync android
+
+      - name: Compilar APK debug
+        working-directory: Educentro/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Renombrar el APK
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/Educentro-debug-${GITHUB_SHA::7}.apk"
+          ls -la out
+
+      - name: Subir APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: Educentro-debug-apk
+          path: Educentro/mobile/out/*.apk
+          if-no-files-found: error
+          retention-days: 30

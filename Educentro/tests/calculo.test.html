@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Pruebas de calculo.js</title>
+<style>body{font:14px/1.5 system-ui,sans-serif;margin:20px}.ok{color:#17693a}.fail{color:#a82424;font-weight:600}#res{font-weight:700;margin:12px 0}li{margin:2px 0}</style></head>
+<body><h1>EDU.calculo · pruebas</h1><div id="res">Ejecutando…</div><ul id="lista"></ul>
+<script src="../js/core/formato.js"></script>
+<script src="../js/core/escala.js"></script>
+<script src="../js/core/calculo.js"></script>
+<script>
+(function () {
+  var C = EDU.calculo, E100 = EDU.escala.crear({ min: 0, max: 100, notaMinAprobar: 70 }), E10 = EDU.escala.crear({ min: 0, max: 10, notaMinAprobar: 7 });
+  var pruebas = [], pas = 0, fal = 0;
+  function t(n, f) { pruebas.push([n, f]); }
+  function eq(a, b, m) { if (a !== b) throw new Error((m || 'esperado') + ': ' + JSON.stringify(b) + ' obtenido: ' + JSON.stringify(a)); }
+  function cerca(a, b, m) { if (a === null || Math.abs(a - b) > 1e-9) throw new Error((m || 'esperado') + ' ~ ' + b + ' obtenido: ' + a); }
+
+  t('redondeo half-up', function () { eq(C.redondear(2.5, 0), 3); eq(C.redondear(1.005, 2), 1.01); eq(C.redondear(72.25, 1), 72.3); eq(C.redondear(69.95, 1), 70); eq(C.redondear(null), null); });
+  t('nota de actividad 0-100 y 0-10', function () { cerca(C.notaActividad(15, 20, E100), 75); cerca(C.notaActividad(15, 20, E10), 7.5); eq(C.notaActividad(null, 20, E100), null); eq(C.notaActividad('', 20, E100), null); eq(C.notaActividad(5, 0, E100), null); cerca(C.notaActividad('7,5', 10, E100), 75); });
+  t('categoria = suma puntos / suma puntosMax', function () { cerca(C.notaCategoria([{ puntos: 10, puntosMax: 20 }, { puntos: 20, puntosMax: 20 }], E100), 75); });
+  t('categoria excluye actividades sin nota', function () { cerca(C.notaCategoria([{ puntos: 10, puntosMax: 20 }, { puntos: null, puntosMax: 20 }], E100), 50); eq(C.notaCategoria([{ puntos: null, puntosMax: 20 }], E100), null); eq(C.notaCategoria([], E100), null); });
+  t('categoria pondera por puntosMax (no promedio de notas)', function () { cerca(C.notaCategoria([{ puntos: 5, puntosMax: 10 }, { puntos: 90, puntosMax: 100 }], E100), 95 / 110 * 100); });
+  t('asignatura/periodo ponderada', function () { cerca(C.notaAsignaturaPeriodo([{ nota: 80, peso: 50 }, { nota: 60, peso: 50 }]), 70); cerca(C.notaAsignaturaPeriodo([{ nota: 100, peso: 30 }, { nota: 50, peso: 70 }]), 65); });
+  t('categorias sin nota no cuentan en el denominador', function () { cerca(C.notaAsignaturaPeriodo([{ nota: 80, peso: 20 }, { nota: null, peso: 80 }]), 80); eq(C.notaAsignaturaPeriodo([{ nota: null, peso: 100 }]), null); });
+  t('final ponderado por periodos con nota', function () { cerca(C.notaFinal([{ nota: 90, peso: 30 }, { nota: 70, peso: 30 }, { nota: null, peso: 40 }]), 80); });
+  t('borde de aprobacion exacto', function () { eq(C.aprobado(70, E100), true); eq(C.aprobado(69.999, E100), false); eq(C.aprobado(7, E10), true); eq(C.aprobado(6.99, E10), false); eq(C.aprobado(null, E100), false); eq(C.aprobado(0.7 * 100, E100), true, '0.7*100 con ruido flotante'); });
+  t('aprobado compara sin redondear', function () { eq(C.aprobado(69.96, E100), false); eq(C.redondear(69.96, 1), 70); });
+  t('promedio general ignora null', function () { cerca(C.promedioGeneral([80, null, 60]), 70); eq(C.promedioGeneral([null]), null); cerca(C.promedioGeneral([{ nota: 90 }, { nota: 70 }]), 80); });
+  t('validarPesos suma 100', function () { eq(C.validarPesos([20, 30, 20, 30]).ok, true); var r = C.validarPesos([{ peso: 20 }, { peso: 30 }]); eq(r.ok, false); eq(r.suma, 50); eq(r.diferencia, 50); eq(C.validarPesos([33.33, 33.33, 33.34]).ok, true); });
+
+  var cats = [{ id: 'T', peso: 20 }, { id: 'P', peso: 30 }, { id: 'X', peso: 50 }];
+  var acts = [{ id: 'a1', categoriaId: 'T', periodoId: 'p1', puntosMax: 20 }, { id: 'a2', categoriaId: 'P', periodoId: 'p1', puntosMax: 100 }, { id: 'a3', categoriaId: 'X', periodoId: 'p1', puntosMax: 100 },
+    { id: 'b1', categoriaId: 'T', periodoId: 'p2', puntosMax: 10 }];
+  t('calcularPeriodo con notas faltantes', function () {
+    var r = C.calcularPeriodo({ categorias: cats, actividades: acts, periodoId: 'p1', escala: E100, calificaciones: { a1: 20, a2: 50 } });
+    cerca(r.nota, (100 * 20 + 50 * 30) / 50); eq(r.categorias[2].nota, null);
+  });
+  t('calcularPeriodo filtra por estudiante en lista', function () {
+    var cal = [{ actividadId: 'a1', estudianteId: 'e1', puntos: 20 }, { actividadId: 'a1', estudianteId: 'e2', puntos: 0 }];
+    cerca(C.calcularPeriodo({ categorias: cats, actividades: acts, periodoId: 'p1', escala: E100, calificaciones: cal, estudianteId: 'e1' }).nota, 100);
+    cerca(C.calcularPeriodo({ categorias: cats, actividades: acts, periodoId: 'p1', escala: E100, calificaciones: cal, estudianteId: 'e2' }).nota, 0);
+  });
+  t('calcularPeriodo sin notas -> null', function () { eq(C.calcularPeriodo({ categorias: cats, actividades: acts, periodoId: 'p1', escala: E100, calificaciones: {} }).nota, null); });
+  t('calcularFinal ponderado por periodos y aprobado', function () {
+    var r = C.calcularFinal({ categorias: cats, actividades: acts, escala: E100, periodos: [{ id: 'p1', peso: 60 }, { id: 'p2', peso: 40 }], calificaciones: { a1: 20, a2: 100, a3: 100, b1: 5 } });
+    cerca(r.periodos[0].nota, 100); cerca(r.periodos[1].nota, 50); cerca(r.final, 80); eq(r.aprobado, true);
+    var s = C.calcularFinal({ categorias: cats, actividades: acts, escala: E100, periodos: [{ id: 'p1', peso: 60 }, { id: 'p2', peso: 40 }], calificaciones: { a1: 20, a2: 100, a3: 100 } });
+    cerca(s.final, 100, 'periodo sin notas no penaliza');
+  });
+  t('misma logica en escala 0-10', function () {
+    var r = C.calcularFinal({ categorias: [{ id: 'T', peso: 100 }], actividades: [{ id: 'x', categoriaId: 'T', periodoId: 'p1', puntosMax: 20 }], escala: E10, periodos: [{ id: 'p1', peso: 100 }], calificaciones: { x: 14 } });
+    cerca(r.final, 7); eq(r.aprobado, true);
+    var n = C.calcularFinal({ categorias: [{ id: 'T', peso: 100 }], actividades: [{ id: 'x', categoriaId: 'T', periodoId: 'p1', puntosMax: 20 }], escala: E10, periodos: [{ id: 'p1', peso: 100 }], calificaciones: { x: 13.9 } });
+    eq(n.aprobado, false);
+  });
+  t('escala: porcentaje, convertir y tramo', function () {
+    cerca(EDU.escala.porcentaje(7.5, E10), 75); cerca(EDU.escala.convertir(7.5, E10, E100), 75); eq(EDU.escala.tramo(95, E100).letra, 'A'); eq(EDU.escala.tramo(69, E100).letra, 'D'); eq(EDU.escala.tramo(null, E100), null);
+    eq(EDU.escala.validar({ min: 0, max: 100, notaMinAprobar: 120 }).ok, false);
+  });
+  t('formato nota redondea solo al presentar', function () { eq(EDU.fmt.nota(72.25, E100), '72.3'); eq(EDU.fmt.nota(null, E100), '—'); });
+  t('EDU.esc escapa HTML', function () { eq(EDU.esc('<img src=x onerror="a()">&\''), '&lt;img src=x onerror=&quot;a()&quot;&gt;&amp;&#39;'); });
+
+  /* ---- modelo por competencias (planilla MINERD) ---- */
+  var EC = EDU.escala.crear({ min: 0, max: 100, notaMinAprobar: 70, modelo: 'competencias' });
+  function comp(p, rp) { return { p: p, rp: rp || [null, null, null, null] }; }
+  function cuatro(p, rp) { return [comp(p, rp), comp(p, rp), comp(p, rp), comp(p, rp)]; }
+  t('competencias: modelo() y configuracion por defecto', function () {
+    eq(C.modelo(EC), 'competencias'); eq(C.modelo(E100), 'ponderado'); eq(C.modelo(null), 'ponderado');
+    var c = C.configCompetencias(EC); eq(c.competencias, 4); eq(c.periodos, 4); eq(c.regla, 'reemplaza'); eq(c.completiva.cf, 50); eq(c.extraordinaria.cex, 70);
+  });
+  t('competencias: efectivo del periodo (RP reemplaza / maximo)', function () {
+    eq(C.efectivoPeriodo(80, 90, EC, 'reemplaza'), 80); eq(C.efectivoPeriodo(60, 75, EC, 'reemplaza'), 75); eq(C.efectivoPeriodo(60, 55, EC, 'reemplaza'), 55);
+    eq(C.efectivoPeriodo(60, 55, EC, 'maximo'), 60); eq(C.efectivoPeriodo(60, 75, EC, 'maximo'), 75); eq(C.efectivoPeriodo(60, null, EC), 60);
+    eq(C.efectivoPeriodo(70, 90, EC), 70, 'P = minimo no se recupera'); eq(C.efectivoPeriodo(null, null, EC), null); eq(C.efectivoPeriodo(null, 72, EC), 72);
+  });
+  t('competencias: promedio y CF (media de 4 competencias)', function () {
+    var r = C.calcularCompetencias({ escala: EC, competencias: [comp([80, 90, 70, 100]), comp([60, 70, 80, 90], [75, null, null, null]), comp([100, 100, 100, 100]), comp([50, 60, 70, 80], [70, 70, null, null])] });
+    cerca(r.competencias[0].promedio, 85); cerca(r.competencias[1].promedio, (75 + 70 + 80 + 90) / 4); cerca(r.competencias[3].promedio, (70 + 70 + 70 + 80) / 4);
+    cerca(r.cf, (85 + 78.75 + 100 + 72.5) / 4); eq(r.completo, true); eq(r.estado, 'Aprobado'); eq(r.via, 'cf'); cerca(r.final, r.cf);
+  });
+  t('competencias: misma regla en todas las filas (no mezcla RP si P >= minimo)', function () {
+    var a = C.calcularCompetencias({ escala: EC, competencias: cuatro([72, 90, 85, 95], [99, 99, 99, 99]) });
+    cerca(a.cf, (72 + 90 + 85 + 95) / 4);
+  });
+  t('competencias: ano incompleto = Pendiente con CF provisional', function () {
+    var r = C.calcularCompetencias({ escala: EC, competencias: cuatro([50, 60, null, null]) });
+    eq(r.completo, false); eq(r.estado, 'Pendiente'); eq(r.aprobado, null); cerca(r.cf, 55);
+    eq(C.calcularCompetencias({ escala: EC, competencias: cuatro([null, null, null, null]) }).cf, null);
+  });
+  t('competencias: completiva 50/50, extraordinaria 30/70 y especial', function () {
+    var base = cuatro([60, 60, 60, 60]);   // CF = 60
+    var r = C.calcularCompetencias({ escala: EC, competencias: base }); eq(r.estado, 'Completiva'); eq(r.aprobado, false);
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 90 }); cerca(r.cfc, 75); eq(r.estado, 'Aprobado'); eq(r.via, 'completiva'); cerca(r.final, 75);
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 70 }); cerca(r.cfc, 65); eq(r.estado, 'Extraordinaria');
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 70, cex: 85 }); cerca(r.cexf, 0.3 * 60 + 0.7 * 85); eq(r.estado, 'Aprobado'); eq(r.via, 'extraordinaria');
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 70, cex: 60 }); cerca(r.cexf, 60); eq(r.estado, 'Reprobado');
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 70, cex: 60, esp: 75 }); eq(r.estado, 'Aprobado'); eq(r.via, 'especial'); cerca(r.final, 75);
+    r = C.calcularCompetencias({ escala: EC, competencias: base, cec: 70, cex: 60, esp: 50 }); eq(r.estado, 'Reprobado');
+  });
+  t('competencias: borde 70 exacto y pesos configurables por centro', function () {
+    eq(C.calcularCompetencias({ escala: EC, competencias: cuatro([70, 70, 70, 70]) }).estado, 'Aprobado');
+    eq(C.calcularCompetencias({ escala: EC, competencias: cuatro([69.99, 70, 70, 70]) }).estado, 'Completiva');
+    var E2 = EDU.escala.crear({ min: 0, max: 100, notaMinAprobar: 70, modelo: 'competencias', competencias: { regla: 'maximo', completiva: { cf: 40, cec: 60 } } });
+    var r = C.calcularCompetencias({ escala: E2, competencias: cuatro([60, 60, 60, 60], [55, 55, 55, 55]), cec: 90 }); cerca(r.cf, 60); cerca(r.cfc, 0.4 * 60 + 0.6 * 90);
+  });
+  t('competencias: media por periodo para el boletin', function () {
+    var r = C.calcularCompetencias({ escala: EC, competencias: cuatro([80, 90, null, null]) }); cerca(r.periodos[0], 80); cerca(r.periodos[1], 90); eq(r.periodos[2], null);
+  });
+
+  var ul = document.getElementById('lista');
+  pruebas.forEach(function (p) {
+    var li = document.createElement('li');
+    try { p[1](); pas++; li.className = 'ok'; li.textContent = 'PASA · ' + p[0]; } catch (e) { fal++; li.className = 'fail'; li.textContent = 'FALLA · ' + p[0] + ' — ' + e.message; }
+    ul.appendChild(li);
+  });
+  var r = document.getElementById('res'); r.textContent = (fal ? 'FALLAN ' + fal : 'TODAS PASAN') + ' (' + pas + '/' + pruebas.length + ')'; r.className = fal ? 'fail' : 'ok';
+  document.title = fal ? 'FAIL' : 'PASS';
+  window.__resultado = { pasan: pas, fallan: fal };
+})();
+</script></body></html>
