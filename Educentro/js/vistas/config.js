@@ -59,8 +59,10 @@
           { nombre: 'activo', label: 'Año activo (el vigente del centro)', tipo: 'checkbox' }] });
         if (!v) return;
         try {
-          var g = await EDU.repo.guardar('anios', Object.assign({}, a || {}, v));
-          if (v.activo) for (var i = 0; i < anios.length; i++) if (anios[i].id !== g.id && anios[i].activo) await EDU.repo.guardar('anios', Object.assign({}, anios[i], { activo: false }));
+          var NA = EDU.repo.negocio(); // modo API: «activar» es un endpoint transaccional (un solo año activo por centro); el guardado normal no cambia `activo`
+          var g = await EDU.repo.guardar('anios', Object.assign({}, a || {}, v, NA ? { activo: a ? !!a.activo : false } : {}));
+          if (NA) { if (v.activo && !g.activo) await NA.activarAnio(g.id); }
+          else if (v.activo) for (var i = 0; i < anios.length; i++) if (anios[i].id !== g.id && anios[i].activo) await EDU.repo.guardar('anios', Object.assign({}, anios[i], { activo: false }));
           estado.anioId = g.id; ui.toast('Año lectivo guardado.', 'ok');
         } catch (e) { falla(e); }
         pintar();
@@ -96,7 +98,18 @@
           if (!s.ok) { ui.toast('No se puede cerrar: los pesos de los periodos suman ' + s.suma + ', deben sumar 100.', 'error', 6000); return; }
           if (!(await ui.confirmar({ titulo: 'Cerrar periodo', mensaje: '¿Cerrar «' + per.nombre + '»? Las notas del periodo dejarán de editarse.', textoOk: 'Cerrar periodo' }))) return;
         } else if (!(await ui.confirmar({ titulo: 'Reabrir periodo', mensaje: '¿Reabrir «' + per.nombre + '» para permitir cambios de notas?', textoOk: 'Reabrir' }))) return;
-        try { await EDU.repo.guardar('periodos', Object.assign({}, per, { cerrado: !per.cerrado })); ui.toast(per.cerrado ? 'Periodo reabierto.' : 'Periodo cerrado.', 'ok'); } catch (e) { falla(e); }
+        try {
+          var AP = EDU.repo.adaptador(); AP = AP && AP.esServidor && AP.periodos ? AP : null;
+          if (AP) { // modo API: el cierre y la reapertura son endpoints del servidor (el PUT genérico no cambia `cerrado`)
+            if (!per.cerrado) await AP.periodos.cerrar(per.id, true);
+            else {
+              var mv = await ui.formularioModal({ titulo: 'Reabrir periodo', textoEnviar: 'Reabrir', campos: [{ nombre: 'motivo', label: 'Motivo (queda en la auditoría)', tipo: 'textarea', requerido: true, minLen: 5, maxLen: 300, ancho: 'full' }] });
+              if (!mv) return;
+              await AP.periodos.reabrir(per.id, mv.motivo);
+            }
+          } else await EDU.repo.guardar('periodos', Object.assign({}, per, { cerrado: !per.cerrado }));
+          ui.toast(per.cerrado ? 'Periodo reabierto.' : 'Periodo cerrado.', 'ok');
+        } catch (e) { falla(e); }
         pintar();
       }
       var sel = document.createElement('div'); sel.className = 'fld'; sel.style.maxWidth = '340px';

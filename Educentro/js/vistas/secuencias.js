@@ -97,7 +97,7 @@
     var bb = cont.querySelector('#sq-borrar');
     if (bb) bb.addEventListener('click', async function () {
       if (!(await EDU.ui.confirmar({ titulo: 'Eliminar secuencia', mensaje: '¿Eliminar «' + s.titulo + '»? Los planes vinculados quedarán sin secuencia.', textoOk: 'Eliminar', peligro: true }))) return;
-      for (var i = 0; i < planes.length; i++) await EDU.repo.guardar('planes', Object.assign({}, planes[i], { secuenciaId: null, indicadorIds: [] }));
+      if (!EDU.repo.negocio()) for (var i = 0; i < planes.length; i++) await EDU.repo.guardar('planes', Object.assign({}, planes[i], { secuenciaId: null, indicadorIds: [] })); // modo API: el servidor desvincula los planes en cascada, en la misma transacción
       await EDU.repo.borrar('secuencias', s.id); EDU.ui.toast('Secuencia eliminada.', 'ok'); EDU.router.ir('secuencias');
     });
   }

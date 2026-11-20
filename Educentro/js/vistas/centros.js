@@ -47,7 +47,7 @@
     if (!v) return null;
     var reg = Object.assign({}, centro || {}, v, { pais: (centro && centro.pais) || 'República Dominicana' });
     var g = await EDU.repo.guardar('centros', reg);
-    if (!centro) { // escala por defecto para que el centro sea operativo
+    if (!centro && !EDU.repo.negocio()) { // escala por defecto para que el centro sea operativo (modo API: la crea el servidor en la misma transacción)
       var e = EDU.escala.porDefecto();
       await EDU.repo.guardar('escalas', Object.assign({ centroId: g.id, activa: true }, e));
     }
@@ -60,11 +60,12 @@
     if (!m.vacio) { ui.toast('No se puede eliminar «' + centro.nombre + '»: tiene estudiantes, docentes, cursos u otros datos. Desactívalo en su lugar.', 'error', 7000); return false; }
     var ok = await ui.confirmar({ titulo: 'Eliminar centro', mensaje: '¿Eliminar «' + centro.nombre + '» y su configuración básica (años, periodos, escala, asignaturas)? Esta acción no se puede deshacer.', textoOk: 'Eliminar', peligro: true });
     if (!ok) return false;
-    for (var i = 0; i < ['anios', 'periodos', 'escalas', 'asignaturas'].length; i++) {
+    if (EDU.repo.negocio()) { try { await EDU.repo.borrar('centros', centro.id); } catch (e) { ui.toast(e.message || 'No se pudo eliminar el centro.', 'error', 7000); return false; } } // el servidor verifica que no tenga datos y limpia su configuración básica
+    else for (var i = 0; i < ['anios', 'periodos', 'escalas', 'asignaturas'].length; i++) {
       var col = ['anios', 'periodos', 'escalas', 'asignaturas'][i];
       for (var k = 0; k < m.d[col].length; k++) await EDU.repo.borrar(col, m.d[col][k].id);
     }
-    await EDU.repo.borrar('centros', centro.id);
+    if (!EDU.repo.negocio()) await EDU.repo.borrar('centros', centro.id);
     if (EDU.estado.centroActivo() === centro.id) EDU.estado.cambiarCentro(null);
     ui.toast('Centro eliminado.', 'ok');
     return true;

@@ -103,6 +103,10 @@
   /** Inscribe estudiantes; cada uno se evalúa de forma independiente. Devuelve [{estudianteId, ok, estado?, error?}]. */
   async function asignar(cursoId, estIds, opts) {
     opts = opts || {};
+    var N = EDU.repo.negocio(); // modo API: cupo, lista de espera (turno del servidor), grado y choques en UNA transaccion con el curso bloqueado
+    if (N) {
+      return (await N.inscribir(cursoId, estIds)).map(function (r) { return r.ok ? { estudianteId: r.estudianteId, ok: true, estado: r.estado } : { estudianteId: r.estudianteId, ok: false, error: r.mensaje || 'No se pudo inscribir.' }; });
+    }
     var d = await cargar(), curso = pick(d.cursosExtra, cursoId);
     if (!curso) throw new Error('El curso no existe en este centro.');
     var res = [], nuevos = [], ocup = conteo(d, curso).inscritos, cupo = conteo(d, curso).cupo;
@@ -126,6 +130,8 @@
 
   /** Promueve de la lista de espera mientras haya lugares. Devuelve las inscripciones promovidas (con nombre para avisar). */
   async function promover(cursoId) {
+    var NP = EDU.repo.negocio();
+    if (NP) { var ph = await NP.promoverCurso(cursoId); if (!ph.length) return []; var dp = await cargar(); return ph.map(function (x) { return { inscripcion: x.inscripcion, estudiante: pick(dp.estudiantes, x.estudianteId) }; }); }
     var d = await cargar(), curso = pick(d.cursosExtra, cursoId);
     if (!curso || curso.estado === 'cerrado') return [];
     var c = conteo(d, curso), libres = c.libres, hechos = [], fallidos = [];
@@ -142,6 +148,8 @@
   }
 
   async function retirar(insIdv, motivo) {
+    var NR = EDU.repo.negocio(); // modo API: retiro + promocion de la lista de espera en la misma transaccion
+    if (NR) { var rr = await NR.retirarInscripcion(insIdv, motivo || ''); if (!rr.promovidos.length) return []; var dr = await cargar(); return rr.promovidos.map(function (x) { return { inscripcion: x.inscripcion, estudiante: pick(dr.estudiantes, x.estudianteId) }; }); }
     var i = await EDU.repo.obtener('inscripciones', insIdv);
     if (!i) throw new Error('La inscripción no existe.');
     var eraInscrito = ocupan(i);
@@ -152,6 +160,8 @@
 
   /** Reinscribe a un retirado: pasa por todas las validaciones y por el cupo (puede quedar en lista de espera). */
   async function reinscribir(insIdv) {
+    var NI = EDU.repo.negocio();
+    if (NI) { var ri = await NI.reinscribir(insIdv); return ri.estado; }
     var i = await EDU.repo.obtener('inscripciones', insIdv);
     if (!i) throw new Error('La inscripción no existe.');
     var d = await cargar(), curso = pick(d.cursosExtra, i.cursoId), est = pick(d.estudiantes, i.estudianteId);

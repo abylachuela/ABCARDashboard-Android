@@ -120,6 +120,8 @@
     /** Cambia el adaptador (p. ej. API HTTP) manteniendo la misma interfaz. */
     usar: function (ad) { adaptador = ad; },
     adaptador: function () { return A(); },
+    /** Endpoints transaccionales del servidor (Fase 3A) o null en modo local: las vistas usan `var N = EDU.repo.negocio(); if (N) …`. */
+    negocio: function () { var a = A(); return a && a.esServidor && a.negocio ? a.negocio : null; },
     /** listar(col, {centroId?, filtro?, orden?, desc?, limite?, offset?}) */
     listar: listar,
     /** consultar(col, filtro, opts): filtro = objeto {campo: valor | [valores] | fn(valor,reg)} o fn(reg). */

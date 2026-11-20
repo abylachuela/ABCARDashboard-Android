@@ -217,6 +217,11 @@ export function iniciarMock({ puerto = 3000, host = '127.0.0.1', log = false } =
       if (!['admin_red', 'director'].includes(u.rol)) throw new Err(403, 'sin_permiso', 'Sin permiso.');
       return responder(res, 200, { datos: filtrar(u, 'auditoria', url.searchParams), total: 0, siguiente: null });
     }
+    if (m === 'GET' && r === '/comunicados') { // lista filtrada por rol (el backend real resuelve además el segmento y los contadores)
+      const gestor = ['admin_red', 'director', 'secretaria'].includes(u.rol), aud = { docente: 'docentes', tutor: 'tutores', estudiante: 'estudiantes' }[u.rol];
+      const datos = filtrar(u, 'comunicados', url.searchParams).filter((c) => gestor || (c.estado === 'publicado' && ['todos', aud].includes(c.destinatarios || 'todos')));
+      return responder(res, 200, { datos, total: datos.length, siguiente: null });
+    }
     if ((mt = /^\/comunicados\/([^/]+)\/lectura$/.exec(r)) && m === 'POST') {
       const c = reg('comunicados', decodeURIComponent(mt[1]));
       if (!c || !visible(u, 'comunicados', c) || c.estado !== 'publicado') throw new Err(404, 'no_encontrado', 'Comunicado no disponible.');

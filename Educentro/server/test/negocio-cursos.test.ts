@@ -172,6 +172,22 @@ describe('retiro, promoción, reinscripción y cierre', () => {
   });
 });
 
+describe('promover tras subir el cupo', () => {
+  it('POST /cursos/:id/promover pasa a inscritos a la cola por turno hasta llenar las nuevas plazas', async () => {
+    await sembrar('cursos_extra', 'cxCupo', A, { tipo: 'taller', estado: 'abierto', nombre: 'Cupo', cupo: 1, horario: [{ dia: 5, desde: '18:00', hasta: '18:30' }] });
+    await ins('cxCupo', ['ec106']);
+    await ins('cxCupo', ['ec107']);
+    await ins('cxCupo', ['ec108']);
+    expect((await pedir(app, S('dirA'), 'POST', '/cursos/cxCupo/promover')).json()).toMatchObject({ promovidos: [] });
+    const c = (await pedir(app, S('dirA'), 'GET', '/c/cursosExtra/cxCupo')).json() as Record<string, unknown>;
+    expect((await pedir(app, S('dirA'), 'PUT', '/c/cursosExtra/cxCupo', { ...c, cupo: 2 })).statusCode).toBe(200);
+    const r = (await pedir(app, S('dirA'), 'POST', '/cursos/cxCupo/promover')).json() as { promovidos: { estudianteId: string }[] };
+    expect(r.promovidos.map((x) => x.estudianteId)).toEqual(['ec107']);
+    expect(await estados('cxCupo')).toMatchObject({ ec106: 'inscrito', ec107: 'inscrito', ec108: 'en_lista_espera' });
+    expect((await pedir(app, S('tutA'), 'POST', '/cursos/cxCupo/promover')).statusCode).toBe(403);
+  });
+});
+
 describe('CONCURRENCIA en cursos', () => {
   it('20 inscripciones simultáneas con UNA plaza → exactamente 1 inscrito y 19 en lista de espera con turnos distintos', async () => {
     await sembrar('cursos_extra', 'cxRace', A, { tipo: 'taller', estado: 'abierto', nombre: 'Carrera', cupo: 1, horario: [{ dia: 2, desde: '07:00', hasta: '07:30' }] });

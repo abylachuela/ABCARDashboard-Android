@@ -116,12 +116,15 @@
     render: async function (cont) {
       var s = EDU.estado.sesion(), gestiona = EDU.permisos.puede(s.rol, 'comunicados', 'crear'), puedeBorrar = EDU.permisos.puede(s.rol, 'comunicados', 'borrar');
       var d = await EDU.consultas.cargar(COLS);
+      var N = EDU.repo.negocio(); // modo API: el servidor resuelve la visibilidad (rol/segmento/alcance) y calcula los contadores
+      if (N) d.comunicados = await N.comunicados();
       var cid = EDU.estado.centroActivo();
       function cab(desc, acciones) { return ui.cabecera({ eyebrow: 'Comunicación', titulo: 'Comunicados', descripcion: desc, acciones: acciones }).toString(); }
 
       if (gestiona) {
-        var staff = d.usuarios.filter(function (u) { return ROL_AUD[u.rol]; }), ctxs = staff.map(function (u) { return ctxDe(d, u); });
+        var staff = N ? [] : d.usuarios.filter(function (u) { return ROL_AUD[u.rol]; }), ctxs = staff.map(function (u) { return ctxDe(d, u); });
         var filas = d.comunicados.slice().sort(function (a, b) { return (a.fecha < b.fecha ? 1 : -1); }).map(function (c) {
+          if (N) return Object.assign({}, c, { alcanceTxt: etiquetaSeg(d, c), nDest: c.totalDestinatarios || 0, nLeidos: c.totalLeidos || 0 });
           var dest = ctxs.filter(function (x) { return esDestinatario(c, x) && (!c.centroId || (porId(d.usuarios, x.usuarioId) || {}).centroId === c.centroId); });
           var leidos = dest.filter(function (x) { return leido(c, x.usuarioId); }).length;
           return Object.assign({}, c, { alcanceTxt: etiquetaSeg(d, c), nDest: dest.length, nLeidos: leidos });
@@ -133,7 +136,15 @@
           columnas: [{ clave: 'fecha', titulo: 'Fecha', formato: function (v) { return fmt.fecha(v); } }, { clave: 'titulo', titulo: 'Título' }, { clave: 'alcanceTxt', titulo: 'Destinatarios' },
             { clave: 'estado', titulo: 'Estado', render: function (c) { return ui.badge(c.estado === 'publicado' ? 'Publicado' : 'Borrador', c.estado === 'publicado' ? 'ok' : 'neu'); } },
             { clave: 'nLeidos', titulo: 'Lecturas', align: 'c', render: function (c) { return c.estado === 'publicado' ? esc(c.nLeidos + ' de ' + c.nDest) : '—'; } }],
-          acciones: [{ texto: 'Ver', alClic: function (c) {
+          acciones: [{ texto: 'Ver', alClic: async function (c) {
+            if (N) {
+              try {
+                var cf = await N.confirmaciones(c.id);
+                var qs = cf.map(function (x) { return '<li>' + esc(x.nombre) + ' (' + esc(EDU.permisos.etiquetaRol(x.rol)) + '): ' + (x.leido ? 'leído' : 'sin confirmar') + '</li>'; }).join('');
+                verCuerpo(d, c, c.estado === 'publicado' ? '<h3>Confirmaciones</h3><ul>' + (qs || '<li>Sin destinatarios</li>') + '</ul>' : '');
+              } catch (e) { ui.toast(e.message, 'error'); }
+              return;
+            }
             var quienes = ctxs.filter(function (x) { return esDestinatario(c, x); }).map(function (x) { var u = porId(d.usuarios, x.usuarioId); return '<li>' + esc(u.nombre) + ' (' + esc(EDU.permisos.etiquetaRol(u.rol)) + '): ' + (leido(c, x.usuarioId) ? 'leído' : 'sin confirmar') + '</li>'; }).join('');
             verCuerpo(d, c, c.estado === 'publicado' ? '<h3>Confirmaciones</h3><ul>' + (quienes || '<li>Sin destinatarios</li>') + '</ul>' : '');
           } }, { texto: 'Editar', tipo: 'sec', visible: function () { return EDU.permisos.puede(s.rol, 'comunicados', 'editar') && !!cid; }, alClic: function (c) { editor(d, d.comunicados.filter(function (x) { return x.id === c.id; })[0], recargar); } },
@@ -147,7 +158,7 @@
 
       // Docente / tutor / estudiante: solo lo suyo
       var u = { rol: s.rol, refId: s.refId, usuarioId: s.usuarioId, centroUsuario: s.centroUsuario }, x = ctxDe(d, { id: s.usuarioId, rol: s.rol, refId: s.refId });
-      var mios = d.comunicados.filter(function (c) { return esDestinatario(c, x); }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+      var mios = (N ? d.comunicados : d.comunicados.filter(function (c) { return esDestinatario(c, x); })).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
       var sin = mios.filter(function (c) { return !leido(c, s.usuarioId); }).length;
       cont.innerHTML = cab(sin ? 'Tiene ' + fmt.plural(sin, 'comunicado') + ' sin confirmar.' : 'Está al día con sus comunicados.') + '<div class="card"><div id="cT"></div></div>';
       function pintar() {
