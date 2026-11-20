@@ -81,7 +81,10 @@
       if (falta) { var inp = falta.querySelector('.mo'); inp.setAttribute('aria-invalid', 'true'); inp.focus(); er.textContent = 'Indique el motivo de cada justificación.'; er.hidden = false; return; }
       $('asGuardar').disabled = true;
       try {
-        await EDU.repo.guardarMuchos('asistencia', regs);
+        var N = EDU.repo.negocio();
+        if (N) { // modo API: un lote atomico por seccion y fecha; el servidor fija registradoPor/justificadoPor/fechas y valida matricula activa y fecha no futura
+          await N.asistenciaSeccionFecha(secId, f, regs.map(function (x) { var o = { estudianteId: x.estudianteId, estado: x.estado }; if (x.justificacion) o.justificacion = x.justificacion; if (x.nota) o.nota = x.nota; return o; }));
+        } else await EDU.repo.guardarMuchos('asistencia', regs);
         d.asistencia = (await EDU.repo.listar('asistencia'));
         $('asEstado').textContent = 'Guardado: ' + regs.length + ' registros del ' + fmt.fecha(f) + '.'; ui.toast('Asistencia guardada', 'ok'); pintar();
       } catch (e) { er.textContent = e.message; er.hidden = false; }
@@ -131,11 +134,15 @@
       acciones: puedeEditar ? [{ texto: 'Justificar', visible: function (r) { return r.estado === 'A'; }, alClic: async function (r) {
         var v = await ui.formularioModal({ titulo: 'Justificar ausencia de ' + r.est, textoEnviar: 'Justificar', campos: [{ nombre: 'motivo', label: 'Motivo', tipo: 'textarea', requerido: true, minLen: 5, maxLen: 200, ancho: 'full', ayuda: 'Ej.: certificado médico, duelo familiar.' }] });
         if (!v) return;
-        await EDU.repo.guardar('asistencia', Object.assign({}, r, { est: undefined, estado: 'J', justificacion: v.motivo, justificadoPor: s.usuarioId, justificadoEn: new Date().toISOString() }));
+        var NJ = EDU.repo.negocio();
+        if (NJ) await NJ.justificar(r.id, v.motivo);
+        else await EDU.repo.guardar('asistencia', Object.assign({}, r, { est: undefined, estado: 'J', justificacion: v.motivo, justificadoPor: s.usuarioId, justificadoEn: new Date().toISOString() }));
         ui.toast('Ausencia justificada', 'ok'); recargar();
       } }, { texto: 'Quitar justificación', visible: function (r) { return r.estado === 'J'; }, alClic: async function (r) {
         if (!(await ui.confirmar({ titulo: 'Quitar justificación', mensaje: 'La falta volverá a contarse como ausencia injustificada.', textoOk: 'Quitar' }))) return;
-        await EDU.repo.guardar('asistencia', Object.assign({}, r, { est: undefined, estado: 'A', justificacion: null, justificadoPor: null, justificadoEn: null }));
+        var NQ = EDU.repo.negocio();
+        if (NQ) await NQ.quitarJustificacion(r.id);
+        else await EDU.repo.guardar('asistencia', Object.assign({}, r, { est: undefined, estado: 'A', justificacion: null, justificadoPor: null, justificadoEn: null }));
         ui.toast('Justificación retirada', 'ok'); recargar();
       } }] : [], vacio: { titulo: 'Sin ausencias registradas' } });
     panel.querySelector('#juT').appendChild(t.el);

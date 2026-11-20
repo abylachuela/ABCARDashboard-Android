@@ -6,7 +6,7 @@ import { ErrorHttp } from '../errores.js';
 import { puedeModulo } from '../domain/permisos.js';
 import { esquemaId } from '../repo/generico.js';
 import { activarAnio, bajaPersona, matricular, reactivarMatricula, reactivarPersona, retirarMatricula, vincularTutor, type ColPersona } from '../repo/negocio-matriculas.js';
-import { cambiarEstadoCurso, guardarNotasCurso, inscribir, reinscribirInscripcion, retirarInscripcion } from '../repo/negocio-cursos.js';
+import { cambiarEstadoCurso, guardarNotasCurso, inscribir, promoverCurso, reinscribirInscripcion, retirarInscripcion } from '../repo/negocio-cursos.js';
 import { importarVersion, marcarVigente } from '../repo/negocio-curriculo.js';
 import { asistenciaSeccionFecha, cambiarJustificacion, confirmacionesComunicado, listarComunicados } from '../repo/negocio-aula.js';
 import { guardarFranjasTanda, guardarHorarios } from '../repo/negocio-horarios.js';
@@ -70,6 +70,10 @@ export const rutasNegocio: FastifyPluginAsync = async (app: FastifyInstance) => 
   app.post<{ Params: P }>('/cursos/:id/estado', guardia, async (req) => {
     const id = idDe(req.params.id);
     return abrir(req, (p) => cambiarEstadoCurso(p, id, req.body));
+  });
+  app.post<{ Params: P }>('/cursos/:id/promover', guardia, async (req) => {
+    const id = idDe(req.params.id);
+    return abrir(req, (p) => promoverCurso(p, id));
   });
   app.post<{ Params: P }>('/cursos/:id/notas', guardia, async (req) => {
     const id = idDe(req.params.id);

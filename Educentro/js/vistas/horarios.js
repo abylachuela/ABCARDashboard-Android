@@ -206,7 +206,14 @@
     }
     /** Persiste el borrador (y opcionalmente descarta bloques heredados de las cargas indicadas). */
     async function persistir(descartarLegacyCargas) {
-      var d = diff(), n = 0;
+      var d = diff(), n = 0, NH = EDU.repo.negocio();
+      if (NH) { // modo API: UN guardado atomico; el servidor valida los conflictos (docente, seccion, aula, disponibilidad, franja) con el mismo motor
+        var borrarIds = d.borrar.slice();
+        if (descartarLegacyCargas) S.legacy.forEach(function (h) { if (descartarLegacyCargas.indexOf(h.cargaId) >= 0) borrarIds.push(h.id); });
+        var res = await NH.guardarHorarios({ crear: d.crear.map(function (e) { return aRegistro(e); }), actualizar: d.act.map(function (e) { return aRegistro(e, d.orig[e.id]); }), borrar: borrarIds });
+        S.D.horarios = await EDU.repo.listar('horarios'); leerHorarios(); revalidar();
+        return res.creados.length + res.actualizados.length + res.borrados.length;
+      }
       for (var i = 0; i < d.borrar.length; i++) { await EDU.repo.borrar('horarios', d.borrar[i]); n++; }
       for (var j = 0; j < d.act.length; j++) { await EDU.repo.guardar('horarios', aRegistro(d.act[j], d.orig[d.act[j].id])); n++; }
       if (d.crear.length) { await EDU.repo.guardarMuchos('horarios', d.crear.map(function (e) { return aRegistro(e); })); n += d.crear.length; }
@@ -220,7 +227,12 @@
     async function guardar() {
       if (S.val.conflictos.length) { ui.toast('Hay ' + S.val.conflictos.length + ' conflicto(s): corrígelos para poder guardar.', 'error'); return; }
       try { var n = await persistir(null); ui.toast('Horario guardado (' + n + ' cambio' + (n === 1 ? '' : 's') + ').', 'ok'); }
-      catch (e) { ui.toast(e.message || 'No se pudo guardar.', 'error'); }
+      catch (e) {
+        ui.toast(e.message || 'No se pudo guardar.', 'error');
+        if (e.detalle && e.detalle.conflictos && e.detalle.conflictos.length) { // el servidor rechazó el guardado: se muestran TODOS los conflictos (nada se guardó)
+          ui.modal({ titulo: 'El servidor rechazó el horario', contenido: '<p>No se guardó ningún cambio. Corrige estos conflictos:</p><ul>' + e.detalle.conflictos.map(function (c) { return '<li>' + esc(c.msg) + '</li>'; }).join('') + '</ul>', botones: [{ texto: 'Cerrar', tipo: 'sec', valor: null }] });
+        }
+      }
       repintarTodo();
     }
     async function descartar() {
@@ -618,8 +630,12 @@
           if (errores.length) { err.innerHTML = '<div class="alert red"><div><strong>Revisa las franjas</strong><ul>' + errores.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div></div>'; return; }
           try {
             var ord = l.slice().sort(function (a, b2) { return M.mins(a.inicio) - M.mins(b2.inicio); });
+            var NF = EDU.repo.negocio();
+            if (NF) await NF.guardarFranjasTanda(t, ord.map(function (f) { return { id: f.id || undefined, inicio: f.inicio, fin: f.fin, tipo: f.tipo }; })); // reemplazo atomico de la tanda
+            else {
             for (var q = 0; q < quitadas.length; q++) await EDU.repo.borrar('franjas', quitadas[q].id);
             for (var k = 0; k < ord.length; k++) await EDU.repo.guardar('franjas', Object.assign({}, ord[k].id ? S.ctx.franjaPor[ord[k].id] : {}, { centroId: centro, tanda: t, orden: k + 1, inicio: ord[k].inicio, fin: ord[k].fin, tipo: ord[k].tipo }));
+            }
             S.D.franjas = await EDU.repo.listar('franjas'); reconstruir(); revalidar(); S.fr[t] = franjasDeTanda(t);
             ui.toast('Franjas de la tanda ' + H.TANDAS[t].toLowerCase() + ' guardadas.', 'ok');
           } catch (e) { err.innerHTML = '<div class="alert red"><div><strong>' + esc(e.message || 'No se pudo guardar') + '</strong></div></div>'; return; }

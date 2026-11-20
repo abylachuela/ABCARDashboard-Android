@@ -242,6 +242,13 @@ async function promover(p: Peticion, curso: Curso): Promise<Promovido[]> {
   return hechos;
 }
 
+/** POST /cursos/:id/promover: tras subir el cupo del curso, pasa a inscritos a quienes esperaban (por turno) mientras haya plazas. */
+export async function promoverCurso(p: Peticion, cursoId: string): Promise<{ promovidos: Promovido[] }> {
+  exigirRolEscribe(p, 'inscripciones', 'editar');
+  const curso = await bloquearCurso(p, cursoId);
+  return { promovidos: await promover(p, curso) };
+}
+
 /** Bloquea el curso de una inscripción y luego la inscripción (curso primero, como inscribir y cerrar). */
 async function bloquearInscripcion(p: Peticion, id: string): Promise<{ curso: Curso; ins: { id: string; datos: Registro; centroId: string } }> {
   const previa = await leerFila(p, meta('inscripciones'), id);

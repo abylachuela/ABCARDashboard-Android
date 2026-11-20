@@ -267,6 +267,145 @@ async function probarNotas(browser, base, origenes, cred) {
   } finally { await doc.ctx.close(); await dir.ctx.close(); }
 }
 
+
+/** Reglas de negocio del SERVIDOR (Fase 3A) vistas desde el cliente real: cupo lleno, lista de espera con promoción, horario con conflicto,
+    comunicado no visible para otro rol, plan impartido bloqueado y campos fijados por el servidor. Solo contra el backend real. */
+async function probarNegocio(browser, base, origenes, cred) {
+  const abrir = async (rol) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage(), vig = vigilar(page, origenes);
+    vig.silenciar(1); await page.goto(base + '/'); await page.waitForSelector('#lgForm', { timeout: 20000 });
+    await entrar(page, vig, cred[rol]);
+    return { ctx, page, vig, rol };
+  };
+  const dir = await abrir('director'), doc = await abrir('docente'), est = await abrir('estudiante'), sec = await abrir('secretaria');
+  const todos = [dir, doc, est, sec];
+  todos.forEach((x) => x.vig.silenciar(40)); // 4xx esperados: cupo lleno, conflictos, plan bloqueado, 404 de comunicados ajenos…
+  /** Ejecuta `fn(args)` en la página; devuelve {ok:true,v} o {ok:false,codigo,estado,mensaje,detalle}. */
+  const ejec = (x, fn, args) => x.page.evaluate(async ([src, a]) => {
+    try { return { ok: true, v: await (new Function('EDU', 'a', 'return (async () => {' + src + '})()'))(window.EDU, a) }; }
+    catch (e) { return { ok: false, codigo: e.codigo, estado: e.estado, mensaje: e.message, detalle: e.detalle }; }
+  }, [fn, args === undefined ? null : args]);
+  const sufijo = Date.now().toString(36).toUpperCase();
+  try {
+    // ---------- 1) matrícula con cupo lleno ----------
+    const sec1 = await ejec(dir, `return EDU.repo.guardar('secciones', { centroId: 'cen_1', cursoId: 'cur_1_1', anioId: 'ani_1_2026', nombre: 'E2E-' + a, capacidad: 1 });`, sufijo);
+    ok(sec1.ok, 'negocio: el director crea una sección de capacidad 1 (' + (sec1.mensaje || '') + ')');
+    const est2 = await ejec(dir, `var r = []; for (var i = 0; i < 2; i++) r.push(await EDU.repo.guardar('estudiantes', { centroId: 'cen_1', nombres: 'E2E' + a + i, apellidos: 'Prueba' })); return r;`, sufijo);
+    ok(est2.ok && est2.v.every((e) => /^MAT-1-\d+$/.test(e.matricula)), 'negocio: el servidor asigna el código MAT a los estudiantes nuevos (' + (est2.ok ? est2.v.map((e) => e.matricula).join(', ') : est2.mensaje) + ')');
+    const [e1, e2] = est2.ok ? est2.v : [{}, {}];
+    const m1 = await ejec(dir, `return EDU.repo.negocio().matricular({ anioId: 'ani_1_2026', seccionId: a.s, estudianteIds: [a.e], fecha: EDU.fmt.hoy() });`, { s: sec1.v && sec1.v.id, e: e1.id });
+    ok(m1.ok && m1.v[0].estado === 'activa', 'negocio: matrícula en la última plaza (' + (m1.mensaje || '') + ')');
+    const m2 = await ejec(dir, `return EDU.repo.negocio().matricular({ anioId: 'ani_1_2026', seccionId: a.s, estudianteIds: [a.e] });`, { s: sec1.v && sec1.v.id, e: e2.id });
+    ok(!m2.ok && m2.estado === 409 && m2.codigo === 'seccion_completa' && /completa/i.test(m2.mensaje), 'negocio: sección llena → 409 seccion_completa con mensaje en español (' + m2.codigo + ')');
+    const secB = await ejec(dir, `return EDU.repo.guardar('secciones', { centroId: 'cen_1', cursoId: 'cur_1_1', anioId: 'ani_1_2026', nombre: 'E2E2-' + a, capacidad: 5 });`, sufijo);
+    const m3 = await ejec(dir, `return EDU.repo.negocio().matricular({ anioId: 'ani_1_2026', seccionId: a.s, estudianteIds: [a.e] });`, { s: secB.v && secB.v.id, e: e1.id });
+    ok(!m3.ok && m3.codigo === 'matricula_duplicada', 'negocio: el mismo estudiante en el mismo año → matricula_duplicada');
+    const mp = await ejec(dir, `return EDU.repo.guardar('matriculas', { centroId: 'cen_1', estudianteId: a.e, seccionId: a.s, anioId: 'ani_1_2026', estado: 'retirada' });`, { s: sec1.v && sec1.v.id, e: e2.id });
+    ok(!mp.ok && mp.estado === 422, 'negocio: el POST genérico no puede crear una matrícula «retirada» (422)');
+    // la pantalla de matrícula carga con la sección nueva y muestra el cupo completo
+    await irA(dir.page, '#/matricula');
+    ok(!(await hayTarjetaError(dir.page)), 'negocio: la pantalla Matrícula carga sin error');
+
+    // ---------- 2) inscripción con lista de espera y promoción ----------
+    const cur = await ejec(dir, `return EDU.repo.guardar('cursosExtra', { centroId: 'cen_1', nombre: 'Taller E2E ' + a, codigo: 'E2E-' + a, tipo: 'taller', cupo: 1, grados: [], horario: [], estado: 'abierto', inicio: '2026-10-01', fin: '2026-12-01' });`, sufijo);
+    ok(cur.ok, 'negocio: se crea un curso de cupo 1 (' + (cur.mensaje || '') + ')');
+    const ins = await ejec(dir, `return EDU.cursosLogica.asignar(a.c, [a.e1, a.e2]);`, { c: cur.v && cur.v.id, e1: e1.id, e2: e2.id });
+    ok(ins.ok && ins.v[0].estado === 'inscrito' && ins.v[1].estado === 'en_lista_espera', 'negocio: cupo 1 → el primero inscrito y el segundo en lista de espera (' + JSON.stringify(ins.v || ins.mensaje) + ')');
+    const turno = await ejec(dir, `var l = await EDU.repo.listar('inscripciones', { filtro: { cursoId: a } }); return l.map(function (i) { return [i.estudianteId, i.estado, i.turno]; });`, cur.v && cur.v.id);
+    ok(turno.ok && turno.v.some((t) => t[1] === 'en_lista_espera' && Number(t[2]) > 0), 'negocio: el turno de la lista de espera lo fijó el servidor (' + JSON.stringify(turno.v) + ')');
+    const forzado = await ejec(dir, `var l = await EDU.repo.listar('inscripciones', { filtro: { cursoId: a } }); var x = l.filter(function (i) { return i.estado === 'en_lista_espera'; })[0]; x.estado = 'inscrito'; return EDU.repo.guardar('inscripciones', x);`, cur.v && cur.v.id);
+    ok(!forzado.ok && forzado.estado === 422, 'negocio: el cliente no puede forzar el estado de una inscripción (422)');
+    const ret = await ejec(dir, `return EDU.cursosLogica.retirar('ins_' + a.c + '_' + a.e1, 'Cambio de horario');`, { c: cur.v && cur.v.id, e1: e1.id });
+    ok(ret.ok && ret.v.length === 1 && ret.v[0].inscripcion.estudianteId === e2.id && ret.v[0].inscripcion.estado === 'inscrito', 'negocio: al retirar al inscrito se promueve al de la lista de espera');
+    const cer = await ejec(dir, `return EDU.repo.negocio().estadoCurso(a, 'cerrado');`, cur.v && cur.v.id);
+    ok(cer.ok, 'negocio: cierre del curso (transaccional)');
+    const cerrado = await ejec(dir, `return EDU.cursosLogica.asignar(a.c, [a.e1]);`, { c: cur.v && cur.v.id, e1: e1.id });
+    ok(!cerrado.ok && cerrado.estado === 409 && cerrado.codigo === 'curso_cerrado', 'negocio: un curso cerrado no admite inscripciones (409 curso_cerrado)');
+
+    // ---------- 3) horario con conflicto rechazado ----------
+    const fr = await ejec(dir, `return EDU.repo.negocio().guardarFranjasTanda('vespertina', [{ inicio: '16:00', fin: '16:45', tipo: 'clase' }, { inicio: '16:45', fin: '17:30', tipo: 'clase' }]);`);
+    ok(fr.ok && fr.v.franjas.length === 2, 'negocio: franjas de la tanda guardadas de forma atómica (' + (fr.mensaje || '') + ')');
+    const solape = await ejec(dir, `return EDU.repo.negocio().guardarFranjasTanda('vespertina', [{ inicio: '16:00', fin: '16:45', tipo: 'clase' }, { inicio: '16:30', fin: '17:00', tipo: 'clase' }]);`);
+    ok(!solape.ok && solape.codigo === 'franjas_invalidas' && /solapan/.test(solape.mensaje), 'negocio: franjas solapadas → 422 franjas_invalidas');
+    const cargas = await ejec(dir, `var d = await EDU.consultas.cargar(['cargas']); var por = {}; d.cargas.forEach(function (c) { (por[c.docenteId] = por[c.docenteId] || []).push(c); }); var k = Object.keys(por).filter(function (x) { return por[x].length > 1 && por[x][0].seccionId !== por[x][1].seccionId; })[0]; return por[k].slice(0, 2).map(function (c) { return c.id; });`);
+    const fid = fr.ok ? fr.v.franjas[0].id : 'x';
+    const choque = await ejec(dir, `return EDU.repo.negocio().guardarHorarios({ crear: [{ cargaId: a[0], dia: 1, franjaId: a[2] }, { cargaId: a[1], dia: 1, franjaId: a[2] }] });`, cargas.ok ? [...cargas.v, fid] : []);
+    ok(!choque.ok && choque.estado === 409 && choque.codigo === 'horario_conflictos' && choque.detalle && choque.detalle.conflictos[0].tipo === 'docente', 'negocio: el servidor RECHAZA el horario con choque de docente (409) y devuelve la lista (' + (choque.mensaje || '').slice(0, 80) + ')');
+    const nada = await ejec(dir, `var l = await EDU.repo.listar('horarios'); return l.filter(function (h) { return h.franjaId === a; }).length;`, fid);
+    ok(nada.ok && nada.v === 0, 'negocio: tras el rechazo no se guardó ningún bloque (atomicidad)');
+    const bueno = await ejec(dir, `return EDU.repo.negocio().guardarHorarios({ crear: [{ cargaId: a[0], dia: 1, franjaId: a[2] }] });`, cargas.ok ? [...cargas.v, fid] : []);
+    ok(bueno.ok && bueno.v.creados.length === 1, 'negocio: un horario sin conflictos se guarda');
+    const generico = await ejec(dir, `return EDU.repo.guardar('horarios', { centroId: 'cen_1', cargaId: a[1], dia: 1, franjaId: a[2], aula: '' });`, cargas.ok ? [...cargas.v, fid] : []);
+    ok(!generico.ok && generico.estado === 409, 'negocio: el POST genérico de horarios tampoco puede introducir el conflicto (409)');
+    const par = await ejec(dir, `var d = await EDU.consultas.cargar(['franjas','horarios','disponibilidad','cargas','secciones','cursos','asignaturas','docentes']); var M = EDU.horarios.motor; var v = M.validar(M.armar(d), d.horarios.map(function (h) { return { id: h.id, cargaId: h.cargaId, dia: h.dia, franjaId: h.franjaId, aula: h.aula }; }).concat([{ _k: 'x', cargaId: a[1], dia: 1, franjaId: a[2] }])); return v.conflictos.map(function (c) { return c.tipo; });`, cargas.ok ? [...cargas.v, fid] : []);
+    ok(par.ok && par.v.includes('docente'), 'negocio: el cliente (modo visual) marca el mismo conflicto de docente que el servidor');
+    await ejec(dir, `var h = (await EDU.repo.listar('horarios')).filter(function (x) { return x.franjaId === a[2]; }).map(function (x) { return x.id; }); if (h.length) await EDU.repo.negocio().guardarHorarios({ borrar: h }); return EDU.repo.negocio().guardarFranjasTanda('vespertina', []);`, cargas.ok ? [...cargas.v, fid] : []);
+
+    // ---------- 4) comunicado no visible para otro rol ----------
+    const com = await ejec(dir, `var pub = await EDU.repo.guardar('comunicados', { centroId: 'cen_1', titulo: 'Solo docentes ' + a, cuerpo: 'Mensaje solo para docentes del centro', destinatarios: 'docentes', segmento: { tipo: 'centro', id: null }, estado: 'publicado', autorId: 'usr_falso', fecha: '1999-01-01' });
+      var bor = await EDU.repo.guardar('comunicados', { centroId: 'cen_1', titulo: 'Borrador ' + a, cuerpo: 'Borrador interno del centro', destinatarios: 'todos', segmento: { tipo: 'centro', id: null }, estado: 'borrador' });
+      return { pub: pub, bor: bor };`, sufijo);
+    ok(com.ok && com.v.pub.autorId !== 'usr_falso' && com.v.pub.fecha !== '1999-01-01', 'negocio: el servidor fija autorId y fecha del comunicado (' + (com.mensaje || '') + ')');
+    if (com.ok) {
+      const vis = (x) => ejec(x, `var l = await EDU.repo.negocio().comunicados(); return l.map(function (c) { return c.id; });`);
+      const vd = await vis(doc), ve = await vis(est), vdir = await vis(dir);
+      ok(vd.ok && vd.v.includes(com.v.pub.id) && !vd.v.includes(com.v.bor.id), 'negocio: el docente ve el comunicado para docentes y NO el borrador');
+      ok(ve.ok && !ve.v.includes(com.v.pub.id) && !ve.v.includes(com.v.bor.id), 'negocio: el estudiante no ve el comunicado de docentes ni el borrador');
+      ok(vdir.ok && vdir.v.includes(com.v.pub.id) && vdir.v.includes(com.v.bor.id), 'negocio: la dirección ve ambos');
+      const directo = await ejec(est, `return EDU.repo.obtener('comunicados', a);`, com.v.pub.id);
+      ok(directo.ok && directo.v === null, 'negocio: pedirlo directo al servidor (GET /c/comunicados/:id) como estudiante → no existe');
+      const lectura = await ejec(est, `return EDU.repo.registrarLectura(a);`, com.v.pub.id);
+      ok(!lectura.ok && lectura.estado === 404, 'negocio: el estudiante no puede confirmar la lectura de un comunicado ajeno (404)');
+      const cont = await ejec(dir, `var l = await EDU.repo.negocio().comunicados(); var c = l.filter(function (x) { return x.id === a; })[0]; return [c.totalDestinatarios, c.totalLeidos];`, com.v.pub.id);
+      ok(cont.ok && cont.v[0] >= 1 && cont.v[1] === 0, 'negocio: los contadores de destinatarios y leídos los calcula el servidor (' + JSON.stringify(cont.v) + ')');
+      await ejec(dir, `await EDU.repo.borrar('comunicados', a.p); await EDU.repo.borrar('comunicados', a.b); return 1;`, { p: com.v.pub.id, b: com.v.bor.id });
+    }
+
+    // ---------- 5) plan impartido bloqueado ----------
+    const info = await ejec(doc, `var s = EDU.estado.sesion(), d = await EDU.consultas.cargar(['cargas']); var c = d.cargas.filter(function (x) { return x.docenteId === s.refId; })[0]; return { carga: c.id, uid: s.usuarioId, ref: s.refId };`);
+    const plan = await ejec(doc, `return EDU.repo.guardar('planes', { centroId: 'cen_1', cargaId: a, docenteId: 'otro', tema: 'E2E ' + Date.now(), fecha: '2026-11-23', estado: 'borrador' });`, info.v && info.v.carga);
+    ok(plan.ok && plan.v.docenteId === info.v.ref, 'negocio: el docente crea su plan y el servidor fija la autoría (' + (plan.mensaje || '') + ')');
+    const salto = await ejec(doc, `var p = await EDU.repo.obtener('planes', a); p.estado = 'impartido'; return EDU.repo.guardar('planes', p);`, plan.v && plan.v.id);
+    ok(!salto.ok && salto.codigo === 'transicion_invalida', 'negocio: no se salta de borrador a impartido (transicion_invalida)');
+    const paso = await ejec(doc, `var p = await EDU.repo.obtener('planes', a); p.estado = 'listo'; p = await EDU.repo.guardar('planes', p); p.estado = 'impartido'; return EDU.repo.guardar('planes', p);`, plan.v && plan.v.id);
+    ok(paso.ok && paso.v.estado === 'impartido', 'negocio: borrador → listo → impartido');
+    const edita = await ejec(doc, `var p = await EDU.repo.obtener('planes', a); p.tema = 'Cambio indebido'; return EDU.repo.guardar('planes', p);`, plan.v && plan.v.id);
+    ok(!edita.ok && edita.estado === 409 && edita.codigo === 'plan_impartido' && /bloqueado/i.test(edita.mensaje), 'negocio: el docente NO puede editar un plan impartido (409 plan_impartido)');
+    const borra = await ejec(doc, `return EDU.repo.borrar('planes', a);`, plan.v && plan.v.id);
+    ok(!borra.ok && borra.codigo === 'plan_impartido', 'negocio: ni borrarlo');
+    const dirEdita = await ejec(dir, `var p = await EDU.repo.obtener('planes', a); p.tema = 'Corregido por dirección'; return EDU.repo.guardar('planes', p);`, plan.v && plan.v.id);
+    ok(dirEdita.ok, 'negocio: la dirección sí puede editar un plan impartido');
+    await ejec(dir, `return EDU.repo.borrar('planes', a);`, plan.v && plan.v.id);
+
+    // ---------- 6) asistencia: lote atómico con campos fijados por el servidor ----------
+    const asis = await ejec(doc, `var s = EDU.estado.sesion(), d = await EDU.consultas.cargar(['cargas', 'matriculas']); var c = d.cargas.filter(function (x) { return x.docenteId === s.refId; })[0];
+      var ids = d.matriculas.filter(function (m) { return m.seccionId === c.seccionId && m.estado === 'activa'; }).map(function (m) { return m.estudianteId; }).slice(0, 3);
+      var f = new Date(Date.now() - 86400000).toISOString().slice(0, 10); var r = await EDU.repo.negocio().asistenciaSeccionFecha(c.seccionId, f, ids.map(function (e, i) { return i === 2 ? { estudianteId: e, estado: 'J', justificacion: 'Cita médica' } : { estudianteId: e, estado: i ? 'A' : 'P' }; }));
+      return { uid: s.usuarioId, sec: c.seccionId, n: r.length, por: r.map(function (x) { return x.registradoPor; }), jus: r.filter(function (x) { return x.estado === 'J'; }).map(function (x) { return x.justificadoPor; }), f: f, ids: ids };`);
+    ok(asis.ok && asis.v.n === 3 && asis.v.por.every((u) => u === asis.v.uid) && asis.v.jus[0] === asis.v.uid, 'negocio: asistencia por lote; registradoPor/justificadoPor los fija el servidor (' + (asis.mensaje || '') + ')');
+    const fut = await ejec(doc, `return EDU.repo.negocio().asistenciaSeccionFecha(a.sec, '2999-01-01', [{ estudianteId: a.ids[0], estado: 'P' }]);`, asis.ok ? asis.v : {});
+    ok(!fut.ok && fut.codigo === 'fecha_futura', 'negocio: la asistencia de una fecha futura se rechaza');
+    const ajeno = await ejec(doc, `return EDU.repo.negocio().asistenciaSeccionFecha(a.sec, a.f, [{ estudianteId: 'est_no_matriculado', estado: 'P' }]);`, asis.ok ? asis.v : {});
+    ok(!ajeno.ok && ajeno.estado === 409, 'negocio: un estudiante no matriculado en la sección → 409 (lote atómico)');
+    await irA(doc.page, '#/asistencia');
+    ok(!(await hayTarjetaError(doc.page)), 'negocio: la pantalla Asistencia carga sin error');
+
+    // ---------- 7) año activo y bajas ----------
+    const baja = await ejec(dir, `var d = await EDU.consultas.cargar(['cargas']); return EDU.repo.negocio().baja('docentes', d.cargas[0].docenteId, {});`);
+    ok(!baja.ok && baja.codigo === 'docente_con_cargas' && /asignaci/i.test(baja.mensaje), 'negocio: baja de un docente con cargas → 409 docente_con_cargas');
+    const bajaE = await ejec(dir, `return EDU.repo.negocio().baja('estudiantes', a, { motivo: 'Prueba e2e' });`, e1.id);
+    ok(bajaE.ok && bajaE.v.estado === 'inactivo', 'negocio: baja de estudiante (retira su matrícula en la misma transacción)');
+    const matE = await ejec(dir, `return (await EDU.repo.listar('matriculas', { filtro: { estudianteId: a } })).map(function (m) { return m.estado; });`, e1.id);
+    ok(matE.ok && matE.v.every((x) => x === 'retirada'), 'negocio: tras la baja su matrícula quedó retirada');
+    const activar = await ejec(dir, `var a = (await EDU.repo.listar('anios')).filter(function (x) { return x.activo; })[0]; return EDU.repo.negocio().activarAnio(a.id);`);
+    ok(activar.ok && activar.v.activo === true, 'negocio: activar año (idempotente)');
+    // limpieza de lo creado (la sección y el curso ya no tienen dependencias vivas salvo las matrículas/inscripciones de prueba)
+    await ejec(dir, `return EDU.repo.negocio().reactivar('estudiantes', a);`, e1.id);
+    for (const x of todos) for (const p of x.vig.problemas()) fallos.push('[negocio:' + x.rol + '] ' + p);
+  } finally { for (const x of todos) await x.ctx.close(); }
+}
+
 async function main() {
   let mock = null, dev = null;
   if (usarMock) {
@@ -281,6 +420,7 @@ async function main() {
   try {
     for (const rol of ROLES) { try { await probarRol(browser, rol, cred[rol], base, origenes); } catch (e) { fallos.push(`[${rol}] excepción del test: ${e.message.split('\n')[0]}`); } }
     if (!usarMock) { try { await probarNotas(browser, base, origenes, cred); } catch (e) { fallos.push(`[notas] excepción del test: ${e.message.split('\n')[0]}`); } }
+    if (!usarMock) { try { await probarNegocio(browser, base, origenes, cred); } catch (e) { fallos.push(`[negocio] excepción del test: ${e.message.split('\n')[0]}`); } }
     try { await probarCuenta(browser, base, origenes, cred); } catch (e) { fallos.push(`[cuenta] excepción del test: ${e.message.split('\n')[0]}`); }
   } finally { await browser.close(); if (mock) await mock.cerrar(); if (dev) await dev.cerrar(); }
   console.log(`roles probados: ${resumen.roles}/${ROLES.length} · rutas recorridas: ${resumen.rutas} · comprobaciones: ${resumen.comprobaciones} · fallos: ${fallos.length}`);

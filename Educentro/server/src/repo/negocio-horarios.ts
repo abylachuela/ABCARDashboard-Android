@@ -8,7 +8,7 @@ import { metaDe } from '../domain/colecciones.js';
 import { motorHorarios, type ConflictoHorario, type DatosHorarios, type EntradaHorario, type AvisoHorario } from '../domain/horarios-shim.js';
 import { registrarAuditoria } from './auditoria.js';
 import type { Peticion } from './generico.js';
-import { actualizarDatos, bloquearClave, centroDeEscritura, esObjeto, exigirRolEscribe, insertarDatos, invalido, leerFila, str } from './util-negocio.js';
+import { actualizarDatos, bloquearClave, centroDeEscritura, esObjeto, exigirRolEscribe, insertarDatos, invalido, str } from './util-negocio.js';
 import { randomUUID } from 'node:crypto';
 
 const meta = (n: string) => metaDe(n) as NonNullable<ReturnType<typeof metaDe>>;
@@ -24,9 +24,15 @@ export async function cargarDatosHorarios(p: Peticion, centro: string): Promise<
     const r = await p.tx.query<{ id: string; datos: Registro }>(`SELECT id, datos FROM ${tabla} WHERE centro_id = $1 AND borrado_en IS NULL ORDER BY id`, [centro]);
     return r.rows.map((x) => ({ ...x.datos, id: x.id, centroId: centro }));
   };
-  const [franjas, horarios, disponibilidad, cargas, secciones, cursos, asignaturas, docentes] = await Promise.all(
-    ['franjas', 'horarios', 'disponibilidad', 'cargas', 'secciones', 'cursos', 'asignaturas', 'docentes'].map(leer),
-  );
+  // en serie: todas las consultas comparten la conexión de la transacción (pg no admite consultas concurrentes en un cliente)
+  const franjas = await leer('franjas');
+  const horarios = await leer('horarios');
+  const disponibilidad = await leer('disponibilidad');
+  const cargas = await leer('cargas');
+  const secciones = await leer('secciones');
+  const cursos = await leer('cursos');
+  const asignaturas = await leer('asignaturas');
+  const docentes = await leer('docentes');
   return { franjas, horarios, disponibilidad, cargas, secciones, cursos, asignaturas, docentes } as DatosHorarios;
 }
 
@@ -46,7 +52,11 @@ export function evaluarHorarios(datos: DatosHorarios, nuevas: EntradaHorario[], 
   const vigentes = datos.horarios
     .filter((h) => !quitar.has(String(h.id)) && !reemplazadas.has(String(h.id)) && str(h.franjaId))
     .map(aEntrada);
-  const r = motorHorarios().validar(datos, [...vigentes, ...nuevas]);
+  // día fuera de 1–5: conflicto propio (el motor del cliente no soporta nombrar un día inexistente con una franja que no es de clase)
+  const diaMalo = nuevas.filter((n) => !(n.dia >= 1 && n.dia <= 5));
+  const buenas = nuevas.filter((n) => n.dia >= 1 && n.dia <= 5);
+  const r = motorHorarios().validar(datos, [...vigentes, ...buenas]);
+  for (const n of diaMalo) r.conflictos.push({ tipo: 'franja', msg: 'Día no válido: debe ser de lunes (1) a viernes (5).', claves: [n.id ?? n._k ?? ''] });
   const involucra = (c: ConflictoHorario): boolean => c.claves.some((k) => tocadas.has(k));
   return { bloqueantes: r.conflictos.filter(involucra), previos: r.conflictos.filter((c) => !involucra(c)), avisos: r.avisos };
 }
@@ -67,7 +77,7 @@ function entradaValida(x: unknown, etiqueta: string, conId: boolean): { id?: str
   const dia = typeof x.dia === 'number' ? x.dia : Number(x.dia);
   if (!cargaId) throw invalido(`${etiqueta}: cargaId es obligatorio.`, 'cargaId');
   if (!franjaId) throw invalido(`${etiqueta}: franjaId es obligatorio.`, 'franjaId');
-  if (!Number.isInteger(dia) || dia < 1 || dia > 5) throw invalido(`${etiqueta}: el día debe ser un entero de 1 (lunes) a 5 (viernes).`, 'dia', 'dia_invalido');
+  if (!Number.isInteger(dia)) throw invalido(`${etiqueta}: el día debe ser un entero de 1 (lunes) a 5 (viernes).`, 'dia', 'dia_invalido');
   const aula = x.aula === undefined || x.aula === null ? '' : x.aula;
   if (typeof aula !== 'string' || aula.length > 40) throw invalido(`${etiqueta}: el aula debe ser texto de hasta 40 caracteres.`, 'aula');
   const id = str(x.id);
@@ -241,6 +251,5 @@ export async function guardarFranjasTanda(p: Peticion, cuerpo: unknown): Promise
     else out.push(await insertarDatos(p, m, `${m.prefijo}_${randomUUID().replace(/-/g, '').slice(0, 20)}`, centro, { tanda, orden: k + 1, inicio: campos.inicio, fin: campos.fin, tipo: f.tipo }));
   }
   await registrarAuditoria(p.tx, p.ses, centro, { accion: 'guardar_franjas', coleccion: 'franjas', extra: { tanda, franjas: out.length, quitadas: quitadas.length } });
-  void leerFila;
   return { franjas: out, quitadas };
 }

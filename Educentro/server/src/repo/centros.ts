@@ -5,7 +5,13 @@ import { ErrorHttp } from '../errores.js';
 import { puede, type Registro } from '../domain/autorizacion.js';
 import type { MetaColeccion } from '../domain/colecciones.js';
 import { aplicarFiltros, paginacion, sqlOrden, type Columnas, type Consulta } from './consulta.js';
+import { COLECCIONES, metaDe } from '../domain/colecciones.js';
+import { calculo, normalizar } from '../domain/calculo-shim.js';
 import { esquemaId, MAX_DATOS_BYTES, type Peticion, type Resultado } from './generico.js';
+import { insertarDatos } from './util-negocio.js';
+
+/** Colecciones de configuración básica que se retiran junto con un centro vacío (el resto cuenta como «datos»). */
+const CONFIG_BASICA = ['anios', 'periodos', 'escalas', 'asignaturas'];
 
 const iso = (c: string): string => `to_char(${c} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 const SEL = `id, nombre, codigo, activo, datos, ${iso('creado_en')} AS creado_en, ${iso('actualizado_en')} AS actualizado_en`;
@@ -121,6 +127,11 @@ export async function guardarCentro(
     ).rows[0] as Fila;
   }
   void meta;
+  // un centro nuevo nace con su escala por defecto, en la MISMA transacción (el cliente no la crea aparte)
+  if (!vivo && op.modo === 'crear') {
+    const em = metaDe('escalas');
+    if (em) await insertarDatos(p, em, `esc_${id}`.slice(0, 100), id, { activa: true, ...normalizar<Record<string, unknown>>(calculo().escalaPorDefecto()) });
+  }
   return { registro: plano(g), antes, creado: !vivo };
 }
 
@@ -135,5 +146,20 @@ export async function borrarCentro(p: Peticion, id: string, ifMatch?: string | n
   }
   const dec = await puede(p.ses, 'centros', 'borrar', { id }, { antes: plano(fila) });
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, dec.mensaje);
+  // no se elimina un centro con datos (solo su configuración básica); la limpieza de esa configuración va en la misma transacción
+  const con: Record<string, number> = {};
+  for (const nombre of COLECCIONES) {
+    const m = metaDe(nombre);
+    if (!m || m.tipo !== 'generica' || CONFIG_BASICA.includes(nombre)) continue;
+    const r = await p.tx.query<{ n: number }>(`SELECT count(*)::int AS n FROM ${m.tabla} WHERE centro_id = $1 AND borrado_en IS NULL`, [id]);
+    if (r.rows[0]?.n) con[nombre] = r.rows[0].n;
+  }
+  const us = await p.tx.query<{ n: number }>('SELECT count(*)::int AS n FROM usuarios WHERE centro_id = $1 AND activo', [id]);
+  if (us.rows[0]?.n) con.usuarios = us.rows[0].n;
+  if (Object.keys(con).length) throw new ErrorHttp(409, 'centro_con_datos', 'No se puede eliminar el centro: tiene estudiantes, docentes, cursos, usuarios u otros datos. Desactívalo en su lugar.', undefined, { dependencias: con });
+  for (const nombre of CONFIG_BASICA) {
+    const m = metaDe(nombre);
+    if (m) await p.tx.query(`UPDATE ${m.tabla} SET borrado_en = now() WHERE centro_id = $1 AND borrado_en IS NULL`, [id]);
+  }
   await p.tx.query(`UPDATE centros SET borrado_en = now(), activo = false WHERE id = $1`, [id]);
 }

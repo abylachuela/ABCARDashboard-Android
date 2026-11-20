@@ -58,6 +58,17 @@
     return estado >= 500 ? MSG.servidor : MSG.datos;
   }
 
+  /** Datos extra NO sensibles del error del servidor (conflictos de horario, rechazadas, errores de esquema…), saneados y acotados. */
+  function detalleDe(er) {
+    var d = {};
+    function txt(x) { return limpio(String(x), 300); }
+    if (Array.isArray(er.conflictos)) d.conflictos = er.conflictos.slice(0, 100).map(function (c) { return { tipo: txt(c && c.tipo), msg: txt(c && c.msg), claves: Array.isArray(c && c.claves) ? c.claves.slice(0, 10).map(txt) : [] }; });
+    if (Array.isArray(er.avisos)) d.avisos = er.avisos.slice(0, 100).map(function (c) { return { tipo: txt(c && c.tipo), msg: txt(c && c.msg) }; });
+    if (Array.isArray(er.rechazadas)) d.rechazadas = er.rechazadas.slice(0, 200).map(function (c) { return { estudianteId: txt(c && c.estudianteId), codigo: txt(c && c.codigo), mensaje: txt(c && c.mensaje) }; });
+    if (Array.isArray(er.errores)) d.errores = er.errores.slice(0, 50).map(txt);
+    if (er.dependencias && typeof er.dependencias === 'object') { d.dependencias = {}; Object.keys(er.dependencias).slice(0, 30).forEach(function (k) { d.dependencias[txt(k)] = Number(er.dependencias[k]) || 0; }); }
+    return Object.keys(d).length ? d : null;
+  }
   function esperar(ms) { return api.esperar(ms); }
   function espera429(resp, intento) {
     var ra = 0;
@@ -97,6 +108,7 @@
     }
     var er = datos && datos.error && typeof datos.error === 'object' ? datos.error : {};
     var err = error(mensajeDe(resp.status, datos, o.mensajes), resp.status, limpio(er.codigo, 60) || null, Array.isArray(er.campos) ? er.campos.map(function (x) { return limpio(String(x), 40); }).slice(0, 20) : null);
+    err.detalle = detalleDe(er);
     if (resp.status === 401 && !o.sinCierre) caducada();
     if (resp.status === 403 && err.codigo === 'csrf_invalido' && !o.reintentoCsrf && !o.sinCierre) { // token CSRF desfasado (p. ej. sesion rotada en otra pestana): se renueva y se reintenta una vez
       var viva = null; try { viva = await api.auth.me(); } catch (e) { viva = null; }
@@ -243,6 +255,47 @@
     invalidar('comunicados');
     var r = registro(j);
     return r && r.id ? clon(r) : api.obtener('comunicados', id);
+  };
+
+  // ---------------------------------------------------------------- reglas de negocio TRANSACCIONALES (Fase 3A)
+  /** Endpoints del servidor que aplican las reglas (cupo, bajas, conflictos…) en UNA transaccion: el cliente no encadena escrituras sueltas.
+      Los errores 409/422 llegan con el mensaje en espanol del servidor (err.codigo, err.detalle). Tras cada llamada se descartan las cachés afectadas. */
+  function enc(x) { return encodeURIComponent(x); }
+  function post(ruta, cuerpo, cols) {
+    return peticion('POST', ruta, { cuerpo: cuerpo === undefined ? {} : cuerpo }).then(function (j) { (cols || []).forEach(invalidar); return j; }, function (e) { (cols || []).forEach(invalidar); throw e; });
+  }
+  api.negocio = {
+    /** {anioId, seccionId, estudianteIds[] | estudianteId, fecha?} -> [matriculas] (todo o nada). */
+    matricular: function (b) { return post('/matriculas', b, ['matriculas']).then(function (j) { return j.datos; }); },
+    retirarMatricula: function (id, b) { return post('/matriculas/' + enc(id) + '/retirar', b, ['matriculas']); },
+    reactivarMatricula: function (id) { return post('/matriculas/' + enc(id) + '/reactivar', {}, ['matriculas']); },
+    /** col: estudiantes | docentes | tutores */
+    baja: function (col, id, b) { return post('/' + enc(col) + '/' + enc(id) + '/baja', b, [col, 'matriculas']); },
+    reactivar: function (col, id) { return post('/' + enc(col) + '/' + enc(id) + '/reactivar', {}, [col]); },
+    vincular: function (tutorId, estudianteId) { return post('/tutores/' + enc(tutorId) + '/vincular', { estudianteId: estudianteId }, ['tutores']); },
+    desvincular: function (tutorId, estudianteId) { return post('/tutores/' + enc(tutorId) + '/desvincular', { estudianteId: estudianteId }, ['tutores']); },
+    activarAnio: function (id) { return post('/anios/' + enc(id) + '/activar', {}, ['anios']); },
+    /** -> [{estudianteId, ok, estado?, codigo?, mensaje?}] (en lote cada estudiante se evalua por separado). */
+    inscribir: function (cursoId, estudianteIds) { return post('/cursos/' + enc(cursoId) + '/inscripciones', { estudianteIds: estudianteIds }, ['inscripciones']).then(function (j) { return j.resultados; }); },
+    promoverCurso: function (cursoId) { return post('/cursos/' + enc(cursoId) + '/promover', {}, ['inscripciones']).then(function (j) { return j.promovidos; }); },
+    estadoCurso: function (cursoId, estado) { return post('/cursos/' + enc(cursoId) + '/estado', { estado: estado }, ['cursosExtra', 'inscripciones']); },
+    notasCurso: function (cursoId, registros) { return post('/cursos/' + enc(cursoId) + '/notas', { registros: registros }, ['inscripciones']); },
+    /** -> {inscripcion, promovidos:[{inscripcion, estudianteId}]} (la promocion de la lista de espera ocurre en la misma transaccion). */
+    retirarInscripcion: function (id, motivo) { return post('/inscripciones/' + enc(id) + '/retirar', { motivo: motivo || '' }, ['inscripciones']); },
+    reinscribir: function (id) { return post('/inscripciones/' + enc(id) + '/reinscribir', {}, ['inscripciones']).then(function (j) { return j.inscripcion; }); },
+    /** Curriculo: marcar vigente (la vigente pasa a anterior) e importar documento (valida esquema, hash en el servidor). */
+    vigente: function (id) { return post('/curriculo/versiones/' + enc(id) + '/vigente', {}, ['curriculoVersiones']); },
+    importarCurriculo: function (doc, extra) { return post('/curriculo/versiones/importar', Object.assign({ doc: doc }, extra || {}), ['curriculoVersiones', 'curriculoContenidos']); },
+    /** Asistencia: lote por seccion y fecha (atomico); el servidor fija quien registra/justifica y las fechas. */
+    asistenciaSeccionFecha: function (seccionId, fecha, registros) { return post('/asistencia/seccion-fecha', { seccionId: seccionId, fecha: fecha, registros: registros }, ['asistencia']).then(function (j) { return j.datos; }); },
+    justificar: function (id, texto) { return post('/asistencia/' + enc(id) + '/justificar', { justificacion: texto }, ['asistencia']); },
+    quitarJustificacion: function (id) { return post('/asistencia/' + enc(id) + '/quitar-justificacion', {}, ['asistencia']); },
+    /** Comunicados: lista ya filtrada por el servidor (rol/segmento) con contadores para quien gestiona. */
+    comunicados: function () { return peticion('GET', '/comunicados?limite=500').then(function (j) { return (j && j.datos) || []; }); },
+    confirmaciones: function (id) { return peticion('GET', '/comunicados/' + enc(id) + '/confirmaciones').then(function (j) { return (j && j.datos) || []; }); },
+    /** Horarios: {crear:[], actualizar:[{id,..}], borrar:[ids]} atomico; 409 horario_conflictos con err.detalle.conflictos. */
+    guardarHorarios: function (b) { return post('/horarios/guardar', b, ['horarios']); },
+    guardarFranjasTanda: function (tanda, franjas) { return post('/franjas/tanda', { tanda: tanda, franjas: franjas }, ['franjas', 'disponibilidad']); }
   };
 
   // ---------------------------------------------------------------- autenticacion (/auth/*)

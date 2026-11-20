@@ -181,6 +181,8 @@ export const rutasApi: FastifyPluginAsync = async (app: FastifyInstance) => {
       );
       const c = r.rows[0];
       if (!c || c.centro_id !== ses.centroId || c.datos.estado !== 'publicado') throw NO;
+      // visibilidad resuelta en el servidor (alcance por rol, segmento de curso/sección/tutor): lo que no ves, no lo puedes confirmar
+      if (!(await obtener(p, metaDe('comunicados') as MetaColeccion, id))) throw NO;
       const aud = (c.datos.destinatarios as string | undefined) ?? 'todos';
       const propia = { docente: 'docentes', tutor: 'tutores', estudiante: 'estudiantes' }[ses.rol as string];
       if (aud !== 'todos' && propia !== aud) throw NO;

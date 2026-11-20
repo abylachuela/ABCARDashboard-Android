@@ -95,6 +95,19 @@ const esquemaCambio = z.object({ id: esquemaId.optional(), ...Object.fromEntries
   id: z.ZodOptional<typeof esquemaId>;
 } & { [K in keyof typeof base]: z.ZodOptional<(typeof base)[K]> });
 
+/** refId coherente con el rol: docente→docentes, estudiante→estudiantes, tutor→tutores, de ese mismo centro; el resto, sin refId. */
+const TABLA_REF: Record<string, string> = { docente: 'docentes', estudiante: 'estudiantes', tutor: 'tutores' };
+async function validarRef(p: Peticion, rol: string, refId: unknown, centro: string | null): Promise<void> {
+  const tabla = TABLA_REF[rol];
+  if (!tabla) {
+    if (refId !== null && refId !== undefined) throw new ErrorHttp(422, 'ref_incoherente', `Un usuario con rol ${rol} no se enlaza a una ficha (refId debe ir vacío).`, ['refId']);
+    return;
+  }
+  if (refId === null || refId === undefined) return; // sin ficha: no ve nada (falla cerrado); se puede enlazar después
+  const r = await p.tx.query(`SELECT 1 FROM ${tabla} WHERE id = $1 AND centro_id = $2 AND borrado_en IS NULL`, [refId, centro]);
+  if (!r.rowCount) throw new ErrorHttp(422, 'ref_incoherente', `La ficha enlazada no existe como ${rol} en el centro del usuario.`, ['refId']);
+}
+
 export const claveTemporal = (): string => randomBytes(12).toString('base64url'); // 96 bits
 
 function traducir(e: unknown): never {
@@ -122,6 +135,7 @@ export async function crearUsuario(p: Peticion, cuerpo: unknown): Promise<{ regi
   const nuevo: Registro = { id: d.id, nombre: d.nombre, email: d.email, rol: d.rol, refId: d.refId ?? null, centroId: centro };
   const dec = await puede(ses, 'usuarios', 'crear', nuevo);
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, dec.mensaje);
+  await validarRef(p, d.rol, d.refId, centro);
   const id = d.id ?? `usr_${randomBytes(10).toString('hex')}`;
   const clave = claveTemporal();
   try {
@@ -164,6 +178,7 @@ export async function cambiarUsuario(p: Peticion, id: string, cuerpo: unknown, i
   };
   const dec = await puede(ses, 'usuarios', 'editar', nuevo, { antes });
   if (!dec.ok) throw new ErrorHttp(dec.status, dec.codigo, dec.mensaje);
+  if (d.rol !== undefined || d.refId !== undefined) await validarRef(p, nuevo.rol as string, nuevo.refId, fila.centro_id);
   if (fila.id === ses.usuarioId && nuevo.activo === false) throw new ErrorHttp(403, 'sin_permiso', 'No puedes desactivar tu propia cuenta.');
   // admin_red no pertenece a un centro y el resto sí (la BD lo impone también): no se permite convertir uno en otro.
   if ((nuevo.rol === 'admin_red') !== (fila.rol === 'admin_red')) throw new ErrorHttp(422, 'datos_invalidos', 'No se puede pasar un usuario desde o hacia admin_red.', ['rol']);

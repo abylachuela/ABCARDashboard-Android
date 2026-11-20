@@ -260,3 +260,36 @@ test('forma real del servidor: csrfToken, centroId y debeCambiarClave fuera del 
   const t = await api.exportarTodo({ centroId: 'cen_1' });
   assert.equal(llamadas[3].q.get('centroId'), 'cen_1'); assert.equal(t.estudiantes.length, 1);
 });
+
+test('negocio (Fase 3A): endpoints transaccionales con la ruta y el cuerpo correctos; el error 409/422 del servidor llega en español con su detalle', async () => {
+  const { api, llamadas } = entorno((r) => {
+    if (r.ruta.endsWith('/matriculas')) return j({ datos: [{ id: 'm1' }], total: 1 }, 201);
+    if (r.ruta.endsWith('/horarios/guardar')) return j({ error: { codigo: 'horario_conflictos', mensaje: 'Ana está en dos secciones a la vez.', conflictos: [{ tipo: 'docente', msg: 'Ana está en dos secciones a la vez.', claves: ['a', 'b'] }, { tipo: 'aula', msg: '<b>x</b>', claves: [] }], avisos: [] } }, 409);
+    if (r.ruta.includes('/inscripciones')) return j({ resultados: [{ estudianteId: 'e1', ok: true, estado: 'en_lista_espera' }, { estudianteId: 'e2', ok: false, mensaje: 'Choque de horario' }] }, 201);
+    if (r.ruta.endsWith('/baja')) return err(409, 'docente_con_cargas', 'No se puede dar de baja: tiene 3 asignaciones docentes. Reasígnalas primero.');
+    if (r.ruta.endsWith('/comunicados')) return j({ datos: [{ id: 'c1', totalDestinatarios: 5 }] });
+    return j({});
+  });
+  const N = api.negocio;
+  assert.equal((await N.matricular({ anioId: 'a1', seccionId: 's1', estudianteIds: ['e1'] })).length, 1);
+  assert.deepEqual(plano(llamadas[0].cuerpo), { anioId: 'a1', seccionId: 's1', estudianteIds: ['e1'] });
+  assert.equal(llamadas[0].metodo, 'POST'); assert.equal(llamadas[0].ruta, '/api/v1/matriculas');
+  const res = await N.inscribir('cx/1', ['e1', 'e2']);
+  assert.equal(llamadas[1].ruta, '/api/v1/cursos/cx%2F1/inscripciones');
+  assert.deepEqual(plano(res.map((x) => x.ok)), [true, false]);
+  const e = await rechaza(N.guardarHorarios({ crear: [{ cargaId: 'c', dia: 1, franjaId: 'f' }] }));
+  assert.equal(e.estado, 409); assert.equal(e.codigo, 'horario_conflictos');
+  assert.match(e.message, /dos secciones a la vez/);
+  assert.equal(e.detalle.conflictos.length, 2);
+  assert.ok(!/[<>]/.test(e.detalle.conflictos[1].msg), 'el detalle del servidor se sanea (sin < ni >)');
+  const b = await rechaza(N.baja('docentes', 'd1', {}));
+  assert.match(b.message, /tiene 3 asignaciones docentes/); assert.equal(b.codigo, 'docente_con_cargas');
+  assert.equal((await N.comunicados())[0].totalDestinatarios, 5);
+});
+
+test('EDU.repo.negocio(): solo existe con el adaptador del servidor (el modo local no cambia)', async () => {
+  const src = fs.readFileSync(path.join(RAIZ, 'js/data/repo.js'), 'utf8');
+  assert.match(src, /negocio: function \(\) \{ var a = A\(\); return a && a\.esServidor && a\.negocio \? a\.negocio : null; \}/);
+  const local = fs.readFileSync(path.join(RAIZ, 'js/data/repo-local.js'), 'utf8');
+  assert.ok(!/negocio/.test(local), 'repo-local no define endpoints de negocio');
+});

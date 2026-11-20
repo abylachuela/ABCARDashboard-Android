@@ -120,7 +120,7 @@
     try { var g = await EDU.repo.guardar(col, o); ui.toast(titulo + (nuevo ? ' creado/a.' : ' actualizado/a.'), 'ok'); g._estudianteId = v.estudianteId; return g; } catch (e) { err(e); return null; }
   }
   async function guardarEstudiante(d, reg) {
-    return editar('estudiantes', 'estudiante', camposEstudiante(d, reg && reg.id), reg, function (o, nuevo) { if (nuevo && !o.matricula) o.matricula = nuevaMatriculaCodigo(d); });
+    return editar('estudiantes', 'estudiante', camposEstudiante(d, reg && reg.id), reg, function (o, nuevo) { if (nuevo && !o.matricula && !EDU.repo.negocio()) o.matricula = nuevaMatriculaCodigo(d); }); // modo API: el codigo MAT lo asigna el servidor (secuencia por centro)
   }
   async function guardarTutor(d, reg) {
     var g = await editar('tutores', 'tutor/a', camposTutor(d, reg && reg.id, !reg), reg, function (o, nuevo) { if (nuevo) o.estudianteIds = []; });
@@ -128,6 +128,8 @@
     return g;
   }
   async function vincular(tutorId, estId) {
+    var N = EDU.repo.negocio();
+    if (N) { await N.vincular(tutorId, estId); return; }
     var t = await EDU.repo.obtener('tutores', tutorId); if (!t) return;
     t.estudianteIds = t.estudianteIds || [];
     if (t.estudianteIds.indexOf(estId) === -1) { t.estudianteIds.push(estId); await EDU.repo.guardar('tutores', t); }
@@ -145,12 +147,14 @@
       var ok = await ui.confirmar({ titulo: 'Dar de baja', mensaje: '¿Dar de baja a ' + nombre + '?' + (m ? ' Su matrícula activa será retirada.' : ''), textoOk: 'Dar de baja', peligro: true });
       if (!ok) return false;
       try {
+        var N = EDU.repo.negocio();
+        if (N) { await N.baja(col, p.id, {}); ui.toast(nombre + ' fue dado/a de baja.', 'ok'); return true; } // el servidor bloquea al docente con cargas y retira la matricula del estudiante en la misma transaccion
         if (m) { if (!EDU.permisos.puedeEscribirColeccion(rol(), 'matriculas')) throw new Error('Sin permiso para retirar la matrícula.'); m.estado = 'retirada'; m.fechaRetiro = fmt.hoy(); m.motivoRetiro = 'Baja del estudiante'; await EDU.repo.guardar('matriculas', m); }
         p.estado = 'inactivo'; p.fechaBaja = fmt.hoy(); await EDU.repo.guardar(col, p);
         ui.toast(nombre + ' fue dado/a de baja.', 'ok'); return true;
       } catch (e) { err(e); return false; }
     }
-    try { p.estado = 'activo'; delete p.fechaBaja; await EDU.repo.guardar(col, p); ui.toast(nombre + ' fue reactivado/a.', 'ok'); return true; } catch (e) { err(e); return false; }
+    try { var NA = EDU.repo.negocio(); if (NA) await NA.reactivar(col, p.id); else { p.estado = 'activo'; delete p.fechaBaja; await EDU.repo.guardar(col, p); } ui.toast(nombre + ' fue reactivado/a.', 'ok'); return true; } catch (e) { err(e); return false; }
   }
 
   /* ---------- listas ---------- */
@@ -337,7 +341,7 @@
         b.addEventListener('click', async function () {
           var t = pick(d.tutores, b.dataset.quitar); if (!t) return;
           if (!(await ui.confirmar({ titulo: 'Quitar tutor', mensaje: '¿Quitar a ' + fmt.nombreCompleto(t) + ' como tutor de ' + nombre + '?', textoOk: 'Quitar', peligro: true }))) return;
-          try { t.estudianteIds = (t.estudianteIds || []).filter(function (x) { return x !== id; }); await EDU.repo.guardar('tutores', t); ui.toast('Tutor desvinculado.', 'ok'); recargar(); } catch (e) { err(e); }
+          try { var ND = EDU.repo.negocio(); if (ND) await ND.desvincular(t.id, id); else { t.estudianteIds = (t.estudianteIds || []).filter(function (x) { return x !== id; }); await EDU.repo.guardar('tutores', t); } ui.toast('Tutor desvinculado.', 'ok'); recargar(); } catch (e) { err(e); }
         });
       });
       var bv = cont.querySelector('#pf-vinc');

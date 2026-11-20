@@ -118,6 +118,8 @@
   async function cerrarCurso(c, refrescar) {
     if (!(await ui.confirmar({ titulo: 'Cerrar curso', mensaje: '¿Cerrar «' + c.nombre + '»? Se cancelará la lista de espera y no se aceptarán más inscripciones.', textoOk: 'Cerrar curso', peligro: true }))) return;
     try {
+      var NC = EDU.repo.negocio();
+      if (NC) { await NC.estadoCurso(c.id, 'cerrado'); ui.toast('Curso cerrado.', 'ok'); refrescar(); return; } // el servidor pasa la lista de espera a «retirado» y cierra, en una transaccion
       var d = await L.cargar(), esp = L.insDeCurso(d, c.id).filter(function (i) { return i.estado === 'en_lista_espera'; });
       esp.forEach(function (i) { i.estado = 'retirado'; i.motivoRetiro = 'Curso cerrado'; i.fechaRetiro = fmt.hoy(); i.turno = null; });
       if (esp.length) await EDU.repo.guardarMuchos('inscripciones', esp);
@@ -193,7 +195,10 @@
         if (ex && cupo != null && L.conteo(fresco, ex).inscritos > cupo) return fallo('El cupo no puede ser menor que los ' + L.conteo(fresco, ex).inscritos + ' inscritos actuales.', 'ce-cupo');
         var s = ses(), reg = Object.assign({}, ex || {}, { centroId: ex ? ex.centroId : (s.centroActivo || s.centroUsuario), nombre: nombre, codigo: codigo, tipo: v('ce-tipo'), docenteId: v('ce-doc'), cupo: cupo, estado: v('ce-estado'),
           inicio: ini || '', fin: fin || '', descripcion: v('ce-desc'), grados: grados, horario: hor.map(function (h) { return { dia: +h.dia, franjaId: h.franjaId || null, desde: h.desde || '', hasta: h.hasta || '', texto: h.texto || '' }; }) });
+        var NE = EDU.repo.negocio(), estadoPedido = reg.estado;
+        if (NE) reg.estado = ex ? ex.estado : 'abierto'; // el estado solo cambia con su endpoint
         var gs = await EDU.repo.guardar('cursosExtra', reg);
+        if (NE && estadoPedido !== reg.estado) await NE.estadoCurso(gs.id, estadoPedido);
         var prom = await L.promover(gs.id);
         ui.toast((nuevo ? 'Curso creado.' : 'Curso actualizado.') + (prom.length ? ' ' + fmt.plural(prom.length, 'estudiante promovido', 'estudiantes promovidos') + ' desde la lista de espera.' : ''), 'ok');
         m.cerrar(true); refrescar();
@@ -403,6 +408,8 @@
         cambios.push({ id: inp.dataset.i, nota: v, completado: lista.querySelector('[data-c="' + inp.dataset.i + '"]').checked });
       }
       try {
+        var NN = EDU.repo.negocio();
+        if (NN) { await NN.notasCurso(c.id, cambios.map(function (x) { return { inscripcionId: x.id, nota: x.nota, completado: x.completado }; })); ui.toast('Notas y estados guardados.', 'ok'); refrescar(); return; } // «completado» solo cambia por el endpoint
         var fresco = await EDU.repo.listar('inscripciones', { filtro: { cursoId: c.id } }), out = [];
         cambios.forEach(function (x) { var i = pick(fresco, x.id); if (!i || (i.estado !== 'inscrito' && i.estado !== 'completado')) return; i.nota = x.nota; i.estado = x.completado ? 'completado' : 'inscrito'; i.fechaCierre = x.completado ? fmt.hoy() : null; out.push(i); });
         await EDU.repo.guardarMuchos('inscripciones', out); ui.toast('Notas y estados guardados.', 'ok'); refrescar();

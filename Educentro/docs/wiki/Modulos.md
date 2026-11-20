@@ -68,3 +68,6 @@ Exportar/importar JSON `educentro-respaldo` (versión 1) con validación de esqu
 Importa y exporta la planilla Excel del MINERD. Ver [Planilla Excel y competencias](Planilla-Excel-y-competencias).
 
 ![Importar planilla](img/05-importar-planilla.png)
+
+## Modo API (Fase 3A)
+Con el backend, Matrícula, Cursos, Personas, Horarios, Asistencia, Comunicados, Currículo y Configuración usan los endpoints transaccionales (`EDU.repo.negocio()`): una sola llamada atómica en lugar de varias escrituras, y los errores 409/422 del servidor se muestran en español (el horario rechazado lista todos los conflictos). El modo local no cambia.

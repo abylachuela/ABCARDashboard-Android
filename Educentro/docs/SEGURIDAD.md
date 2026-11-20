@@ -119,3 +119,11 @@ La API `/api/v1/c/:col` aplica en el **servidor** rol → colección, centro, al
 - Periodo cerrado, rangos, pesos y propiedad de las notas se validan en el servidor (no solo en el cliente); el director/admin_red edita un periodo cerrado solo con motivo y queda auditado. Pruebas: `server/test/notas-*.test.ts`.
 - La auditoría de datos es de solo anexado (sin UPDATE/DELETE/TRUNCATE para la API ni, por trigger, para el propietario por la vía normal) y **encadenada con SHA-256 por centro** (`seq`, `huella`, `huellaPrevia`; IP y user-agent truncados fijados por el servidor). `GET /auditoria/verificar` la recorre y detecta alteración, borrado, reordenamiento y cola truncada, incluso si se hizo como propietario suspendiendo triggers (probado).
 - **Límite honesto**: un administrador de la BD con acceso total puede reescribir toda la cadena y su cabeza de forma coherente; la verificación sola no lo detecta. Mitigación: anclar periódicamente el hash final fuera de la VM con `npm run anclar-auditoria` (imprime centro, seq, hash y fecha) y comprobarlo con `/auditoria/verificar?anclaSeq=&anclaHash=` (probado).
+
+## Fase 3A: integridad de reglas de negocio en el servidor
+- Cupo, duplicados, bajas, retiros, promoción de la lista de espera, año activo y versión vigente del currículo se deciden en el servidor con transacciones y `FOR UPDATE`; la BD impone las unicidades (UNIQUE parciales) aunque se esquive la API. Pruebas de concurrencia reales.
+- Mass-assignment cerrado: estado de matrículas/inscripciones/cursos/personas, `turno`, código MAT, `autorId`, fechas de publicación, `registradoPor`/`justificadoPor`, `hash`/`total` de currículo y `lecturas` los fija o ignora el servidor.
+- Comunicados: la visibilidad se resuelve en el servidor (rol, segmento curso/sección/tutor, alcance); nadie sin gestión ve borradores ni comunicados ajenos; confirmar lectura solo de lo visible. Matriz completa probada.
+- Propiedad y estados: el docente solo gestiona sus secuencias y planes (por carga); un plan impartido solo lo modifica o borra la dirección; transiciones borrador → listo → impartido.
+- Usuarios: `refId` debe existir con el rol correspondiente en el mismo centro. Centros: no se eliminan con datos.
+- Límite: las reglas del cliente siguen siendo solo comodidad; la autoridad es el servidor.

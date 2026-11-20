@@ -164,6 +164,11 @@
       /* ------- versiones ------- */
       async function itemsDeVersion(vid) { return EDU.repo.listar('curriculoContenidos', { filtro: { versionId: vid }, orden: 'orden' }); }
       async function crearVersionDesde(doc, extra) {
+        var N = EDU.repo.negocio(); // modo API: esquema, hash y total se validan/calculan en el servidor y todo se guarda en UNA transaccion (borrador)
+        if (N) {
+          var ex = { centroId: S.centroId }; ['nombre', 'idExterno'].forEach(function (k) { if (extra && extra[k]) ex[k] = extra[k]; }); if (extra && 'vigenteDesde' in extra) ex.vigenteDesde = extra.vigenteDesde;
+          return (await N.importarCurriculo(doc, ex)).version;
+        }
         var regs = CS().registros(doc, S.centroId, null), meta = CS().versionDe(doc, regs, Object.assign({ centroId: S.centroId }, extra));
         var v = await EDU.repo.guardar('curriculoVersiones', meta);
         for (var i = 0; i < regs.length; i++) { regs[i].versionId = v.id; regs[i].centroId = S.centroId; }
@@ -197,15 +202,24 @@
       }
       async function marcarVigente(v) {
         if (!(await EDU.ui.confirmar({ titulo: 'Marcar como vigente', mensaje: '«' + v.nombre + '» pasará a ser la versión vigente; la actual quedará como anterior.', textoOk: 'Marcar vigente' }))) return;
+        var NV = EDU.repo.negocio();
+        if (NV) await NV.vigente(v.id); // el servidor baja la vigente anterior y sube esta en una transaccion
+        else {
         for (var i = 0; i < S.versiones.length; i++) { var x = S.versiones[i]; if (x.estado === 'vigente' && x.id !== v.id) await EDU.repo.guardar('curriculoVersiones', Object.assign({}, x, { estado: 'anterior' })); }
         await EDU.repo.guardar('curriculoVersiones', Object.assign({}, v, { estado: 'vigente', vigenteDesde: v.vigenteDesde || EDU.fmt.hoy() }));
+        }
         S.versionId = v.id; EDU.ui.toast('Versión vigente actualizada.', 'ok'); await refrescar(); tabsApi.seleccionar('versiones');
       }
       async function eliminarVersion(v) {
         if (!(await EDU.ui.confirmar({ titulo: 'Eliminar versión', mensaje: '¿Eliminar «' + v.nombre + '» y todos sus elementos?', textoOk: 'Eliminar', peligro: true }))) return;
-        var its = await itemsDeVersion(v.id);
-        for (var i = 0; i < its.length; i++) await EDU.repo.borrar('curriculoContenidos', its[i].id);
-        await EDU.repo.borrar('curriculoVersiones', v.id); EDU.ui.toast('Versión eliminada.', 'ok'); await refrescar(); tabsApi.seleccionar('versiones');
+        try {
+          if (!EDU.repo.negocio()) { // modo local: N borrados; en modo API el servidor elimina la version y sus elementos en una transaccion (y rechaza la vigente o la usada por secuencias)
+            var its = await itemsDeVersion(v.id);
+            for (var i = 0; i < its.length; i++) await EDU.repo.borrar('curriculoContenidos', its[i].id);
+          }
+          await EDU.repo.borrar('curriculoVersiones', v.id); EDU.ui.toast('Versión eliminada.', 'ok');
+        } catch (e) { EDU.ui.toast(e.message || 'No se pudo eliminar la versión.', 'error', 7000); }
+        await refrescar(); tabsApi.seleccionar('versiones');
       }
       async function duplicar(v) {
         var its = await itemsDeVersion(v.id), doc = docDeVersion(v, its);
@@ -229,7 +243,7 @@
         var acc = [{ texto: 'Ver catálogo', alClic: async function (v) { S.versionId = v.id; await cargarItems(); pintar(); tabsApi.seleccionar('catalogo'); } },
           { texto: 'Exportar', alClic: async function (v) { var its = await itemsDeVersion(v.id); descargar('curriculo-' + slug(v.nombre) + '.json', JSON.stringify(docDeVersion(v, its), null, 2)); EDU.ui.toast('Exportado.', 'ok'); } }];
         if (puedeEd && S.centroId) acc = acc.concat([
-          { texto: 'Marcar vigente', visible: function (v) { return v.estado !== 'vigente'; }, alClic: marcarVigente }, { texto: 'Duplicar', alClic: duplicar }, { texto: 'Datos', alClic: metaVersion },
+          { texto: 'Marcar vigente', visible: function (v) { return v.estado !== 'vigente'; }, alClic: function (v) { marcarVigente(v).catch(function (e) { EDU.ui.toast(e.message || 'No se pudo marcar como vigente.', 'error', 7000); }); } }, { texto: 'Duplicar', alClic: duplicar }, { texto: 'Datos', alClic: metaVersion },
           { texto: 'Eliminar', tipo: 'dng', visible: function (v) { return v.estado !== 'vigente'; }, alClic: eliminarVersion }]);
         var tb = EDU.ui.tabla({ etiqueta: 'Versiones del currículo', caption: 'Versiones del currículo', buscar: false, porPagina: false, filas: S.versiones, acciones: acc, vacio: { titulo: 'Sin versiones' },
           columnas: [{ clave: 'nombre', titulo: 'Versión', render: function (v) { return '<strong>' + esc(v.nombre) + '</strong><br><small>' + EDU.planUtil.enlaceSeguro(v.fuente) + (v.instrumentoLegal ? ' · ' + esc(v.instrumentoLegal) : '') + '</small>'; } },

@@ -46,6 +46,8 @@
 
   /** Crea matriculas validando duplicados y capacidad contra datos recien leidos. */
   async function matricular(anioId, secId, estIds, fecha) {
+    var N = EDU.repo.negocio(); // modo API: el servidor valida cupo, duplicados, estado y coherencia en UNA transaccion con bloqueo
+    if (N) { var creadas = await N.matricular({ anioId: anioId, seccionId: secId, estudianteIds: estIds, fecha: fecha || fmt.hoy() }); return creadas.length; }
     var fresco = await EDU.consultas.cargar(['matriculas', 'secciones', 'estudiantes']), s = pick(fresco.secciones, secId);
     if (!s) throw new Error('La sección no existe en este centro.');
     var libres = s.capacidad == null ? Infinity : +s.capacidad - fresco.matriculas.filter(function (m) { return m.seccionId === secId && m.estado === 'activa'; }).length;
@@ -112,10 +114,12 @@
             { nombre: 'motivo', label: 'Motivo', tipo: 'select', requerido: true, opciones: ['Traslado a otro centro', 'Abandono', 'Razones de salud', 'Cambio de domicilio', 'Otro'] },
             { nombre: 'fecha', label: 'Fecha de retiro', tipo: 'date', requerido: true, valor: fmt.hoy() }] });
           if (!v) return;
-          try { var m = Object.assign({}, r.mat, { estado: 'retirada', fechaRetiro: v.fecha, motivoRetiro: v.motivo }); await EDU.repo.guardar('matriculas', m); ui.toast(r.nombre + ' fue retirado/a.', 'ok'); refrescar(); } catch (e) { err(e); }
+          try { var N = EDU.repo.negocio(); if (N) await N.retirarMatricula(r.mat.id, { motivo: v.motivo, fecha: v.fecha }); else { var m = Object.assign({}, r.mat, { estado: 'retirada', fechaRetiro: v.fecha, motivoRetiro: v.motivo }); await EDU.repo.guardar('matriculas', m); } ui.toast(r.nombre + ' fue retirado/a.', 'ok'); refrescar(); } catch (e) { err(e); }
         }
         async function reactivar(r, s) {
           try {
+            var NR = EDU.repo.negocio();
+            if (NR) { await NR.reactivarMatricula(r.mat.id); ui.toast(r.nombre + ' fue reactivado/a.', 'ok'); refrescar(); return; }
             var f = await EDU.consultas.cargar(['matriculas', 'secciones', 'estudiantes']), m = pick(f.matriculas, r.mat.id), e = pick(f.estudiantes, r.id);
             if (!m) throw new Error('La matrícula ya no existe.');
             if (e && estadoDe(e) !== 'activo') throw new Error(r.nombre + ' está dado de baja; reactívalo primero en Personas.');
