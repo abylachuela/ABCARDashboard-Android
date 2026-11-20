@@ -39,11 +39,11 @@ export async function validarMatriculas(
   );
   const s = sec.rows[0];
   if (!s) throw new ErrorHttp(422, 'referencia_invalida', 'La sección no existe en este centro.', ['seccionId']);
-  const anioSec = str(s.datos.anioId);
-  if (anioSec && anioSec !== d.anioId) throw new ErrorHttp(409, 'anio_incoherente', 'La sección pertenece a otro año lectivo distinto del indicado.', ['anioId']);
   const an = await tx.query('SELECT 1 FROM anios WHERE id = $1 AND centro_id = $2 AND borrado_en IS NULL', [d.anioId, centro]);
   if (!an.rowCount) throw new ErrorHttp(422, 'referencia_invalida', 'El año lectivo no existe en este centro.', ['anioId']);
 
+  const anioSec = str(s.datos.anioId);
+  if (anioSec && anioSec !== d.anioId) throw new ErrorHttp(409, 'anio_incoherente', 'La sección pertenece a otro año lectivo distinto del indicado.', ['anioId']);
   const cap = s.datos.capacidad === null || s.datos.capacidad === undefined || s.datos.capacidad === '' ? null : Number(s.datos.capacidad);
   const ids = [...new Set(d.estudianteIds)].sort();
   if (ids.length !== d.estudianteIds.length) throw new ErrorHttp(422, 'datos_invalidos', 'Hay estudiantes repetidos en la selección.', ['estudianteIds']);

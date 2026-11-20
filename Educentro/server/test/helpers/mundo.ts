@@ -115,3 +115,8 @@ export function pedir(app: FastifyInstance, ses: Sesion | null, metodo: Metodo, 
     ...(payload !== undefined ? { payload: payload as object } : {}),
   });
 }
+
+/** Consulta con contexto admin_red (la RLS FORCE no deja ver filas al propietario sin contexto). */
+export async function consultaAdmin<R extends Record<string, unknown> = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<R[]> {
+  return conContexto(poolApp(), { rol: 'admin_red', centroId: null, usuarioId: 'prueba' }, async (tx) => (await tx.query<R>(sql, params)).rows);
+}
