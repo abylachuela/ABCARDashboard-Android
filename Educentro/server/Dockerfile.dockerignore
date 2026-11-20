@@ -9,3 +9,6 @@
 !js/core/escala.js
 !js/core/calculo.js
 !js/data/consultas.js
+!js/core/formato.js
+!js/data/curriculo-semilla.js
+!js/vistas/horarios-motor.js

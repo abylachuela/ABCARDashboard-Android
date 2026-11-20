@@ -36,7 +36,7 @@ beforeAll(async () => {
     await ins('actividades', `'act' || g || '_' || a, '${C}', jsonb_build_object('cargaId', 'cg' || g, 'categoriaId', 'cat' || g || '_' || (1 + a % 4), 'periodoId', 'p' || (1 + a % 4), 'puntosMax', 10, 'nombre', 'A' || a) FROM generate_series(1, 300) g, generate_series(1, 15) a`);
     await ins('calificaciones', `'cal' || g || '_' || a || '_' || e, '${C}', jsonb_build_object('actividadId', 'act' || g || '_' || a, 'estudianteId', 'est' || g || '_' || e, 'puntos', (a + e) % 11) FROM generate_series(1, 300) g, generate_series(1, 15) a, generate_series(1, 15) e`);
     await ins('notas_competencia', `'nc' || g || '_' || e, '${C}', jsonb_build_object('cargaId', 'cg' || g, 'estudianteId', 'est' || g || '_' || e, 'c', '[]'::jsonb) FROM generate_series(1, 300) g, generate_series(1, 15) e`);
-    await ins('periodos', `'per' || g, '${C}', jsonb_build_object('anioId', 'an' || (g % 100), 'orden', g % 4, 'peso', 25, 'cerrado', g % 2 = 0) FROM generate_series(1, 4000) g`);
+    await ins('periodos', `'per' || g, '${C}', jsonb_build_object('anioId', 'an' || (g % 100), 'orden', 1 + (g / 100), 'peso', 25, 'cerrado', g % 2 = 0) FROM generate_series(1, 4000) g`);
   });
   for (const t of ['cargas', 'categorias', 'actividades', 'calificaciones', 'notas_competencia', 'periodos']) await owner().query(`ANALYZE ${t}`);
 }, 120_000);

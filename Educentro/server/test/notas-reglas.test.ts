@@ -242,9 +242,9 @@ describe('rangos, tipos y campos calculados', () => {
     expect(ok.json()).toMatchObject({ nombre: 'Periodo 2 (editado)', cerrado: false });
     expect(ok.json()).not.toHaveProperty('cerradoPor');
     expect(ok.json()).not.toHaveProperty('reabiertoMotivo');
-    expect((await pedir(app, dir, 'POST', '/c/periodos', { id: 'prNuevo', anioId: 'an1', orden: 4, nombre: 'Nuevo', peso: 0 })).statusCode).toBe(201);
-    expect(err(await pedir(app, dir, 'PUT', '/c/periodos/prNuevo', { anioId: 'an1', orden: 4, nombre: 'N', peso: 120 })).codigo).toBe('fuera_de_rango');
-    expect(err(await pedir(app, dir, 'PUT', '/c/periodos/prNuevo', { anioId: 'an1', orden: 4, nombre: 'N', peso: 0, inicio: '2026-09-01', fin: '2026-01-01' })).codigo).toBe('datos_invalidos');
+    expect((await pedir(app, dir, 'POST', '/c/periodos', { id: 'prNuevo', anioId: 'an9', orden: 4, nombre: 'Nuevo', peso: 0.01 })).statusCode).toBe(201);
+    expect(err(await pedir(app, dir, 'PUT', '/c/periodos/prNuevo', { anioId: 'an9', orden: 4, nombre: 'N', peso: 120 })).codigo).toBe('fuera_de_rango');
+    expect(err(await pedir(app, dir, 'PUT', '/c/periodos/prNuevo', { anioId: 'an9', orden: 4, nombre: 'N', peso: 0.01, inicio: '2026-09-01', fin: '2026-01-01' })).codigo).toBe('datos_invalidos');
     // editar un periodo cerrado (nombre, pesos): director con motivo
     expect(err(await pedir(app, dir, 'PUT', '/c/periodos/pr1', { anioId: 'an1', orden: 1, nombre: 'P1', peso: 50 })).codigo).toBe('motivo_requerido');
     expect((await pedir(app, dir, 'PUT', '/c/periodos/pr1', { anioId: 'an1', orden: 1, nombre: 'Periodo 1', peso: 50 }, MOTIVO)).json()).toMatchObject({ cerrado: true });

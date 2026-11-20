@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cargarPermisosDelCliente } from '../scripts/paridad.js';
 import { crearApp, limpiarBD, owner, prepararBD } from './helpers/app.js';
-import { A, cerrarPoolApp, montarMundo, pedir, type Metodo, type Mundo } from './helpers/mundo.js';
+import { A, cerrarPoolApp, montarMundo, pedir, sembrar, type Metodo, type Mundo } from './helpers/mundo.js';
 
 const cliente = cargarPermisosDelCliente();
 const CLAVES_ROL: Record<string, string> = { admin_red: 'admin', director: 'dirA', docente: 'docA1', secretaria: 'secA', tutor: 'tutA', estudiante: 'estA1' };
@@ -25,6 +25,9 @@ beforeAll(async () => {
   await limpiarBD();
   app = (await crearApp()).app;
   m = await montarMundo(app);
+  // apoyos para las colecciones con reglas de integridad (Fase 3A)
+  await sembrar('anios', 'anM', A, { nombre: 'Año de la matriz' });
+  await sembrar('curriculo_versiones', 'cvM', A, { nombre: 'Versión de la matriz', estado: 'borrador' });
 });
 afterAll(async () => {
   await app.close();
@@ -41,7 +44,13 @@ function cuerpoValido(rol: string, col: string): Record<string, unknown> {
   if (col === 'centros') return { nombre: `Centro nuevo ${k}` };
   if (col === 'calificaciones') return { ...base, actividadId: 'act1', estudianteId: `est_m${k}`, puntos: 7 };
   if (col === 'notasCompetencia') return { ...base, cargaId: 'cg1', estudianteId: `est_m${k}`, c: [] };
-  if (col === 'asistencia') return { ...base, seccionId: 's1', estudianteId: `est_m${k}`, fecha: `2027-01-${String(k % 28 + 1).padStart(2, '0')}x${k}`, estado: 'P' };
+  if (col === 'asistencia') return { ...base, seccionId: 's1', estudianteId: 'e1', fecha: new Date(Date.UTC(2025, 0, 1 + k)).toISOString().slice(0, 10), estado: 'P' };
+  if (col === 'matriculas') return { ...base, estudianteId: `emt${k}`, seccionId: 's1', anioId: 'anM' };
+  if (col === 'curriculoContenidos') return { ...base, versionId: 'cvM', descripcion: `x${k}`, estado: 'pendiente' };
+  if (col === 'franjas') {
+    const h = (n: number): string => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
+    return { ...base, tanda: 'matutina', tipo: 'clase', inicio: h(k * 2), fin: h(k * 2 + 1) };
+  }
   if (col === 'agenteConfig') return { ...base, docenteId: rol === 'docente' ? 'd1' : 'd9' };
   if (rol === 'estudiante') return { ...base, estudianteId: 'e1', cargaId: 'cg1', autorId: m.s.estA1!.id, texto: 'hola' };
   return { ...base, cargaId: 'cg1', nombre: `x${k}` };
@@ -69,13 +78,24 @@ describe('6 roles × colecciones × acciones contra la MATRIZ/ESCRIBE del client
       expect((await pedir(app, ses, 'DELETE', `/c/${col}/x1`)).statusCode, `borrar ${rol}/${col}`).toBe(403);
       return;
     }
+    // inscripciones: solo POST /cursos/:id/inscripciones; el POST genérico se rechaza (la matriz de reglas está en negocio-*.test.ts)
+    if (col === 'inscripciones') {
+      const r = await pedir(app, ses, 'POST', `/c/${col}`, { cursoId: 'cx', estudianteId: 'e1', ...(rol === 'admin_red' ? { centroId: A } : {}) });
+      expect(r.statusCode, `crear ${rol}/${col}: ${r.body}`).toBe(409);
+      expect((r.json() as { error: { codigo: string } }).error.codigo).toBe('usar_endpoint');
+      return;
+    }
+    if (col === 'matriculas') {
+      const k = n + 1;
+      await sembrar('estudiantes', `emt${k}`, A, { nombres: 'Matriz' });
+    }
     // con permiso: ciclo completo crear → editar → borrar
     const c = await pedir(app, ses, 'POST', `/c/${col}`, cuerpoValido(rol, col));
     expect(c.statusCode, `crear ${rol}/${col}: ${c.body}`).toBe(201);
     const id = (c.json() as { id: string }).id;
     const nuevo = { ...cuerpoValido(rol, col), ...(col === 'calificaciones' || col === 'asistencia' ? {} : {}) };
     const antes = c.json() as Record<string, unknown>;
-    const e = await pedir(app, ses, 'PUT', `/c/${col}/${id}`, { ...antes, ...Object.fromEntries(Object.entries(nuevo).filter(([k]) => !['estudianteId', 'fecha', 'email', 'actividadId', 'seccionId', 'rol'].includes(k) || !(k in antes))), id });
+    const e = await pedir(app, ses, 'PUT', `/c/${col}/${id}`, { ...antes, ...Object.fromEntries(Object.entries(nuevo).filter(([k]) => !['estudianteId', 'fecha', 'email', 'actividadId', 'seccionId', 'rol', 'anioId', 'versionId', 'inicio', 'fin', 'tanda', 'tipo'].includes(k) || !(k in antes))), id });
     expect(e.statusCode, `editar ${rol}/${col}: ${e.body}`).toBe(200);
     const b = await pedir(app, ses, 'DELETE', `/c/${col}/${id}`);
     expect(b.statusCode, `borrar ${rol}/${col}: ${b.body}`).toBe(204);

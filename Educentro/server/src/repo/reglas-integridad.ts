@@ -217,8 +217,8 @@ async function reglaPeriodo(e: EntradaInt): Promise<void> {
   const anio = str(n.anioId) ?? str(e.antes?.anioId);
   if (anio) {
     const a = await e.p.tx.query<{ datos: Registro }>('SELECT datos FROM anios WHERE id = $1 AND centro_id = $2 AND borrado_en IS NULL', [anio, e.centro]);
-    if (!a.rows[0]) throw new ErrorHttp(422, 'referencia_invalida', 'El año lectivo del periodo no existe en este centro.', ['anioId']);
-    const ini = str(n.inicio), fin = str(n.fin), ai = str(a.rows[0].datos.inicio), af = str(a.rows[0].datos.fin);
+    // si el año no existe como ficha (datos antiguos) no se comprueban las fechas; la suma de pesos sí aplica
+    const ini = str(n.inicio), fin = str(n.fin), ai = str(a.rows[0]?.datos.inicio), af = str(a.rows[0]?.datos.fin);
     if (ai && af) {
       for (const [k, v] of [['inicio', ini], ['fin', fin]] as const) if (v && esFecha(v) && (v < ai || v > af)) throw invalido(`La fecha «${k}» debe estar dentro del año lectivo (${ai} a ${af}).`, k);
     }

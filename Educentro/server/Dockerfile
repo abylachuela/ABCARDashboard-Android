@@ -24,9 +24,10 @@ COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node server/package.json ./
 COPY --chown=node:node server/migrations ./migrations
-# Cálculo compartido con el cliente (calculo-shim los carga sin copiarlos al código): solo estos 3 archivos del frontend.
-COPY --chown=node:node js/core/escala.js js/core/calculo.js ./js/core/
-COPY --chown=node:node js/data/consultas.js ./js/data/
+# Cálculo compartido con el cliente (calculo-shim los carga sin copiarlos al código): solo estos 6 archivos del frontend (cálculo, formato, consultas, horarios-motor y curriculo-semilla).
+COPY --chown=node:node js/core/escala.js js/core/calculo.js js/core/formato.js ./js/core/
+COPY --chown=node:node js/data/consultas.js js/data/curriculo-semilla.js ./js/data/
+COPY --chown=node:node js/vistas/horarios-motor.js ./js/vistas/
 ENV EDU_JS_DIR=/app/js
 USER node
 EXPOSE 3000

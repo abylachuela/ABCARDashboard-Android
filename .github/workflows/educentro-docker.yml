@@ -13,6 +13,9 @@ on:
       - 'Educentro/server/backup/**'
       - 'Educentro/server/migrations/**'
       - 'Educentro/server/secrets/generar.sh'
+      - 'Educentro/js/core/**'
+      - 'Educentro/js/vistas/horarios-motor.js'
+      - 'Educentro/js/data/curriculo-semilla.js'
       - '.github/workflows/educentro-docker.yml'
 
 permissions:

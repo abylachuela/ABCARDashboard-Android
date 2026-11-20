@@ -11,6 +11,8 @@ on:
       - 'Educentro/js/core/formato.js'
       - 'Educentro/js/data/consultas.js'
       - 'Educentro/js/data/repo-local.js' # lista de colecciones
+      - 'Educentro/js/vistas/horarios-motor.js'
+      - 'Educentro/js/data/curriculo-semilla.js'
       - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'
   pull_request:
@@ -22,6 +24,8 @@ on:
       - 'Educentro/js/core/formato.js'
       - 'Educentro/js/data/consultas.js'
       - 'Educentro/js/data/repo-local.js'
+      - 'Educentro/js/vistas/horarios-motor.js'
+      - 'Educentro/js/data/curriculo-semilla.js'
       - 'Educentro/js/data/semilla.js'
       - '.github/workflows/educentro-server.yml'
 
