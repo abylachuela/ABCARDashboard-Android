@@ -22,3 +22,6 @@ Versionar los scripts de smoke/XSS/aislamiento y ejecutarlos en CI ([Hoja de rut
 
 ## Fase 2 (servidor)
 506 pruebas Vitest con PostgreSQL real: paridad de cálculo (28 casos portados contra servidor y cliente + 6000 generados contra un oráculo), periodo cerrado por rol, rangos, mass-assignment, pesos y cierre, lotes, UNIQUE bajo concurrencia, EXPLAIN con índices, cadena de hashes (concurrencia, manipulación como propietario, ancla) y `/notas/resumen` == cliente con la semilla. e2e de 6 roles con flujo de notas contra el servidor real (`tests/e2e/api.e2e.mjs`).
+
+## Fase 3A (servidor)
+741 pruebas Vitest con PostgreSQL real: matrículas, cursos e inscripciones (cupo, lista de espera, promoción), integridad genérica, centros, usuarios, asistencia, planes y secuencias, currículo, horarios (guardado atómico, franjas, paridad servidor↔cliente con semilla fija), visibilidad de comunicados por rol (matriz completa), matriz 6 roles × endpoints nuevos, migración 0010 con datos previos y concurrencia real (20 simultáneas en la última plaza → 1 gana). `tests/e2e/api.e2e.mjs` añade cupo lleno, lista de espera, horario con conflicto rechazado, comunicado no visible y plan impartido bloqueado (139 comprobaciones, 6/6 roles); `tests/repo-api.test.mjs`: 20 pruebas.

@@ -118,3 +118,7 @@ Inventario de solo lectura hecho antes de empezar la Fase 3. Rutas relativas a `
 ## Volumen con la semilla actual (3 centros)
 Aprox. 4.500–5.000 filas, menos de 1 MB de JSON. Por pantalla se leen colecciones enteras: panel ~17 colecciones (~4.000 filas), reportes 13, vista de red 3×16, personas 8, matrícula 7, horarios 10.
 Con un centro real (500 estudiantes, 10 asignaturas, 3 periodos) las calificaciones serían unas 75.000 filas y la asistencia unas 90.000 por año: el panel, los reportes y la asistencia dejan de ser viables sin agregación en el servidor y paginación.
+
+## Estado tras la Fase 3A
+**Cubierto en servidor (con pruebas y cliente en modo API adaptado):** prioridades 1 a 5 de arriba: restricciones SQL (migración 0010), endpoints transaccionales con bloqueo (matrícula, retirar/reactivar, inscripciones con lista de espera y promoción, cierre de curso, bajas, vincular tutor), validadores de integridad y dependencias de borrado (periodos, secciones, cursos, asignaturas, cargas, centros, escalas, año activo, currículo vigente/importar), autorización por propiedad y estados (secuencias, planes impartidos, asistencia con campos fijados por el servidor, comunicados con visibilidad en el servidor, `usuarios.refId`) y horarios (`POST /horarios/guardar`, `/franjas/tanda`).
+**Pendiente (3B / Fase 5):** prioridad 6 (agregados y paginación: reportes, panel, métricas de centro, resumen de asistencia, `GET /matriculas/pendientes`, `GET /horarios/contexto`, cobertura de secuencias, filtros en servidor) y prioridad 7 (respaldo e importación).

@@ -37,3 +37,6 @@ Ver también [Seguridad y privacidad](Seguridad-y-privacidad) y [Hoja de ruta](H
 
 ## Fase 2: notas, periodos y auditoría
 El servidor aplica las reglas de notas (periodo cerrado con motivo del director, rangos, pesos = 100, propiedad), calcula con el mismo `calculo.js` del cliente (`calculo-shim`) y expone `GET /notas/resumen`, lotes por fila, `POST /periodos/:id/{cerrar,reabrir}` y `GET /auditoria/verificar` (cadena de hashes por centro; ancla externa con `npm run anclar-auditoria`). Detalle: `docs/API-REST.md` §10 y `docs/BACKEND.md`.
+
+## Fase 3A: reglas de negocio en el servidor
+Migración 0010 (UNIQUE parciales y secuencias por centro), validadores en la capa genérica y endpoints transaccionales para matrícula, bajas, vincular tutor, año activo, cursos e inscripciones (cupo, lista de espera con turno del servidor, promoción), currículo (vigente/importar), asistencia por lote, comunicados (visibilidad en el servidor) y horarios (`POST /horarios/guardar` con el motor del cliente cargado por `vm`). Ver [API REST §11](../API-REST.md). Pendiente: agregados y paginación (3B), importación de respaldos (Fase 5).

@@ -167,3 +167,14 @@ Una tabla por colección; `id text PK` (se conservan los ids actuales), `centro_
 6. **Quién administra** (VM, copias, altas de usuarios, incidentes) y responsable de datos por centro.
 7. **Proveedor de IA** y aceptación legal del envío de datos anonimizados (validar con asesoría).
 8. Si se exigirá **2FA** a director y admin_red.
+
+## Estado de la Fase 3A (implementado en `Educentro/server/`)
+Integridad de las reglas de negocio en el servidor, probada con PostgreSQL 16 real (741 pruebas del servidor; e2e de 6 roles 139 comprobaciones contra el servidor real con flujos de cupo lleno, lista de espera, horario con conflicto, comunicado no visible y plan impartido; regresión local 28/28, 10/10 y 166 visitas). Detalle de endpoints y códigos: [API-REST §11](API-REST.md).
+- **Migración 0010**: índices UNIQUE parciales sobre columnas generadas (matrícula por estudiante y año, cédula normalizada por colección, código MAT por centro, un año activo, una escala activa, una versión vigente, sección, carga, inscripción, orden de periodo), secuencias por centro (`siguiente_secuencia`) y resolución de duplicados previos sin perder filas (marcadas `migracion0010`; para cargas duplicadas con datos se detiene con un mensaje). Probada con datos previos duplicados.
+- **Capa genérica** (`reglas-integridad.ts`): campos protegidos, validadores, referencias del mismo centro y dependencias de borrado; el cliente no se salta nada con `/c/:col`.
+- **Endpoints transaccionales** (`routes/negocio.ts`, `repo/negocio-*.ts`) con bloqueo y concurrencia verificada (20 matrículas/inscripciones en la última plaza → 1 gana; promoción bajo carrera; activar año y vigente simultáneos).
+- **Horarios y currículo reutilizan el código del cliente** por `vm` (`horarios-shim`, `curriculo-shim`), con paridad probada (400 casos con semilla fija + 60 extremo a extremo). La imagen Docker copia esos 3 archivos de `js/`.
+- **Cliente en modo API**: `EDU.repoApi.negocio` + `EDU.repo.negocio()`; el modo local no cambia.
+
+**Diferencias con el inventario**: conflictos de horario que no involucran bloques tocados se informan (`conflictosPrevios`) sin bloquear; el PUT genérico de franjas valida solapes, la edición por tanda usa `/franjas/tanda`; la fecha «hoy» del servidor usa `EDU_TZ` (por defecto `America/Santo_Domingo`); el código de la migración 0010 usa `MAT--n` si el id de centro no tiene dígitos (el servidor usa `MAT-0-n`).
+**Pendiente (3B / Fase 5)**: agregados y paginación (reportes, panel, métricas de centro, resumen de asistencia, filtros en servidor), importación de respaldos, `GET /matriculas/pendientes`, `GET /horarios/contexto`, `GET /secuencias/:id/cobertura`. **No probado**: `docker build`, CI real, carga de rendimiento.
